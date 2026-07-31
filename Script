@@ -202,7 +202,7 @@ local function SendWebhook(url, rarity, mutation)
                 ["title"] = "🎉 Card Bought!",
                 ["description"] = "Successfully bought a card matching your criteria.",
                 ["type"] = "rich",
-                ["color"] = 16711680, -- Pure Red Color (0xFF0000)
+                ["color"] = 16711680, -- สีแดงสำหรับ Embed (0xFF0000)
                 ["fields"] = {
                     {
                         ["name"] = "Rarity",
@@ -587,7 +587,6 @@ local AutoUseLuckToggle = MainTab:Toggle({
         end
     end
 })
-
 local MiscTab = Window:Tab({
     Title = "Misc",
     Icon = "solar:settings-bold",
@@ -659,6 +658,7 @@ MiscTab:Keybind({
             if not toggled then
                 for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
                     if v:IsA("ScreenGui") and v:FindFirstChild("Main") and v.Main:IsA("Frame") then
+                        -- Check if this is the WindUI ScreenGui
                         local titleLabel = v.Main:FindFirstChild("Topbar", true)
                         if titleLabel or v.Name == "WindUI" or v.Name == "PayomboyZUI" then
                             v.Enabled = not v.Enabled
@@ -721,6 +721,7 @@ local function LoadConfig(name)
             
             getgenv().DiscordWebhook = data.Webhook or ""
             pcall(function() WebhookInput:SetValue(getgenv().DiscordWebhook) end)
+            
             
             if RarityDropdown then
                 local arrR = {}
@@ -799,29 +800,4 @@ ConfigDropdown = MiscTab:Dropdown({
         if type(value) == "table" then
             for k, v in pairs(value) do
                 if type(k) == "number" then
-                    SelectedConfig = tostring(v)
-                end
-            end
-        elseif type(value) == "string" then
-            SelectedConfig = value
-        end
-    end
-})
-
-MiscTab:Button({
-    Title = "Load Selected Config",
-    Callback = function()
-        if SelectedConfig and SelectedConfig ~= "" then
-            LoadConfig(SelectedConfig)
-        else
-            WindUI:Notify({ Title = "Config", Content = "Please select a config to load", Duration = 3 })
-        end
-    end
-})
-
-if ConfigData.Autoload and ConfigData.Autoload ~= "" then
-    task.spawn(function()
-        task.wait(1)
-        LoadConfig(ConfigData.Autoload)
-    end)
-end
+                    SelectedConfig = v
