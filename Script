@@ -1,0 +1,440 @@
+-- ==========================================
+-- 🎁 Gift / Trade Script V6 — Auto Equip + TP + Send
+-- ==========================================
+-- ⚡ ต้องถือการ์ดในมือก่อนถึงส่งได้!
+-- ⚡ Cooldown: 0
+-- ==========================================
+
+-- === Services ===
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- === Remote ===
+local GiftRE = ReplicatedStorage:WaitForChild("Remotes", 5) and ReplicatedStorage.Remotes:FindFirstChild("GiftRE")
+
+-- === State ===
+local AutoAccept = false
+local AutoDecline = false
+local AutoTrading = false
+local UseTween = true
+local LastRequestId = nil
+local SelectedPlayer = nil
+local SelectedCard = nil
+local SendAmount = 1
+local IsOpen = true
+local Logs = {}
+
+-- === Colors ===
+local Colors = {
+    BG = Color3.fromRGB(15, 15, 25),
+    BGLight = Color3.fromRGB(25, 25, 40),
+    Card = Color3.fromRGB(30, 30, 50),
+    Accent = Color3.fromRGB(99, 102, 241),
+    AccentGlow = Color3.fromRGB(129, 140, 248),
+    Green = Color3.fromRGB(34, 197, 94),
+    GreenGlow = Color3.fromRGB(74, 222, 128),
+    Red = Color3.fromRGB(239, 68, 68),
+    RedGlow = Color3.fromRGB(248, 113, 113),
+    Orange = Color3.fromRGB(251, 146, 60),
+    Yellow = Color3.fromRGB(250, 204, 21),
+    Cyan = Color3.fromRGB(34, 211, 238),
+    Text = Color3.fromRGB(240, 240, 255),
+    TextDim = Color3.fromRGB(140, 140, 170),
+    TextMuted = Color3.fromRGB(80, 80, 110),
+    Border = Color3.fromRGB(50, 50, 80),
+}
+
+-- === Utility Functions ===
+local function tween(obj, props, dur, sty, dir)
+    local t = TweenService:Create(obj, TweenInfo.new(dur or 0.3, sty or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out), props)
+    t:Play(); return t
+end
+local function addCorner(p, r) local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 8); c.Parent = p end
+local function addStroke(p, col, th, tr) local s = Instance.new("UIStroke"); s.Color = col or Colors.Border; s.Thickness = th or 1; s.Transparency = tr or 0.5; s.Parent = p; return s end
+local function addPadding(p, t, b, l, r) local pd = Instance.new("UIPadding"); pd.PaddingTop = UDim.new(0,t or 8); pd.PaddingBottom = UDim.new(0,b or 8); pd.PaddingLeft = UDim.new(0,l or 8); pd.PaddingRight = UDim.new(0,r or 8); pd.Parent = p end
+local function addShadow(p) local s = Instance.new("ImageLabel"); s.BackgroundTransparency = 1; s.Image = "rbxassetid://6014261993"; s.ImageColor3 = Color3.new(0,0,0); s.ImageTransparency = 0.5; s.ScaleType = Enum.ScaleType.Slice; s.SliceCenter = Rect.new(49,49,450,450); s.Size = UDim2.new(1,30,1,30); s.Position = UDim2.new(0,-15,0,-15); s.ZIndex = -1; s.Parent = p end
+
+-- ============================================================
+-- 🎨 BUILD UI
+-- ============================================================
+local oldGui = PlayerGui:FindFirstChild("GiftTradeUI")
+if oldGui then oldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GiftTradeUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 340, 0, 560)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -280)
+MainFrame.BackgroundColor3 = Colors.BG
+MainFrame.BackgroundTransparency = 0.05
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+addCorner(MainFrame, 12)
+addStroke(MainFrame, Colors.Border, 1, 0.3)
+addShadow(MainFrame)
+
+-- Top Glow
+local topGlow = Instance.new("Frame"); topGlow.Size = UDim2.new(1,0,0,80); topGlow.BackgroundColor3 = Colors.Accent; topGlow.BackgroundTransparency = 0.88; topGlow.BorderSizePixel = 0; topGlow.Parent = MainFrame; addCorner(topGlow, 12)
+local tgGrad = Instance.new("UIGradient"); tgGrad.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)}); tgGrad.Rotation = 90; tgGrad.Parent = topGlow
+
+-- Title Bar
+local TitleBar = Instance.new("Frame"); TitleBar.Size = UDim2.new(1,0,0,46); TitleBar.BackgroundTransparency = 1; TitleBar.Parent = MainFrame
+local TitleLabel = Instance.new("TextLabel"); TitleLabel.Size = UDim2.new(1,-60,1,0); TitleLabel.Position = UDim2.new(0,14,0,0); TitleLabel.BackgroundTransparency = 1; TitleLabel.Text = "🎁 GIFT TRADE v6"; TitleLabel.TextSize = 15; TitleLabel.Font = Enum.Font.GothamBold; TitleLabel.TextColor3 = Colors.Text; TitleLabel.TextXAlignment = Enum.TextXAlignment.Left; TitleLabel.Parent = TitleBar
+local CloseBtn = Instance.new("TextButton"); CloseBtn.Size = UDim2.new(0,30,0,30); CloseBtn.Position = UDim2.new(1,-40,0.5,-15); CloseBtn.BackgroundColor3 = Colors.Red; CloseBtn.BackgroundTransparency = 0.85; CloseBtn.Text = "✕"; CloseBtn.TextSize = 14; CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.TextColor3 = Colors.Red; CloseBtn.Parent = TitleBar; addCorner(CloseBtn, 6)
+
+-- Content Area
+local Content = Instance.new("ScrollingFrame"); Content.Size = UDim2.new(1,-24,1,-54); Content.Position = UDim2.new(0,12,0,52); Content.BackgroundTransparency = 1; Content.BorderSizePixel = 0; Content.ScrollBarThickness = 3; Content.ScrollBarImageColor3 = Colors.Accent; Content.CanvasSize = UDim2.new(0,0,0,950); Content.Parent = MainFrame
+local CL = Instance.new("UIListLayout"); CL.SortOrder = Enum.SortOrder.LayoutOrder; CL.Padding = UDim.new(0, 8); CL.Parent = Content
+
+local function createSection(name, icon, lo)
+    local s = Instance.new("Frame"); s.Name = name; s.Size = UDim2.new(1,-4,0,0); s.BackgroundColor3 = Colors.Card; s.BackgroundTransparency = 0.3; s.BorderSizePixel = 0; s.AutomaticSize = Enum.AutomaticSize.Y; s.LayoutOrder = lo; s.Parent = Content; addCorner(s, 8); addStroke(s, Colors.Border, 1, 0.6); addPadding(s, 10, 10, 10, 10)
+    local sl = Instance.new("UIListLayout"); sl.SortOrder = Enum.SortOrder.LayoutOrder; sl.Padding = UDim.new(0,6); sl.Parent = s
+    local h = Instance.new("TextLabel"); h.Size = UDim2.new(1,0,0,20); h.BackgroundTransparency = 1; h.Text = icon.."  "..name; h.TextSize = 12; h.Font = Enum.Font.GothamBold; h.TextColor3 = Colors.TextDim; h.TextXAlignment = Enum.TextXAlignment.Left; h.LayoutOrder = 0; h.Parent = s
+    return s
+end
+
+-- ============================================================
+-- 👥 SELECT PLAYER
+-- ============================================================
+local PlayerSection = createSection("SELECT PLAYER", "👥", 1)
+local PlayerListFrame = Instance.new("Frame"); PlayerListFrame.Size = UDim2.new(1,0,0,0); PlayerListFrame.BackgroundTransparency = 1; PlayerListFrame.AutomaticSize = Enum.AutomaticSize.Y; PlayerListFrame.LayoutOrder = 1; PlayerListFrame.Parent = PlayerSection
+local PLL = Instance.new("UIListLayout"); PLL.SortOrder = Enum.SortOrder.LayoutOrder; PLL.Padding = UDim.new(0,4); PLL.Parent = PlayerListFrame
+local SelectedLabel = Instance.new("TextLabel"); SelectedLabel.Size = UDim2.new(1,0,0,18); SelectedLabel.BackgroundTransparency = 1; SelectedLabel.Text = "📌 ยังไม่ได้เลือก"; SelectedLabel.TextSize = 11; SelectedLabel.Font = Enum.Font.GothamMedium; SelectedLabel.TextColor3 = Colors.TextMuted; SelectedLabel.TextXAlignment = Enum.TextXAlignment.Left; SelectedLabel.LayoutOrder = 99; SelectedLabel.Parent = PlayerSection
+
+local function createPlayerButton(player)
+    local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1,0,0,32); btn.BackgroundColor3 = Colors.BGLight; btn.BackgroundTransparency = 0.3; btn.BorderSizePixel = 0; btn.Text = ""; btn.AutoButtonColor = false; btn.Parent = PlayerListFrame; addCorner(btn, 6)
+    local ps = addStroke(btn, Colors.Border, 1, 0.7)
+    local av = Instance.new("ImageLabel"); av.Size = UDim2.new(0,22,0,22); av.Position = UDim2.new(0,6,0.5,-11); av.BackgroundColor3 = Colors.Card; av.BorderSizePixel = 0; av.Image = "rbxthumb://type=AvatarHeadShot&id="..player.UserId.."&w=48&h=48"; av.Parent = btn; addCorner(av, 11)
+    local nl = Instance.new("TextLabel"); nl.Size = UDim2.new(1,-60,1,0); nl.Position = UDim2.new(0,34,0,0); nl.BackgroundTransparency = 1; nl.Text = player.DisplayName; nl.TextSize = 12; nl.Font = Enum.Font.GothamMedium; nl.TextColor3 = Colors.Text; nl.TextXAlignment = Enum.TextXAlignment.Left; nl.TextTruncate = Enum.TextTruncate.AtEnd; nl.Parent = btn
+    btn.MouseEnter:Connect(function() tween(btn, {BackgroundTransparency = 0}, 0.15); tween(ps, {Color = Colors.Accent, Transparency = 0.3}, 0.15) end)
+    btn.MouseLeave:Connect(function() if SelectedPlayer ~= player then tween(btn, {BackgroundTransparency = 0.3}, 0.15); tween(ps, {Color = Colors.Border, Transparency = 0.7}, 0.15) end end)
+    btn.MouseButton1Click:Connect(function()
+        SelectedPlayer = player; SelectedLabel.Text = "📌 " .. player.DisplayName; SelectedLabel.TextColor3 = Colors.AccentGlow
+        for _, c in ipairs(PlayerListFrame:GetChildren()) do if c:IsA("TextButton") and c ~= btn then tween(c, {BackgroundTransparency = 0.3}, 0.15); local s2 = c:FindFirstChildOfClass("UIStroke"); if s2 then tween(s2, {Color = Colors.Border, Transparency = 0.7}, 0.15) end end end
+        tween(btn, {BackgroundTransparency = 0}, 0.15); tween(ps, {Color = Colors.Accent, Transparency = 0}, 0.15)
+    end)
+end
+
+local function refreshPlayerList() 
+    for _, c in ipairs(PlayerListFrame:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer then createPlayerButton(p) end end 
+end
+refreshPlayerList()
+Players.PlayerAdded:Connect(function() task.wait(1) refreshPlayerList() end)
+Players.PlayerRemoving:Connect(function() task.wait(0.5) refreshPlayerList() end)
+
+-- ============================================================
+-- 🃏 SELECT CARD
+-- ============================================================
+local CardSection = createSection("SELECT CARD", "🃏", 2)
+local CardListFrame = Instance.new("ScrollingFrame"); CardListFrame.Size = UDim2.new(1,0,0,100); CardListFrame.BackgroundColor3 = Colors.BG; CardListFrame.BackgroundTransparency = 0.3; CardListFrame.BorderSizePixel = 0; CardListFrame.ScrollBarThickness = 2; CardListFrame.ScrollBarImageColor3 = Colors.Cyan; CardListFrame.CanvasSize = UDim2.new(0,0,0,0); CardListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y; CardListFrame.LayoutOrder = 1; CardListFrame.Parent = CardSection; addCorner(CardListFrame, 6); addPadding(CardListFrame, 4, 4, 4, 4)
+local CLLayout = Instance.new("UIListLayout"); CLLayout.SortOrder = Enum.SortOrder.LayoutOrder; CLLayout.Padding = UDim.new(0,3); CLLayout.Parent = CardListFrame
+local SelectedCardLabel = Instance.new("TextLabel"); SelectedCardLabel.Size = UDim2.new(1,0,0,18); SelectedCardLabel.BackgroundTransparency = 1; SelectedCardLabel.Text = "🃏 ยังไม่ได้เลือก"; SelectedCardLabel.TextSize = 11; SelectedCardLabel.Font = Enum.Font.GothamMedium; SelectedCardLabel.TextColor3 = Colors.TextMuted; SelectedCardLabel.TextXAlignment = Enum.TextXAlignment.Left; SelectedCardLabel.LayoutOrder = 2; SelectedCardLabel.Parent = CardSection
+
+-- Amount Frame
+local AmountFrame = Instance.new("Frame"); AmountFrame.Size = UDim2.new(1,0,0,32); AmountFrame.BackgroundTransparency = 1; AmountFrame.LayoutOrder = 3; AmountFrame.Parent = CardSection
+local AmountLabel = Instance.new("TextLabel"); AmountLabel.Size = UDim2.new(0.4,0,1,0); AmountLabel.BackgroundTransparency = 1; AmountLabel.Text = "📦 จำนวน:"; AmountLabel.TextSize = 12; AmountLabel.Font = Enum.Font.GothamMedium; AmountLabel.TextColor3 = Colors.Text; AmountLabel.TextXAlignment = Enum.TextXAlignment.Left; AmountLabel.Parent = AmountFrame
+local MinusBtn = Instance.new("TextButton"); MinusBtn.Size = UDim2.new(0,30,0,28); MinusBtn.Position = UDim2.new(0.4,0,0.5,-14); MinusBtn.BackgroundColor3 = Colors.Red; MinusBtn.BackgroundTransparency = 0.3; MinusBtn.Text = "−"; MinusBtn.TextSize = 16; MinusBtn.Font = Enum.Font.GothamBold; MinusBtn.TextColor3 = Colors.Text; MinusBtn.AutoButtonColor = false; MinusBtn.Parent = AmountFrame; addCorner(MinusBtn, 6)
+local AmountDisplay = Instance.new("TextLabel"); AmountDisplay.Size = UDim2.new(0,50,0,28); AmountDisplay.Position = UDim2.new(0.4,34,0.5,-14); AmountDisplay.BackgroundColor3 = Colors.BGLight; AmountDisplay.BackgroundTransparency = 0.3; AmountDisplay.Text = "1"; AmountDisplay.TextSize = 14; AmountDisplay.Font = Enum.Font.GothamBold; AmountDisplay.TextColor3 = Colors.AccentGlow; AmountDisplay.Parent = AmountFrame; addCorner(AmountDisplay, 6); addStroke(AmountDisplay, Colors.Border, 1, 0.5)
+local PlusBtn = Instance.new("TextButton"); PlusBtn.Size = UDim2.new(0,30,0,28); PlusBtn.Position = UDim2.new(0.4,88,0.5,-14); PlusBtn.BackgroundColor3 = Colors.Green; PlusBtn.BackgroundTransparency = 0.3; PlusBtn.Text = "+"; PlusBtn.TextSize = 16; PlusBtn.Font = Enum.Font.GothamBold; PlusBtn.TextColor3 = Colors.Text; PlusBtn.AutoButtonColor = false; PlusBtn.Parent = AmountFrame; addCorner(PlusBtn, 6)
+local MaxBtn = Instance.new("TextButton"); MaxBtn.Size = UDim2.new(0,36,0,28); MaxBtn.Position = UDim2.new(0.4,122,0.5,-14); MaxBtn.BackgroundColor3 = Colors.Accent; MaxBtn.BackgroundTransparency = 0.3; MaxBtn.Text = "MAX"; MaxBtn.TextSize = 10; MaxBtn.Font = Enum.Font.GothamBold; MaxBtn.TextColor3 = Colors.Text; MaxBtn.AutoButtonColor = false; MaxBtn.Parent = AmountFrame; addCorner(MaxBtn, 6)
+
+local RefreshBtn = Instance.new("TextButton"); RefreshBtn.Size = UDim2.new(1,0,0,24); RefreshBtn.BackgroundColor3 = Colors.Cyan; RefreshBtn.BackgroundTransparency = 0.3; RefreshBtn.BorderSizePixel = 0; RefreshBtn.Text = "🔄  รีเฟรชคลัง"; RefreshBtn.TextSize = 11; RefreshBtn.Font = Enum.Font.GothamBold; RefreshBtn.TextColor3 = Colors.Text; RefreshBtn.AutoButtonColor = false; RefreshBtn.LayoutOrder = 4; RefreshBtn.Parent = CardSection; addCorner(RefreshBtn, 6)
+
+local function getPlayerCards()
+    local cards = {}; local cc = {}
+    for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do if t:IsA("Tool") then cc[t.Name] = (cc[t.Name] or 0) + 1 end end
+    if LocalPlayer.Character then for _, t in ipairs(LocalPlayer.Character:GetChildren()) do if t:IsA("Tool") then cc[t.Name] = (cc[t.Name] or 0) + 1 end end end
+    for n, c in pairs(cc) do table.insert(cards, {Name = n, Count = c}) end
+    table.sort(cards, function(a, b) return a.Count > b.Count end)
+    return cards
+end
+
+local function refreshCardList()
+    for _, c in ipairs(CardListFrame:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    local cards = getPlayerCards()
+    if #cards == 0 then local e = Instance.new("TextLabel"); e.Size = UDim2.new(1,0,0,24); e.BackgroundTransparency = 1; e.Text = "❌ ไม่มีการ์ด"; e.TextSize = 11; e.Font = Enum.Font.GothamMedium; e.TextColor3 = Colors.TextMuted; e.Parent = CardListFrame; return end
+
+    for i, card in ipairs(cards) do
+        local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1,0,0,28); btn.BackgroundColor3 = Colors.BGLight; btn.BackgroundTransparency = 0.3; btn.BorderSizePixel = 0; btn.Text = ""; btn.AutoButtonColor = false; btn.LayoutOrder = i; btn.Parent = CardListFrame; addCorner(btn, 5)
+        local cs = addStroke(btn, Colors.Border, 1, 0.7)
+        local cn = Instance.new("TextLabel"); cn.Size = UDim2.new(1,-60,1,0); cn.Position = UDim2.new(0,8,0,0); cn.BackgroundTransparency = 1; cn.Text = "🃏 "..card.Name; cn.TextSize = 11; cn.Font = Enum.Font.GothamMedium; cn.TextColor3 = Colors.Text; cn.TextXAlignment = Enum.TextXAlignment.Left; cn.TextTruncate = Enum.TextTruncate.AtEnd; cn.Parent = btn
+        local cl = Instance.new("TextLabel"); cl.Size = UDim2.new(0,40,0,18); cl.Position = UDim2.new(1,-46,0.5,-9); cl.BackgroundColor3 = Colors.Accent; cl.BackgroundTransparency = 0.6; cl.Text = "x"..card.Count; cl.TextSize = 10; cl.Font = Enum.Font.GothamBold; cl.TextColor3 = Colors.AccentGlow; cl.Parent = btn; addCorner(cl, 4)
+
+        btn.MouseEnter:Connect(function() tween(btn, {BackgroundTransparency = 0}, 0.15); tween(cs, {Color = Colors.Cyan, Transparency = 0.3}, 0.15) end)
+        btn.MouseLeave:Connect(function() if SelectedCard ~= card.Name then tween(btn, {BackgroundTransparency = 0.3}, 0.15); tween(cs, {Color = Colors.Border, Transparency = 0.7}, 0.15) end end)
+        btn.MouseButton1Click:Connect(function()
+            SelectedCard = card.Name; SendAmount = 1; AmountDisplay.Text = "1"
+            SelectedCardLabel.Text = "🃏 "..card.Name.." (x"..card.Count..")"
+            SelectedCardLabel.TextColor3 = Colors.Cyan
+            for _, c in ipairs(CardListFrame:GetChildren()) do if c:IsA("TextButton") and c ~= btn then tween(c, {BackgroundTransparency = 0.3}, 0.15) end end
+            tween(btn, {BackgroundTransparency = 0}, 0.15); tween(cs, {Color = Colors.Cyan, Transparency = 0}, 0.15)
+            addLog("🃏 เลือก: "..card.Name.." (x"..card.Count..")", Colors.Cyan)
+        end)
+    end
+    if #cards > 0 and not SelectedCard then SelectedCard = cards[1].Name; SelectedCardLabel.Text = "🃏 Auto: "..cards[1].Name.." (x"..cards[1].Count..")"; SelectedCardLabel.TextColor3 = Colors.Cyan end
+end
+refreshCardList()
+RefreshBtn.MouseButton1Click:Connect(refreshCardList)
+
+-- ============================================================
+-- 📤 SEND GIFT
+-- ============================================================
+local SendSection = createSection("SEND GIFT", "📤", 3)
+local SendBtn = Instance.new("TextButton"); SendBtn.Size = UDim2.new(1,0,0,38); SendBtn.BackgroundColor3 = Colors.Accent; SendBtn.BorderSizePixel = 0; SendBtn.Text = ""; SendBtn.AutoButtonColor = false; SendBtn.LayoutOrder = 1; SendBtn.Parent = SendSection; addCorner(SendBtn, 8)
+local sgr = Instance.new("UIGradient"); sgr.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(99,102,241)), ColorSequenceKeypoint.new(1, Color3.fromRGB(139,92,246))}); sgr.Rotation = 90; sgr.Parent = SendBtn
+local SendBtnLabel = Instance.new("TextLabel"); SendBtnLabel.Size = UDim2.new(1,0,1,0); SendBtnLabel.BackgroundTransparency = 1; SendBtnLabel.Text = "📤  TP + ส่ง (1x)"; SendBtnLabel.TextSize = 14; SendBtnLabel.Font = Enum.Font.GothamBold; SendBtnLabel.TextColor3 = Color3.new(1,1,1); SendBtnLabel.Parent = SendBtn
+
+local ATF = Instance.new("Frame"); ATF.Size = UDim2.new(1,0,0,38); ATF.BackgroundTransparency = 1; ATF.LayoutOrder = 2; ATF.Parent = SendSection
+local AutoTradeBtn = Instance.new("TextButton"); AutoTradeBtn.Size = UDim2.new(0.62,-2,1,0); AutoTradeBtn.BackgroundColor3 = Colors.Green; AutoTradeBtn.BackgroundTransparency = 0.15; AutoTradeBtn.BorderSizePixel = 0; AutoTradeBtn.Text = "🔁  Auto Trade"; AutoTradeBtn.TextSize = 13; AutoTradeBtn.Font = Enum.Font.GothamBold; AutoTradeBtn.TextColor3 = Color3.new(1,1,1); AutoTradeBtn.AutoButtonColor = false; AutoTradeBtn.Parent = ATF; addCorner(AutoTradeBtn, 8); addStroke(AutoTradeBtn, Colors.Green, 1, 0.4)
+local StopTradeBtn = Instance.new("TextButton"); StopTradeBtn.Size = UDim2.new(0.38,-2,1,0); StopTradeBtn.Position = UDim2.new(0.62,2,0,0); StopTradeBtn.BackgroundColor3 = Colors.Red; StopTradeBtn.BackgroundTransparency = 0.15; StopTradeBtn.BorderSizePixel = 0; StopTradeBtn.Text = "⏹  หยุด"; StopTradeBtn.TextSize = 13; StopTradeBtn.Font = Enum.Font.GothamBold; StopTradeBtn.TextColor3 = Color3.new(1,1,1); StopTradeBtn.AutoButtonColor = false; StopTradeBtn.Visible = false; StopTradeBtn.Parent = ATF; addCorner(StopTradeBtn, 8); addStroke(StopTradeBtn, Colors.Red, 1, 0.4)
+
+local TSL = Instance.new("TextLabel"); TSL.Size = UDim2.new(1,0,0,16); TSL.BackgroundTransparency = 1; TSL.Text = ""; TSL.TextSize = 10; TSL.Font = Enum.Font.GothamMedium; TSL.TextColor3 = Colors.TextMuted; TSL.TextXAlignment = Enum.TextXAlignment.Left; TSL.LayoutOrder = 3; TSL.Parent = SendSection
+
+-- ============================================================
+-- ⚙️ SETTINGS
+-- ============================================================
+local SettingsSection = createSection("SETTINGS", "⚙️", 4)
+local function createToggle(parent, label, default, lo, cb)
+    local tf = Instance.new("Frame"); tf.Size = UDim2.new(1,0,0,30); tf.BackgroundTransparency = 1; tf.LayoutOrder = lo; tf.Parent = parent
+    local tl = Instance.new("TextLabel"); tl.Size = UDim2.new(1,-54,1,0); tl.BackgroundTransparency = 1; tl.Text = label; tl.TextSize = 12; tl.Font = Enum.Font.GothamMedium; tl.TextColor3 = Colors.Text; tl.TextXAlignment = Enum.TextXAlignment.Left; tl.Parent = tf
+    local tb = Instance.new("TextButton"); tb.Size = UDim2.new(0,44,0,22); tb.Position = UDim2.new(1,-44,0.5,-11); tb.BackgroundColor3 = default and Colors.Green or Colors.BGLight; tb.BorderSizePixel = 0; tb.Text = ""; tb.AutoButtonColor = false; tb.Parent = tf; addCorner(tb, 11); addStroke(tb, Colors.Border, 1, 0.5)
+    local tc = Instance.new("Frame"); tc.Size = UDim2.new(0,18,0,18); tc.Position = default and UDim2.new(1,-20,0.5,-9) or UDim2.new(0,2,0.5,-9); tc.BackgroundColor3 = Color3.new(1,1,1); tc.BorderSizePixel = 0; tc.Parent = tb; addCorner(tc, 9)
+    local isOn = default
+    tb.MouseButton1Click:Connect(function() isOn = not isOn; tween(tb, {BackgroundColor3 = isOn and Colors.Green or Colors.BGLight}, 0.2); tween(tc, {Position = isOn and UDim2.new(1,-20,0.5,-9) or UDim2.new(0,2,0.5,-9)}, 0.2); if cb then cb(isOn) end end)
+end
+createToggle(SettingsSection, "🤖 Auto Accept", false, 1, function(v) AutoAccept = v; if v then AutoDecline = false end end)
+createToggle(SettingsSection, "🚫 Auto Decline", false, 2, function(v) AutoDecline = v; if v then AutoAccept = false end end)
+createToggle(SettingsSection, "🚀 Tween (สมูท)", true, 3, function(v) UseTween = v end)
+
+-- ============================================================
+-- 📋 LOG
+-- ============================================================
+local LogSection = createSection("LOG", "📋", 5)
+local LogFrame = Instance.new("ScrollingFrame"); LogFrame.Size = UDim2.new(1,0,0,70); LogFrame.BackgroundColor3 = Colors.BG; LogFrame.BackgroundTransparency = 0.3; LogFrame.BorderSizePixel = 0; LogFrame.ScrollBarThickness = 2; LogFrame.ScrollBarImageColor3 = Colors.Accent; LogFrame.CanvasSize = UDim2.new(0,0,0,0); LogFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y; LogFrame.LayoutOrder = 1; LogFrame.Parent = LogSection; addCorner(LogFrame, 6); addPadding(LogFrame, 4, 4, 4, 4)
+local LLL = Instance.new("UIListLayout"); LLL.SortOrder = Enum.SortOrder.LayoutOrder; LLL.Padding = UDim.new(0,2); LLL.Parent = LogFrame
+
+function addLog(text, color)
+    local le = Instance.new("TextLabel"); le.Size = UDim2.new(1,0,0,0); le.AutomaticSize = Enum.AutomaticSize.Y; le.BackgroundTransparency = 1; le.Text = os.date("%H:%M:%S").." "..text; le.TextSize = 9; le.Font = Enum.Font.RobotoMono; le.TextColor3 = color or Colors.TextDim; le.TextXAlignment = Enum.TextXAlignment.Left; le.TextWrapped = true; le.LayoutOrder = #Logs + 1; le.Parent = LogFrame
+    table.insert(Logs, le); if #Logs > 40 then Logs[1]:Destroy(); table.remove(Logs, 1) end
+    task.defer(function() LogFrame.CanvasPosition = Vector2.new(0, LogFrame.AbsoluteCanvasSize.Y) end)
+end
+addLog("🎁 V6 โหลดสำเร็จ!", Colors.AccentGlow)
+
+-- ============================================================
+-- 🖱️ Draggable + Toggle
+-- ============================================================
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; dragStart = input.Position; startPos = MainFrame.Position; input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
+TitleBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
+UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local d = input.Position - dragStart; MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
+
+local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0,42,0,42); ToggleBtn.Position = UDim2.new(1,-52,1,-52); ToggleBtn.BackgroundColor3 = Colors.Accent; ToggleBtn.BorderSizePixel = 0; ToggleBtn.Text = "🎁"; ToggleBtn.TextSize = 20; ToggleBtn.Font = Enum.Font.SourceSans; ToggleBtn.AutoButtonColor = false; ToggleBtn.Parent = ScreenGui; addCorner(ToggleBtn, 21); addShadow(ToggleBtn); addStroke(ToggleBtn, Colors.AccentGlow, 1, 0.5)
+
+local function toggleUI()
+    IsOpen = not IsOpen
+    if IsOpen then MainFrame.Visible = true; tween(MainFrame, {Size = UDim2.new(0,340,0,560), BackgroundTransparency = 0.05}, 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    else local t = tween(MainFrame, {Size = UDim2.new(0,340,0,0), BackgroundTransparency = 1}, 0.25); t.Completed:Wait(); MainFrame.Visible = false end
+end
+CloseBtn.MouseButton1Click:Connect(toggleUI)
+ToggleBtn.MouseButton1Click:Connect(toggleUI)
+UserInputService.InputBegan:Connect(function(input, p) if p then return end; if input.KeyCode == Enum.KeyCode.Insert then toggleUI() end end)
+
+-- ============================================================
+-- 📡 GIFT LOGIC — EQUIP + TP + ProximityPrompt
+-- ============================================================
+local function findGiftPrompt(character)
+    if not character then return nil end
+    for _, d in ipairs(character:GetDescendants()) do if d:IsA("ProximityPrompt") then return d end end
+    return nil
+end
+
+local function equipCard(cardName)
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    if currentTool and currentTool.Name == cardName then
+        return true
+    end
+
+    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name == cardName then
+            humanoid:EquipTool(tool)
+            task.wait(0.15)
+            return true
+        end
+    end
+    return false
+end
+
+local function moveToPlayer(targetPlayer)
+    local myChar = LocalPlayer.Character
+    local targetChar = targetPlayer.Character
+    if not myChar or not targetChar then return false end
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot or not targetRoot then return false end
+
+    local dir = (myRoot.Position - targetRoot.Position)
+    if dir.Magnitude < 1 then dir = Vector3.new(1, 0, 0) end
+    local targetCF = CFrame.new(targetRoot.Position + dir.Unit * 3, targetRoot.Position)
+
+    if UseTween then
+        local dist = (myRoot.Position - targetCF.Position).Magnitude
+        local dur = math.clamp(dist / 120, 0.15, 4)
+        TSL.Text = "🚀 Tween... " .. math.floor(dist) .. " studs"
+        local tw = TweenService:Create(myRoot, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCF})
+        tw:Play(); tw.Completed:Wait()
+    else
+        TSL.Text = "⚡ TP!"
+        myRoot.CFrame = targetCF
+    end
+    task.wait(0.15)
+    return true
+end
+
+local function doSendGift(targetPlayer, cardName)
+    if not targetPlayer or not targetPlayer.Character then
+        addLog("❌ ไม่มี Character Target!", Colors.Red); return false
+    end
+
+    TSL.Text = "🃏 Equip " .. cardName .. "..."
+    local equipped = equipCard(cardName)
+    if not equipped then
+        addLog("❌ ไม่มี " .. cardName .. " เหลือแล้ว!", Colors.Red)
+        return false
+    end
+
+    if not moveToPlayer(targetPlayer) then
+        addLog("❌ TP ไม่ได้!", Colors.Red); return false
+    end
+
+    local prompt = nil
+    for i = 1, 10 do
+        prompt = findGiftPrompt(targetPlayer.Character)
+        if prompt then break end
+        task.wait(0.15)
+    end
+    if not prompt then
+        addLog("❌ ไม่พบ ProximityPrompt!", Colors.Orange); return false
+    end
+
+    TSL.Text = "📤 ยิงคำสั่ง Gift..."
+    pcall(function() fireproximityprompt(prompt) end)
+    addLog("✅ ส่ง " .. cardName .. " → " .. targetPlayer.DisplayName, Colors.Green)
+    TSL.Text = "✅ ส่งเรียบร้อย!"
+
+    task.wait(0.3)
+    return true
+end
+
+-- ============================================================
+-- 🔘 Button Events & Controller Loop
+-- ============================================================
+local function updateSendBtnText()
+    SendBtnLabel.Text = "📤  TP + ส่ง (" .. SendAmount .. "x)"
+end
+
+MinusBtn.MouseButton1Click:Connect(function() SendAmount = math.max(1, SendAmount - 1); AmountDisplay.Text = tostring(SendAmount); updateSendBtnText() end)
+PlusBtn.MouseButton1Click:Connect(function() SendAmount = SendAmount + 1; AmountDisplay.Text = tostring(SendAmount); updateSendBtnText() end)
+MaxBtn.MouseButton1Click:Connect(function()
+    if SelectedCard then
+        local count = 0
+        for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do if t:IsA("Tool") and t.Name == SelectedCard then count = count + 1 end end
+        if LocalPlayer.Character then for _, t in ipairs(LocalPlayer.Character:GetChildren()) do if t:IsA("Tool") and t.Name == SelectedCard then count = count + 1 end end end
+        SendAmount = math.max(1, count); AmountDisplay.Text = tostring(SendAmount); updateSendBtnText()
+    end
+end)
+
+-- ปุ่มส่งด้วยตนเอง (Manual Send)
+SendBtn.MouseButton1Click:Connect(function()
+    if AutoTrading then addLog("⚠️ ระบบ Auto Trade กำลังทำงาน!", Colors.Orange); return end
+    if not SelectedPlayer then addLog("❌ กรุณาเลือกผู้เล่น!", Colors.Red); return end
+    if not SelectedCard then addLog("❌ กรุณาเลือกการ์ด!", Colors.Red); return end
+
+    SendBtnLabel.Text = "⏳  กำลังดำเนินการ..."
+
+    task.spawn(function()
+        local sent = 0
+        for i = 1, SendAmount do
+            TSL.Text = "📤 กำลังส่ง " .. i .. "/" .. SendAmount
+            local ok = doSendGift(SelectedPlayer, SelectedCard)
+            if ok then
+                sent = sent + 1
+            else
+                addLog("⚠️ หยุดส่งชั่วคราวที่ " .. i .. "/" .. SendAmount, Colors.Orange)
+                break
+            end
+            if i < SendAmount then task.wait(0.2) end
+        end
+        SendBtnLabel.Text = "✅ ส่งแล้ว " .. sent .. "/" .. SendAmount .. " ใบ!"
+        addLog("📊 สรุป: ส่งไปแล้ว " .. sent .. "/" .. SendAmount .. " ใบ", Colors.Green)
+        task.wait(1.2)
+        updateSendBtnText()
+        refreshCardList()
+    end)
+end)
+
+-- ปุ่มเปิด/ปิด ระบบส่งอัตโนมัติ (Auto Trade Loop)
+AutoTradeBtn.MouseButton1Click:Connect(function()
+    if AutoTrading then return end
+    if not SelectedPlayer then addLog("❌ กรุณาเลือกผู้เล่น!", Colors.Red); return end
+    if not SelectedCard then addLog("❌ กรุณาเลือกการ์ด!", Colors.Red); return end
+
+    AutoTrading = true
+    StopTradeBtn.Visible = true
+    AutoTradeBtn.Text = "🔄 ทำงานอยู่..."
+    addLog("🚀 เริ่มระบบ Auto Trade!", Colors.GreenGlow)
+
+    task.spawn(function()
+        while AutoTrading do
+            local ok = doSendGift(SelectedPlayer, SelectedCard)
+            if not ok then
+                addLog("⚠️ การ์ดหมดหรือเกิดข้อผิดพลาด หยุด Auto Trade", Colors.Orange)
+                AutoTrading = false
+                break
+            end
+            task.wait(0.2)
+        end
+        
+        StopTradeBtn.Visible = false
+        AutoTradeBtn.Text = "🔁  Auto Trade"
+        TSL.Text = "⏹ หยุดระบบแล้ว"
+        refreshCardList()
+    end)
+end)
+
+StopTradeBtn.MouseButton1Click:Connect(function()
+    AutoTrading = false
+    StopTradeBtn.Visible = false
+    AutoTradeBtn.Text = "🔁  Auto Trade"
+    addLog("⏹ สั่งหยุด Auto Trade เรียบร้อย", Colors.RedGlow)
+end)
+
+-- ============================================================
+-- 🤖 Auto Accept / Decline Remote Listener
+-- ============================================================
+if GiftRE then
+    GiftRE.OnClientEvent:Connect(function(action, data)
+        if action == "ReceiveGift" or action == "TradeRequest" then
+            if AutoAccept then
+                pcall(function() GiftRE:FireServer("Accept", data) end)
+                addLog("🤖 ตอบรับการเทรดอัตโนมัติ", Colors.Green)
+            elseif AutoDecline then
+                pcall(function() GiftRE:FireServer("Decline", data) end)
+                addLog("🚫 ปฏิเสธการเทรดอัตโนมัติ", Colors.Red)
+            end
+        end
+    end)
+end
