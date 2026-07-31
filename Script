@@ -1,6 +1,6 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 
-local Window = WindUI:CreateWindow({
+local Window = Window or WindUI:CreateWindow({
     Title = "PayomboyZ",
     Author = "Anime Card Farm",
     Folder = "PayomboyZUI",
@@ -53,7 +53,6 @@ local function getSpawnPackClickDetector()
             and workspace.MAP.Plots:FindFirstChild(tostring(plotNum))
         
         if plotFolder and plotFolder:FindFirstChild("Plot_N0") then
-            -- Find the spawn button within the player's plot
             for _, v in ipairs(plotFolder.Plot_N0:GetDescendants()) do
                 if v:IsA("ClickDetector") and v.Parent.Name == "ButtonPart" then
                     return v
@@ -61,7 +60,6 @@ local function getSpawnPackClickDetector()
             end
         end
     end
-    -- Fallback to the first found plot if player's plot cannot be identified
     for _, desc in ipairs(workspace:GetDescendants()) do
         if desc:IsA("ClickDetector") and desc.Parent and desc.Parent.Name == "ButtonPart" and desc.Parent.Parent and desc.Parent.Parent.Name == "Plot_N0" then
             return desc
@@ -84,13 +82,11 @@ local AutoSpawnToggle = MainTab:Toggle({
                     return
                 end
                 
-                -- Maximum speed spawn loop with dynamic brake threshold to prevent conveyor belt overflow
                 while getgenv().AutoSpawnPack do
                     local activeCards = 0
                     if getgenv().CardFolder then
                         for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
                             if model:IsA("Model") and model:GetAttribute("IgnoreTutoBeam") ~= nil and model:FindFirstChildWhichIsA("ProximityPrompt", true) then
-                                -- Ignore cards that have been checked and rejected by the buy loop
                                 if getgenv().AutoBuyCards and model:GetAttribute("Rejected") then
                                     continue
                                 end
@@ -100,7 +96,6 @@ local AutoSpawnToggle = MainTab:Toggle({
                     end
                     
                     if getgenv().AutoBuyCards then
-                        -- Strict 1-by-1 logic when buying
                         if activeCards == 0 then
                             pcall(fireclickdetector, cd)
                             task.wait(0.3) 
@@ -108,7 +103,6 @@ local AutoSpawnToggle = MainTab:Toggle({
                             task.wait(0.05) 
                         end
                     else
-                        -- Fast spam logic when just afk spawning (with a small brake)
                         pcall(fireclickdetector, cd)
                         if activeCards >= 3 then
                             task.wait(0.2)
@@ -187,7 +181,6 @@ getgenv().PromptCooldowns = getgenv().PromptCooldowns or {}
 
 local RunService = game:GetService("RunService")
 
--- Find the workspace folder containing all spawned cards
 local function findCardFolder()
     for _, desc in ipairs(workspace:GetDescendants()) do
         if desc:IsA("ProximityPrompt") then
@@ -212,7 +205,7 @@ local function SendWebhook(url, rarity, mutation)
                 ["title"] = "🎉 Card Bought!",
                 ["description"] = "Successfully bought a card matching your criteria.",
                 ["type"] = "rich",
-                ["color"] = 16724787, -- Red Color (0xFF3C3C)
+                ["color"] = 16724787,
                 ["fields"] = {
                     {
                         ["name"] = "Rarity",
@@ -242,7 +235,6 @@ local function SendWebhook(url, rarity, mutation)
     end)
 end
 
--- Main heartbeat loop targeting ProximityPrompts instantly without queue delays
 local function instantBuyLoop()
     if not getgenv().AutoBuyCards then return end
     
@@ -251,7 +243,6 @@ local function instantBuyLoop()
     end
     if not getgenv().CardFolder then return end
 
-    -- Scan for new target cards on the conveyor belt
     for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
         if not model:IsA("Model") or model:GetAttribute("IgnoreTutoBeam") == nil then continue end
         
@@ -262,7 +253,6 @@ local function instantBuyLoop()
         local mutationLabel = model:FindFirstChild("Mutation", true)
         
         if rarityLabel then
-            -- Strip RichText tags (<font color=...>) to ensure accurate string matching
             local cleanRarityText = string.gsub(rarityLabel.Text, "<[^>]+>", "")
             local cardRarity = string.match(cleanRarityText, "^%s*(.-)%s*$") or ""
             if cardRarity ~= "" and cardRarity ~= "Label" then
@@ -287,7 +277,6 @@ local function instantBuyLoop()
                 end
                 
                 if matchRarity and matchMutation then
-                    -- Mass-spam interactions with a 0.05s internal throttle per prompt to bypass rate limits
                     local now = tick()
                     if not getgenv().PromptCooldowns[prompt] or now - getgenv().PromptCooldowns[prompt] > 0.05 then
                         getgenv().PromptCooldowns[prompt] = now
@@ -309,7 +298,6 @@ local function instantBuyLoop()
                         end
                     end
                 else
-                    -- Mark the card as rejected so the spawner doesn't wait for it
                     model:SetAttribute("Rejected", true)
                 end
             end
@@ -328,9 +316,6 @@ local AutoBuyToggle = MainTab:Toggle({
     end
 })
 
---------------------------------------------------------------------------------
--- CARD PACK ESP SYSTEM (ADDED EXTRA FEATURE / ระบบ ESP มองซองการ์ด)
---------------------------------------------------------------------------------
 getgenv().CardESP = false
 
 local function applyESP(model)
@@ -459,7 +444,7 @@ local AutoCarryToggle = MainTab:Toggle({
                         task.wait(1)
                         elapsed = elapsed + 1
                     end
-                    task.wait(1) -- Safety yield
+                    task.wait(1)
                 end
             end)
         end
@@ -478,7 +463,6 @@ local AutoSellBoxToggle = MainTab:Toggle({
                     local character = player.Character
                     local hrp = character and character:FindFirstChild("HumanoidRootPart")
                     
-                    -- Find Box in Backpack
                     local backpack = player:FindFirstChild("Backpack")
                     local boxTool = nil
                     
@@ -491,13 +475,11 @@ local AutoSellBoxToggle = MainTab:Toggle({
                         end
                     end
                     
-                    -- Equip it if found in backpack
                     if boxTool and character and character:FindFirstChild("Humanoid") then
                         character.Humanoid:EquipTool(boxTool)
                         task.wait(0.2)
                     end
                     
-                    -- If it's equipped in Character, teleport and fire the SellPart prompt
                     local isEquipped = false
                     if character then
                         for _, tool in ipairs(character:GetChildren()) do
@@ -646,7 +628,6 @@ local AutoUseLuckToggle = MainTab:Toggle({
                         local amt2 = getPotionAmount("LuckPotion2")
                         local amt3 = getPotionAmount("LuckPotion3")
                         
-                        -- Notify current inventory
                         if WindUI and WindUI.Notify then
                             WindUI:Notify({
                                 Title = "Luck Inventory Check",
@@ -671,12 +652,13 @@ local AutoUseLuckToggle = MainTab:Toggle({
 })
 
 --------------------------------------------------------------------------------
--- TRADE SYSTEM (UPDATED EXTRA FEATURE / ระบบเลือกคนเทรด + ออโต้เทรด)
+-- TRADE SYSTEM
 --------------------------------------------------------------------------------
 getgenv().AutoAcceptTrade = false
 getgenv().AutoConfirmTrade = false
 getgenv().AutoSendTrade = false
 getgenv().TargetTradePlayer = ""
+getgenv().SelectedTradeCardInstance = nil
 
 local TradeRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") 
     or game:GetService("ReplicatedStorage"):FindFirstChild("TradeRemotes")
@@ -691,10 +673,27 @@ local function getPlayerList()
     return names
 end
 
+local function getBackpackCards()
+    local items = {}
+    local backpack = Players.LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local mutation = tool:GetAttribute("Mutation") or "Normal"
+                table.insert(items, {
+                    Name = tool.Name .. " [" .. tostring(mutation) .. "]",
+                    Instance = tool
+                })
+            end
+        end
+    end
+    return items
+end
+
 local PlayerTradeDropdown
 
 TradeTab:Input({
-    Title = "Target Player Name (ระบุชื่อผู้รับแบบพิมพ์)",
+    Title = "Target Player Name",
     PlaceholderText = "Type player name...",
     Callback = function(text)
         getgenv().TargetTradePlayer = text
@@ -702,7 +701,7 @@ TradeTab:Input({
 })
 
 PlayerTradeDropdown = TradeTab:Dropdown({
-    Title = "Select Target Player (ดรอปดาวน์เลือกผู้รับ)",
+    Title = "Select Target Player",
     Values = getPlayerList(),
     Value = "",
     Callback = function(value)
@@ -718,11 +717,65 @@ PlayerTradeDropdown = TradeTab:Dropdown({
 })
 
 TradeTab:Button({
-    Title = "Refresh Player List (รีเฟรชรายชื่อในเซิร์ฟ)",
+    Title = "Refresh Player List",
     Callback = function()
         if PlayerTradeDropdown and PlayerTradeDropdown.Refresh then
             pcall(function() PlayerTradeDropdown:Refresh(getPlayerList()) end)
             WindUI:Notify({ Title = "Trade", Content = "Refreshed server player list!", Duration = 2 })
+        end
+    end
+})
+
+local currentBackpackItems = getBackpackCards()
+local cardNamesList = {}
+for _, item in ipairs(currentBackpackItems) do
+    table.insert(cardNamesList, item.Name)
+end
+
+local CardTradeDropdown = TradeTab:Dropdown({
+    Title = "Select Card / Pack from Inventory",
+    Values = cardNamesList,
+    Value = "",
+    Callback = function(value)
+        local selectedName = type(value) == "table" and value[1] or tostring(value)
+        for _, item in ipairs(currentBackpackItems) do
+            if item.Name == selectedName then
+                getgenv().SelectedTradeCardInstance = item.Instance
+                break
+            end
+        end
+    end
+})
+
+TradeTab:Button({
+    Title = "Refresh Inventory Cards",
+    Callback = function()
+        currentBackpackItems = getBackpackCards()
+        local newNames = {}
+        for _, item in ipairs(currentBackpackItems) do
+            table.insert(newNames, item.Name)
+        end
+        if CardTradeDropdown and CardTradeDropdown.Refresh then
+            pcall(function() CardTradeDropdown:Refresh(newNames) end)
+            WindUI:Notify({ Title = "Trade", Content = "Refreshed backpack cards!", Duration = 2 })
+        end
+    end
+})
+
+TradeTab:Button({
+    Title = "Add Selected Card to Trade",
+    Callback = function()
+        if getgenv().SelectedTradeCardInstance and getgenv().SelectedTradeCardInstance.Parent then
+            local addRemote = game:GetService("ReplicatedStorage"):FindFirstChild("AddTradeItem", true)
+                or game:GetService("ReplicatedStorage"):FindFirstChild("OfferItem", true)
+                or (TradeRemotes and TradeRemotes:FindFirstChild("AddItem"))
+            
+            if addRemote then
+                addRemote:FireServer(getgenv().SelectedTradeCardInstance)
+                WindUI:Notify({ Title = "Trade", Content = "Added item to trade!", Duration = 2 })
+            end
+        else
+            WindUI:Notify({ Title = "Error", Content = "No card selected or card was removed!", Duration = 3 })
         end
     end
 })
@@ -765,7 +818,7 @@ TradeTab:Toggle({
             task.spawn(function()
                 while getgenv().AutoAcceptTrade do
                     pcall(function()
-                        local player = game:GetService("Players").LocalPlayer
+                        local player = game:GetService("Players.LocalPlayer")
                         local tradeGui = player.PlayerGui:FindFirstChild("TradeRequest") or player.PlayerGui:FindFirstChild("TradeGui")
                         if tradeGui and tradeGui.Visible then
                             local acceptBtn = tradeGui:FindFirstChild("Accept", true) or tradeGui:FindFirstChild("Yes", true)
@@ -795,19 +848,18 @@ TradeTab:Toggle({
             task.spawn(function()
                 while getgenv().AutoConfirmTrade do
                     pcall(function()
-                        local player = game:GetService("Players").LocalPlayer
-                        local mainTrade = player.PlayerGui:FindFirstChild("Trade") or player.PlayerGui:FindFirstChild("TradingFrame")
-                        if mainTrade and mainTrade.Visible then
-                            local confirmBtn = mainTrade:FindFirstChild("Confirm", true) or mainTrade:FindFirstChild("Accept", true) or mainTrade:FindFirstChild("Ready", true)
+                        local player = game:GetService("Players.LocalPlayer")
+                        local tradeGui = player.PlayerGui:FindFirstChild("TradeWindow") or player.PlayerGui:FindFirstChild("TradeGui")
+                        if tradeGui and tradeGui.Visible then
+                            local confirmBtn = tradeGui:FindFirstChild("Confirm", true) or tradeGui:FindFirstChild("Ready", true)
                             if confirmBtn and confirmBtn:IsA("GuiButton") then
                                 for _, c in ipairs(getconnections(confirmBtn.MouseButton1Click)) do
                                     c:Fire()
                                 end
                             end
                         end
-                        if TradeRemotes then
-                            if TradeRemotes:FindFirstChild("ConfirmTrade") then TradeRemotes.ConfirmTrade:FireServer() end
-                            if TradeRemotes:FindFirstChild("AcceptTrade") then TradeRemotes.AcceptTrade:FireServer() end
+                        if TradeRemotes and TradeRemotes:FindFirstChild("ConfirmTrade") then
+                            TradeRemotes.ConfirmTrade:FireServer()
                         end
                     end)
                     task.wait(1)
@@ -817,8 +869,11 @@ TradeTab:Toggle({
     end
 })
 
+--------------------------------------------------------------------------------
+-- MISC TAB & CONFIG SYSTEM
+--------------------------------------------------------------------------------
 local HttpService = game:GetService("HttpService")
-local ConfigFolder = "PayomboyZ_AnimeCardFarm"
+local ConfigFolder = "Dexq_AnimeCardFarm"
 
 if not isfolder(ConfigFolder) then
     pcall(makefolder, ConfigFolder)
@@ -837,9 +892,7 @@ local function GetConfigs()
     return configs
 end
 
-local ConfigData = {
-    Autoload = "",
-}
+local ConfigData = { Autoload = "" }
 
 local function SaveMainConfig()
     if writefile then
@@ -883,9 +936,8 @@ MiscTab:Keybind({
             if not toggled then
                 for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
                     if v:IsA("ScreenGui") and v:FindFirstChild("Main") and v.Main:IsA("Frame") then
-                        -- Check if this is the WindUI ScreenGui
                         local titleLabel = v.Main:FindFirstChild("Topbar", true)
-                        if titleLabel or v.Name == "WindUI" or v.Name == "PayomboyZUI" then
+                        if titleLabel or v.Name == "WindUI" or v.Name == "DexqUI" then
                             v.Enabled = not v.Enabled
                         end
                     end
@@ -906,8 +958,6 @@ local function SaveConfig(name)
         AutoCarryDelay = getgenv().AutoCarryDelay or 5,
         AntiAfk = getgenv().AntiAfkState or false,
         AutoUseLuck = getgenv().AutoUseLuck or false,
-        AutoAcceptTrade = getgenv().AutoAcceptTrade or false,
-        AutoConfirmTrade = getgenv().AutoConfirmTrade or false,
         Webhook = getgenv().DiscordWebhook or ""
     }
     if writefile then
@@ -999,7 +1049,7 @@ MiscTab:Input({
     end
 })
 
-local ConfigDropdown -- declare beforehand
+local ConfigDropdown
 
 MiscTab:Button({
     Title = "Save Config",
@@ -1026,52 +1076,179 @@ ConfigDropdown = MiscTab:Dropdown({
         if type(value) == "table" then
             for k, v in pairs(value) do
                 if type(k) == "number" then
-                    SelectedConfig = tostring(v)
+                    SelectedConfig = v
                 else
-                    SelectedConfig = tostring(k)
+                    SelectedConfig = k
                 end
             end
-        elseif type(value) == "string" then
+        else
             SelectedConfig = value
         end
     end
 })
 
 MiscTab:Button({
-    Title = "Load Config",
+    Title = "Refresh Config List",
+    Callback = function()
+        if ConfigDropdown and ConfigDropdown.Refresh then
+            pcall(function() ConfigDropdown:Refresh(GetConfigs()) end)
+        end
+        WindUI:Notify({ Title = "Config", Content = "Config list refreshed", Duration = 3 })
+    end
+})
+
+MiscTab:Button({
+    Title = "Load Selected Config",
     Callback = function()
         if SelectedConfig and SelectedConfig ~= "" then
             LoadConfig(SelectedConfig)
-        else
-            WindUI:Notify({ Title = "Config", Content = "Please select a config to load", Duration = 3 })
+        end
+    end
+})
+
+MiscTab:Button({
+    Title = "Delete Selected Config",
+    Callback = function()
+        if SelectedConfig and SelectedConfig ~= "" then
+            if isfile and isfile(ConfigFolder .. "/" .. SelectedConfig .. ".json") then
+                pcall(delfile, ConfigFolder .. "/" .. SelectedConfig .. ".json")
+                if ConfigData.Autoload == SelectedConfig then
+                    ConfigData.Autoload = ""
+                    SaveMainConfig()
+                end
+                if ConfigDropdown and ConfigDropdown.Refresh then
+                    pcall(function() ConfigDropdown:Refresh(GetConfigs()) end)
+                end
+                WindUI:Notify({ Title = "Config", Content = "Deleted config: " .. SelectedConfig, Duration = 3 })
+                SelectedConfig = ""
+            else
+                WindUI:Notify({ Title = "Config", Content = "Config not found!", Duration = 3 })
+            end
         end
     end
 })
 
 MiscTab:Toggle({
-    Title = "Autoload Config",
-    Value = ConfigData.Autoload ~= "",
+    Title = "Auto Load Selected Config",
+    Value = (ConfigData.Autoload ~= ""),
     Callback = function(state)
         if state then
-            if SelectedConfig and SelectedConfig ~= "" then
-                ConfigData.Autoload = SelectedConfig
-                SaveMainConfig()
-                WindUI:Notify({ Title = "Config", Content = "Set autoload to: " .. SelectedConfig, Duration = 3 })
-            else
-                WindUI:Notify({ Title = "Config", Content = "Please select a config first", Duration = 3 })
-            end
+            ConfigData.Autoload = SelectedConfig
         else
             ConfigData.Autoload = ""
-            SaveMainConfig()
-            WindUI:Notify({ Title = "Config", Content = "Disabled Autoload", Duration = 3 })
         end
+        SaveMainConfig()
     end
 })
 
--- Auto-load configuration on script execution
-if ConfigData.Autoload and ConfigData.Autoload ~= "" then
+if ConfigData.Autoload ~= "" then
     task.spawn(function()
         task.wait(1)
         LoadConfig(ConfigData.Autoload)
     end)
 end
+
+--------------------------------------------------------------------------------
+-- HORST DESCRIPTION UPDATE LOOP
+--------------------------------------------------------------------------------
+local function updateHorstDescription()
+    local localPlayer = Players.LocalPlayer
+    if not localPlayer then return end
+
+    local coins = "0"
+    local playerGui = localPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        local hud = playerGui:FindFirstChild("HUD")
+        local currencies = hud and hud:FindFirstChild("Currencies")
+        local coinsCounter = currencies and currencies:FindFirstChild("CoinsCounter")
+        local coinsLabel = coinsCounter and coinsCounter:FindFirstChild("TextLabel")
+
+        if coinsLabel and coinsLabel.Text then
+            coins = coinsLabel.Text
+        end
+    end
+
+    local cvStr = "Cv:0"
+    if playerGui then
+        local hud = playerGui:FindFirstChild("HUD")
+        local conveyor = hud and (hud:FindFirstChild("Conveyor") or hud:FindFirstChild("ConveyorLevel"))
+        local levelLabel = conveyor and (conveyor:FindFirstChild("Level") or conveyor:FindFirstChild("TextLabel"))
+        
+        if levelLabel then
+            local levelText = tostring(levelLabel.Text):match("%d+") or levelLabel.Text
+            cvStr = "Cv:" .. tostring(levelText)
+        else
+            local conveyorVal = localPlayer:FindFirstChild("ConveyorLevel") or localPlayer:FindFirstChild("Conveyor")
+            if conveyorVal then
+                cvStr = "Cv:" .. tostring(conveyorVal.Value)
+            end
+        end
+    end
+
+    local cardStats = {
+        Grail   = {Rad = 0, Gli = 0, Star = 0, Adm = 0, Unk = 0},
+        Academy = {Rad = 0, Gli = 0, Star = 0, Adm = 0, Unk = 0}
+    }
+
+    local backpack = localPlayer:FindFirstChild("Backpack")
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                local itemName = item.Name:lower()
+                local itemMutation = tostring(item:GetAttribute("Mutation") or ""):lower()
+                local fullText = itemName .. " " .. itemMutation
+
+                for rarity, data in pairs(cardStats) do
+                    if itemName:find(rarity:lower()) then
+                        if fullText:find("radioactive") then
+                            data.Rad = data.Rad + 1
+                        elseif fullText:find("glitch") then
+                            data.Gli = data.Gli + 1
+                        elseif fullText:find("starfallen") then
+                            data.Star = data.Star + 1
+                        elseif fullText:find("admin") then
+                            data.Adm = data.Adm + 1
+                        elseif fullText:find("unknow") or fullText:find("unknown") then
+                            data.Unk = data.Unk + 1
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    local message = string.format(
+        "💰 %s ⚙️ %s - 🏆 Grail: [Rad:%d Gli:%d Star:%d Adm:%d Unk:%d] 📮 Academy: [Rad:%d Gli:%d Star:%d Adm:%d Unk:%d]",
+        coins, cvStr,
+        cardStats.Grail.Rad,   cardStats.Grail.Gli,   cardStats.Grail.Star,   cardStats.Grail.Adm,   cardStats.Grail.Unk,
+        cardStats.Academy.Rad, cardStats.Academy.Gli, cardStats.Academy.Star, cardStats.Academy.Adm, cardStats.Academy.Unk
+    )
+
+    local item_data = {
+        Coins = coins,
+        ConveyorLevel = cvStr,
+        Grail = cardStats.Grail,
+        Academy = cardStats.Academy
+    }
+    local EncodeJson = HttpService:JSONEncode(item_data)
+
+    if _G and type(_G.Horst_SetDescription) == "function" then
+        pcall(function()
+            _G.Horst_SetDescription(message, EncodeJson)
+        end)
+    end
+end
+
+task.spawn(function()
+    while true do
+        updateHorstDescription()
+        task.wait(2)
+    end
+end)
+
+WindUI:Notify({
+    Title = "PayomboyZ Loaded",
+    Content = "UI & Misc Tab loaded successfully!",
+    Duration = 5,
+})
