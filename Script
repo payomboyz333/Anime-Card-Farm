@@ -23,17 +23,17 @@ local Window = Window or WindUI:CreateWindow({
 })
 
 local MainTab = Window:Tab({
-    Title = "Main",
+    Title = "หน้าหลัก",
     Icon = "solar:home-bold",
 })
 
 local TradeTab = Window:Tab({
-    Title = "Trade",
+    Title = "แลกเปลี่ยน",
     Icon = "solar:transfer-horizontal-bold",
 })
 
 local MiscTab = Window:Tab({
-    Title = "Misc",
+    Title = "ตั้งค่า",
     Icon = "solar:settings-bold",
 })
 
@@ -70,7 +70,7 @@ end
 
 getgenv().AutoSpawnPack = false
 local AutoSpawnToggle = MainTab:Toggle({
-    Title = "Auto Spawn Pack",
+    Title = "เปิดซองอัตโนมัติ",
     Callback = function(state)
         getgenv().AutoSpawnPack = state
         if state then
@@ -128,7 +128,7 @@ local RaritiesList = {
 getgenv().SelectedRarities = {}
 
 local RarityDropdown = MainTab:Dropdown({
-    Title = "Select Rarities to Buy",
+    Title = "เลือกระดับการ์ดที่ต้องการซื้อ",
     Multi = true,
     Values = RaritiesList,
     Value = {},
@@ -156,7 +156,7 @@ local MutationsList = {
 getgenv().SelectedMutations = {}
 
 local MutationDropdown = MainTab:Dropdown({
-    Title = "Select Mutations to Buy",
+    Title = "เลือก Mutation ที่ต้องการซื้อ",
     Multi = true,
     Values = MutationsList,
     Value = {},
@@ -310,7 +310,7 @@ getgenv().BruteForceLoop = RunService.Heartbeat:Connect(instantBuyLoop)
 
 getgenv().AutoBuyCards = false
 local AutoBuyToggle = MainTab:Toggle({
-    Title = "Buy Selected Now",
+    Title = "ซื้อการ์ดที่เลือกอัตโนมัติ",
     Callback = function(state)
         getgenv().AutoBuyCards = state
     end
@@ -389,7 +389,7 @@ getgenv().AutoCarry = false
 getgenv().AutoCarryDelay = 5
 
 local AutoCarryToggle = MainTab:Toggle({
-    Title = "Auto Carry (Collect Money)",
+    Title = "เก็บเงินอัตโนมัติ",
     Callback = function(state)
         getgenv().AutoCarry = state
         if state then
@@ -453,7 +453,7 @@ local AutoCarryToggle = MainTab:Toggle({
 
 getgenv().AutoSellBox = false
 local AutoSellBoxToggle = MainTab:Toggle({
-    Title = "Auto Sell Box",
+    Title = "ขายกล่องอัตโนมัติ",
     Callback = function(state)
         getgenv().AutoSellBox = state
         if state then
@@ -544,7 +544,7 @@ local antiAfkConnection
 
 getgenv().AntiAfkState = false
 local AntiAfkToggle = MainTab:Toggle({
-    Title = "Anti AFK",
+    Title = "ป้องกัน AFK",
     Callback = function(state)
         getgenv().AntiAfkState = state
         if state then
@@ -612,7 +612,7 @@ end
 
 getgenv().AutoUseLuck = false
 local AutoUseLuckToggle = MainTab:Toggle({
-    Title = "Auto Use Luck Potion",
+    Title = "ใช้ยา Luck อัตโนมัติ",
     Value = getgenv().AutoUseLuck,
     Callback = function(state)
         getgenv().AutoUseLuck = state
@@ -693,8 +693,8 @@ end
 local PlayerTradeDropdown
 
 TradeTab:Input({
-    Title = "Target Player Name",
-    PlaceholderText = "Type player name...",
+    Title = "ชื่อผู้เล่นเป้าหมาย",
+    PlaceholderText = "พิมพ์ชื่อผู้เล่น...",
     Callback = function(text)
         getgenv().TargetTradePlayer = text
     end
@@ -717,11 +717,11 @@ PlayerTradeDropdown = TradeTab:Dropdown({
 })
 
 TradeTab:Button({
-    Title = "Refresh Player List",
+    Title = "รีเฟรชรายชื่อผู้เล่น",
     Callback = function()
         if PlayerTradeDropdown and PlayerTradeDropdown.Refresh then
             pcall(function() PlayerTradeDropdown:Refresh(getPlayerList()) end)
-            WindUI:Notify({ Title = "Trade", Content = "Refreshed server player list!", Duration = 2 })
+            WindUI:Notify({ Title = "แลกเปลี่ยน", Content = "Refreshed server player list!", Duration = 2 })
         end
     end
 })
@@ -748,7 +748,7 @@ local CardTradeDropdown = TradeTab:Dropdown({
 })
 
 TradeTab:Button({
-    Title = "Refresh Inventory Cards",
+    Title = "รีเฟรชรายการการ์ด",
     Callback = function()
         currentBackpackItems = getBackpackCards()
         local newNames = {}
@@ -757,7 +757,7 @@ TradeTab:Button({
         end
         if CardTradeDropdown and CardTradeDropdown.Refresh then
             pcall(function() CardTradeDropdown:Refresh(newNames) end)
-            WindUI:Notify({ Title = "Trade", Content = "Refreshed backpack cards!", Duration = 2 })
+            WindUI:Notify({ Title = "แลกเปลี่ยน", Content = "Refreshed backpack cards!", Duration = 2 })
         end
     end
 })
@@ -772,7 +772,7 @@ TradeTab:Button({
             
             if addRemote then
                 addRemote:FireServer(getgenv().SelectedTradeCardInstance)
-                WindUI:Notify({ Title = "Trade", Content = "Added item to trade!", Duration = 2 })
+                WindUI:Notify({ Title = "แลกเปลี่ยน", Content = "Added item to trade!", Duration = 2 })
             end
         else
             WindUI:Notify({ Title = "Error", Content = "No card selected or card was removed!", Duration = 3 })
@@ -1052,7 +1052,7 @@ MiscTab:Input({
 local ConfigDropdown
 
 MiscTab:Button({
-    Title = "Save Config",
+    Title = "บันทึก Config",
     Callback = function()
         if ConfigNameInput ~= "" then
             SaveConfig(ConfigNameInput)
@@ -1069,7 +1069,7 @@ local ConfigList = GetConfigs()
 local SelectedConfig = ConfigData.Autoload
 
 ConfigDropdown = MiscTab:Dropdown({
-    Title = "Saved Configs",
+    Title = "Config ที่บันทึกไว้",
     Values = ConfigList,
     Value = ConfigData.Autoload,
     Callback = function(value)
@@ -1088,7 +1088,7 @@ ConfigDropdown = MiscTab:Dropdown({
 })
 
 MiscTab:Button({
-    Title = "Refresh Config List",
+    Title = "รีเฟรชรายการ Config",
     Callback = function()
         if ConfigDropdown and ConfigDropdown.Refresh then
             pcall(function() ConfigDropdown:Refresh(GetConfigs()) end)
@@ -1098,7 +1098,7 @@ MiscTab:Button({
 })
 
 MiscTab:Button({
-    Title = "Load Selected Config",
+    Title = "โหลด Config ที่เลือก",
     Callback = function()
         if SelectedConfig and SelectedConfig ~= "" then
             LoadConfig(SelectedConfig)
@@ -1107,7 +1107,7 @@ MiscTab:Button({
 })
 
 MiscTab:Button({
-    Title = "Delete Selected Config",
+    Title = "ลบ Config ที่เลือก",
     Callback = function()
         if SelectedConfig and SelectedConfig ~= "" then
             if isfile and isfile(ConfigFolder .. "/" .. SelectedConfig .. ".json") then
