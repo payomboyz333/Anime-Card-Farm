@@ -2,22 +2,22 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footag
 
 local Window = WindUI:CreateWindow({
     Title = "PayomboyZ",
-    Author = "Anime Card Farm (กด F เพื่อย่อหน้าต่าง)",
+    Author = "Anime Card Farm",
     Folder = "PayomboyZUI",
     Size = UDim2.fromOffset(480, 310),
     Transparent = true,
     Theme = "Red", 
     HideSearchBar = true,
     OpenButton = {
-        Title = "Open PayomboyZ (กด F เพื่อย่อหน้าต่าง)",
+        Title = "Open PayomboyZ",
         CornerRadius = UDim.new(1, 0),
         StrokeThickness = 2,
         Enabled = true,
         Draggable = true,
         Scale = 0.8,
         Color = ColorSequence.new(
-            Color3.fromHex("#ff3c3c"),
-            Color3.fromHex("#a82323")
+            Color3.fromHex("#ff0000"),
+            Color3.fromHex("#8b0000")
         )
     }
 })
@@ -25,16 +25,6 @@ local Window = WindUI:CreateWindow({
 local MainTab = Window:Tab({
     Title = "Main",
     Icon = "solar:home-bold",
-})
-
-local TradeTab = Window:Tab({
-    Title = "Trade",
-    Icon = "solar:transfer-horizontal-bold",
-})
-
-local MiscTab = Window:Tab({
-    Title = "Misc",
-    Icon = "solar:settings-bold",
 })
 
 local FilterConfig = {
@@ -212,7 +202,7 @@ local function SendWebhook(url, rarity, mutation)
                 ["title"] = "🎉 Card Bought!",
                 ["description"] = "Successfully bought a card matching your criteria.",
                 ["type"] = "rich",
-                ["color"] = 16724787, -- Red Color (0xFF3C3C)
+                ["color"] = 16711680, -- Pure Red Color (0xFF0000)
                 ["fields"] = {
                     {
                         ["name"] = "Rarity",
@@ -328,78 +318,6 @@ local AutoBuyToggle = MainTab:Toggle({
     end
 })
 
---------------------------------------------------------------------------------
--- CARD PACK ESP SYSTEM (ระบบ ESP มองซองการ์ด)
---------------------------------------------------------------------------------
-getgenv().CardESP = false
-
-local function applyESP(model)
-    if not model:IsA("Model") or model:FindFirstChild("CardESP_Tag") then return end
-    
-    local rarityLabel = model:FindFirstChild("Rarity", true)
-    local mutationLabel = model:FindFirstChild("Mutation", true)
-    local cardRarity = rarityLabel and string.gsub(rarityLabel.Text, "<[^>]+>", "") or "Card"
-    local cardMutation = mutationLabel and string.gsub(mutationLabel.Text, "<[^>]+>", "") or ""
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "CardESP_Tag"
-    highlight.Adornee = model
-    highlight.FillColor = Color3.fromRGB(255, 50, 50)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.Parent = model
-    
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "CardESP_Text"
-    billboard.Adornee = model
-    billboard.Size = UDim2.new(0, 150, 0, 40)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = cardRarity .. (cardMutation ~= "" and ("\n[" .. cardMutation .. "]") or "")
-    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textLabel.TextStrokeTransparency = 0
-    textLabel.TextScaled = true
-    textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.Parent = billboard
-    billboard.Parent = model
-end
-
-local function removeESP(model)
-    if model:FindFirstChild("CardESP_Tag") then model.CardESP_Tag:Destroy() end
-    if model:FindFirstChild("CardESP_Text") then model.CardESP_Text:Destroy() end
-end
-
-MainTab:Toggle({
-    Title = "Card Pack ESP (มองซองทะลุ)",
-    Value = getgenv().CardESP,
-    Callback = function(state)
-        getgenv().CardESP = state
-        task.spawn(function()
-            while getgenv().CardESP do
-                if getgenv().CardFolder then
-                    for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
-                        if model:IsA("Model") and model:GetAttribute("IgnoreTutoBeam") ~= nil then
-                            applyESP(model)
-                        end
-                    end
-                else
-                    findCardFolder()
-                end
-                task.wait(0.5)
-            end
-            if not getgenv().CardESP and getgenv().CardFolder then
-                for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
-                    removeESP(model)
-                end
-            end
-        end)
-    end
-})
-
 getgenv().AutoCarry = false
 getgenv().AutoCarryDelay = 5
 
@@ -499,7 +417,6 @@ local AutoSellBoxToggle = MainTab:Toggle({
                     
                     -- If it's equipped in Character, teleport and fire the SellPart prompt
                     local isEquipped = false
-                    if character me
                     if character then
                         for _, tool in ipairs(character:GetChildren()) do
                             if tool:IsA("Tool") and (tool:GetAttribute("BoxValue") ~= nil or tool.Name:find("Box")) then
@@ -671,237 +588,9 @@ local AutoUseLuckToggle = MainTab:Toggle({
     end
 })
 
---------------------------------------------------------------------------------
--- TRADE SYSTEM (UPDATED EXTRA FEATURE / ระบบเลือกคน + ไอเทมที่จะเทรด)
---------------------------------------------------------------------------------
-getgenv().AutoAcceptTrade = false
-getgenv().AutoConfirmTrade = false
-getgenv().AutoSendTrade = false
-getgenv().AutoAddTradeItems = false
-getgenv().TargetTradePlayer = ""
-getgenv().SelectedTradeItems = {}
-
-local TradeRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") 
-    or game:GetService("ReplicatedStorage"):FindFirstChild("TradeRemotes")
-
-local function getPlayerList()
-    local names = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= Players.LocalPlayer then
-            table.insert(names, plr.Name)
-        end
-    end
-    return names
-end
-
-local function getInventoryItemList()
-    local items = {}
-    local player = Players.LocalPlayer
-    local backpack = player:FindFirstChild("Backpack")
-    if backpack then
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                table.insert(items, tool.Name)
-            end
-        end
-    end
-    if player.Character then
-        for _, tool in ipairs(player.Character:GetChildren()) do
-            if tool:IsA("Tool") then
-                table.insert(items, tool.Name)
-            end
-        end
-    end
-    if #items == 0 then table.insert(items, "No Items Found") end
-    return items
-end
-
-local PlayerTradeDropdown
-local ItemTradeDropdown
-
-TradeTab:Input({
-    Title = "Target Player Name (ระบุชื่อผู้รับแบบพิมพ์)",
-    PlaceholderText = "Type player name...",
-    Callback = function(text)
-        getgenv().TargetTradePlayer = text
-    end
-})
-
-PlayerTradeDropdown = TradeTab:Dropdown({
-    Title = "Select Target Player (ดรอปดาวน์เลือกผู้รับ)",
-    Values = getPlayerList(),
-    Value = "",
-    Callback = function(value)
-        if type(value) == "string" then
-            getgenv().TargetTradePlayer = value
-        elseif type(value) == "table" then
-            for _, v in pairs(value) do
-                getgenv().TargetTradePlayer = tostring(v)
-                break
-            end
-        end
-    end
-})
-
-TradeTab:Button({
-    Title = "Refresh Player List (รีเฟรชรายชื่อในเซิร์ฟ)",
-    Callback = function()
-        if PlayerTradeDropdown and PlayerTradeDropdown.Refresh then
-            pcall(function() PlayerTradeDropdown:Refresh(getPlayerList()) end)
-            WindUI:Notify({ Title = "Trade", Content = "Refreshed server player list!", Duration = 2 })
-        end
-    end
-})
-
-ItemTradeDropdown = TradeTab:Dropdown({
-    Title = "Select Items to Trade (เลือกไอเทมที่จะเทรด)",
-    Multi = true,
-    Values = getInventoryItemList(),
-    Value = {},
-    Callback = function(value)
-        getgenv().SelectedTradeItems = {}
-        if type(value) == "table" then
-            for k, v in pairs(value) do
-                if type(k) == "number" then
-                    getgenv().SelectedTradeItems[tostring(v)] = true
-                else
-                    getgenv().SelectedTradeItems[tostring(k)] = v
-                end
-            end
-        elseif type(value) == "string" then
-            getgenv().SelectedTradeItems[value] = true
-        end
-    end
-})
-
-TradeTab:Button({
-    Title = "Refresh Inventory Items (รีเฟรชกระเป๋าไอเทม)",
-    Callback = function()
-        if ItemTradeDropdown and ItemTradeDropdown.Refresh then
-            pcall(function() ItemTradeDropdown:Refresh(getInventoryItemList()) end)
-            WindUI:Notify({ Title = "Trade", Content = "Refreshed backpack items!", Duration = 2 })
-        end
-    end
-})
-
-TradeTab:Toggle({
-    Title = "Auto Add Selected Items to Trade (ยัดไอเทมลงเทรดออโต้)",
-    Value = getgenv().AutoAddTradeItems,
-    Callback = function(state)
-        getgenv().AutoAddTradeItems = state
-        if state then
-            task.spawn(function()
-                while getgenv().AutoAddTradeItems do
-                    pcall(function()
-                        local player = Players.LocalPlayer
-                        local tradeGui = player.PlayerGui:FindFirstChild("Trade") or player.PlayerGui:FindFirstChild("TradingFrame")
-                        if tradeGui and tradeGui.Visible then
-                            for itemName, isSelected in pairs(getgenv().SelectedTradeItems) do
-                                if isSelected then
-                                    if TradeRemotes and TradeRemotes:FindFirstChild("AddItem") then
-                                        TradeRemotes.AddItem:FireServer(itemName)
-                                    elseif TradeRemotes and TradeRemotes:FindFirstChild("TradeAddItem") then
-                                        TradeRemotes.TradeAddItem:FireServer(itemName)
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                    task.wait(1.5)
-                end
-            end)
-        end
-    end
-})
-
-TradeTab:Toggle({
-    Title = "Auto Send Trade to Target Player",
-    Value = getgenv().AutoSendTrade,
-    Callback = function(state)
-        getgenv().AutoSendTrade = state
-        if state then
-            task.spawn(function()
-                while getgenv().AutoSendTrade do
-                    if getgenv().TargetTradePlayer ~= "" then
-                        local targetPlr = Players:FindFirstChild(getgenv().TargetTradePlayer)
-                        if targetPlr then
-                            pcall(function()
-                                if TradeRemotes then
-                                    if TradeRemotes:FindFirstChild("SendTradeRequest") then
-                                        TradeRemotes.SendTradeRequest:FireServer(targetPlr)
-                                    elseif TradeRemotes:FindFirstChild("TradeRequest") then
-                                        TradeRemotes.TradeRequest:FireServer(targetPlr)
-                                    end
-                                end
-                            end)
-                        end
-                    end
-                    task.wait(3)
-                end
-            end)
-        end
-    end
-})
-
-TradeTab:Toggle({
-    Title = "Auto Accept Trade Request",
-    Value = getgenv().AutoAcceptTrade,
-    Callback = function(state)
-        getgenv().AutoAcceptTrade = state
-        if state then
-            task.spawn(function()
-                while getgenv().AutoAcceptTrade do
-                    pcall(function()
-                        local player = game:GetService("Players").LocalPlayer
-                        local tradeGui = player.PlayerGui:FindFirstChild("TradeRequest") or player.PlayerGui:FindFirstChild("TradeGui")
-                        if tradeGui and tradeGui.Visible then
-                            local acceptBtn = tradeGui:FindFirstChild("Accept", true) or tradeGui:FindFirstChild("Yes", true)
-                            if acceptBtn and acceptBtn:IsA("GuiButton") then
-                                for _, c in ipairs(getconnections(acceptBtn.MouseButton1Click)) do
-                                    c:Fire()
-                                end
-                            end
-                        end
-                        if TradeRemotes and TradeRemotes:FindFirstChild("AcceptTradeRequest") then
-                            TradeRemotes.AcceptTradeRequest:FireServer()
-                        end
-                    end)
-                    task.wait(1)
-                end
-            end)
-        end
-    end
-})
-
-TradeTab:Toggle({
-    Title = "Auto Confirm / Accept Trade",
-    Value = getgenv().AutoConfirmTrade,
-    Callback = function(state)
-        getgenv().AutoConfirmTrade = state
-        if state then
-            task.spawn(function()
-                while getgenv().AutoConfirmTrade do
-                    pcall(function()
-                        local player = game:GetService("Players").LocalPlayer
-                        local mainTrade = player.PlayerGui:FindFirstChild("Trade") or player.PlayerGui:FindFirstChild("TradingFrame")
-                        if mainTrade and mainTrade.Visible then
-                            local confirmBtn = mainTrade:FindFirstChild("Confirm", true) or mainTrade:FindFirstChild("Accept", true) or mainTrade:FindFirstChild("Ready", true)
-                            if confirmBtn and confirmBtn:IsA("GuiButton") then
-                                for _, c in ipairs(getconnections(confirmBtn.MouseButton1Click)) do
-                                    c:Fire()
-                                end
-                            end
-                        end
-                        if TradeRemotes then
-                            if TradeRemotes:FindFirstChild("ConfirmTrade") then TradeRemotes.ConfirmTrade:FireServer() end
-                            if TradeRemotes:FindFirstChild("AcceptTrade") then TradeRemotes.AcceptTrade:FireServer() end
-                        end
-                    end)
-                    task.wait(1)
-                end
-            end)
-        end
-    end
+local MiscTab = Window:Tab({
+    Title = "Misc",
+    Icon = "solar:settings-bold",
 })
 
 local HttpService = game:GetService("HttpService")
@@ -958,8 +647,8 @@ local WebhookInput = MiscTab:Input({
 })
 
 MiscTab:Keybind({
-    Title = "Toggle UI Key (กด F หรือ RightControl)",
-    Key = "F",
+    Title = "Toggle UI Key",
+    Key = "RightControl",
     Callback = function()
         pcall(function()
             local toggled = false
@@ -970,7 +659,6 @@ MiscTab:Keybind({
             if not toggled then
                 for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
                     if v:IsA("ScreenGui") and v:FindFirstChild("Main") and v.Main:IsA("Frame") then
-                        -- Check if this is the WindUI ScreenGui
                         local titleLabel = v.Main:FindFirstChild("Topbar", true)
                         if titleLabel or v.Name == "WindUI" or v.Name == "PayomboyZUI" then
                             v.Enabled = not v.Enabled
@@ -993,8 +681,6 @@ local function SaveConfig(name)
         AutoCarryDelay = getgenv().AutoCarryDelay or 5,
         AntiAfk = getgenv().AntiAfkState or false,
         AutoUseLuck = getgenv().AutoUseLuck or false,
-        AutoAcceptTrade = getgenv().AutoAcceptTrade or false,
-        AutoConfirmTrade = getgenv().AutoConfirmTrade or false,
         Webhook = getgenv().DiscordWebhook or ""
     }
     if writefile then
@@ -1114,8 +800,6 @@ ConfigDropdown = MiscTab:Dropdown({
             for k, v in pairs(value) do
                 if type(k) == "number" then
                     SelectedConfig = tostring(v)
-                else
-                    SelectedConfig = tostring(k)
                 end
             end
         elseif type(value) == "string" then
@@ -1125,7 +809,7 @@ ConfigDropdown = MiscTab:Dropdown({
 })
 
 MiscTab:Button({
-    Title = "Load Config",
+    Title = "Load Selected Config",
     Callback = function()
         if SelectedConfig and SelectedConfig ~= "" then
             LoadConfig(SelectedConfig)
@@ -1135,27 +819,6 @@ MiscTab:Button({
     end
 })
 
-MiscTab:Toggle({
-    Title = "Autoload Config",
-    Value = ConfigData.Autoload ~= "",
-    Callback = function(state)
-        if state then
-            if SelectedConfig and SelectedConfig ~= "" then
-                ConfigData.Autoload = SelectedConfig
-                SaveMainConfig()
-                WindUI:Notify({ Title = "Config", Content = "Set autoload to: " .. SelectedConfig, Duration = 3 })
-            else
-                WindUI:Notify({ Title = "Config", Content = "Please select a config first", Duration = 3 })
-            end
-        else
-            ConfigData.Autoload = ""
-            SaveMainConfig()
-            WindUI:Notify({ Title = "Config", Content = "Disabled Autoload", Duration = 3 })
-        end
-    end
-})
-
--- Auto-load configuration on script execution
 if ConfigData.Autoload and ConfigData.Autoload ~= "" then
     task.spawn(function()
         task.wait(1)
