@@ -2,14 +2,14 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footag
 
 local Window = WindUI:CreateWindow({
     Title = "PayomboyZ",
-    Author = "Anime Card Farm",
+    Author = "Anime Card Farm (กด F เพื่อย่อหน้าต่าง)",
     Folder = "PayomboyZUI",
     Size = UDim2.fromOffset(480, 310),
     Transparent = true,
     Theme = "Red", 
     HideSearchBar = true,
     OpenButton = {
-        Title = "Open PayomboyZ",
+        Title = "Open PayomboyZ (กด F เพื่อย่อหน้าต่าง)",
         CornerRadius = UDim.new(1, 0),
         StrokeThickness = 2,
         Enabled = true,
@@ -329,7 +329,7 @@ local AutoBuyToggle = MainTab:Toggle({
 })
 
 --------------------------------------------------------------------------------
--- CARD PACK ESP SYSTEM (ADDED EXTRA FEATURE / ระบบ ESP มองซองการ์ด)
+-- CARD PACK ESP SYSTEM (ระบบ ESP มองซองการ์ด)
 --------------------------------------------------------------------------------
 getgenv().CardESP = false
 
@@ -499,6 +499,7 @@ local AutoSellBoxToggle = MainTab:Toggle({
                     
                     -- If it's equipped in Character, teleport and fire the SellPart prompt
                     local isEquipped = false
+                    if character me
                     if character then
                         for _, tool in ipairs(character:GetChildren()) do
                             if tool:IsA("Tool") and (tool:GetAttribute("BoxValue") ~= nil or tool.Name:find("Box")) then
@@ -671,12 +672,14 @@ local AutoUseLuckToggle = MainTab:Toggle({
 })
 
 --------------------------------------------------------------------------------
--- TRADE SYSTEM (UPDATED EXTRA FEATURE / ระบบเลือกคนเทรด + ออโต้เทรด)
+-- TRADE SYSTEM (UPDATED EXTRA FEATURE / ระบบเลือกคน + ไอเทมที่จะเทรด)
 --------------------------------------------------------------------------------
 getgenv().AutoAcceptTrade = false
 getgenv().AutoConfirmTrade = false
 getgenv().AutoSendTrade = false
+getgenv().AutoAddTradeItems = false
 getgenv().TargetTradePlayer = ""
+getgenv().SelectedTradeItems = {}
 
 local TradeRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") 
     or game:GetService("ReplicatedStorage"):FindFirstChild("TradeRemotes")
@@ -691,7 +694,30 @@ local function getPlayerList()
     return names
 end
 
+local function getInventoryItemList()
+    local items = {}
+    local player = Players.LocalPlayer
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                table.insert(items, tool.Name)
+            end
+        end
+    end
+    if player.Character then
+        for _, tool in ipairs(player.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                table.insert(items, tool.Name)
+            end
+        end
+    end
+    if #items == 0 then table.insert(items, "No Items Found") end
+    return items
+end
+
 local PlayerTradeDropdown
+local ItemTradeDropdown
 
 TradeTab:Input({
     Title = "Target Player Name (ระบุชื่อผู้รับแบบพิมพ์)",
@@ -723,6 +749,67 @@ TradeTab:Button({
         if PlayerTradeDropdown and PlayerTradeDropdown.Refresh then
             pcall(function() PlayerTradeDropdown:Refresh(getPlayerList()) end)
             WindUI:Notify({ Title = "Trade", Content = "Refreshed server player list!", Duration = 2 })
+        end
+    end
+})
+
+ItemTradeDropdown = TradeTab:Dropdown({
+    Title = "Select Items to Trade (เลือกไอเทมที่จะเทรด)",
+    Multi = true,
+    Values = getInventoryItemList(),
+    Value = {},
+    Callback = function(value)
+        getgenv().SelectedTradeItems = {}
+        if type(value) == "table" then
+            for k, v in pairs(value) do
+                if type(k) == "number" then
+                    getgenv().SelectedTradeItems[tostring(v)] = true
+                else
+                    getgenv().SelectedTradeItems[tostring(k)] = v
+                end
+            end
+        elseif type(value) == "string" then
+            getgenv().SelectedTradeItems[value] = true
+        end
+    end
+})
+
+TradeTab:Button({
+    Title = "Refresh Inventory Items (รีเฟรชกระเป๋าไอเทม)",
+    Callback = function()
+        if ItemTradeDropdown and ItemTradeDropdown.Refresh then
+            pcall(function() ItemTradeDropdown:Refresh(getInventoryItemList()) end)
+            WindUI:Notify({ Title = "Trade", Content = "Refreshed backpack items!", Duration = 2 })
+        end
+    end
+})
+
+TradeTab:Toggle({
+    Title = "Auto Add Selected Items to Trade (ยัดไอเทมลงเทรดออโต้)",
+    Value = getgenv().AutoAddTradeItems,
+    Callback = function(state)
+        getgenv().AutoAddTradeItems = state
+        if state then
+            task.spawn(function()
+                while getgenv().AutoAddTradeItems do
+                    pcall(function()
+                        local player = Players.LocalPlayer
+                        local tradeGui = player.PlayerGui:FindFirstChild("Trade") or player.PlayerGui:FindFirstChild("TradingFrame")
+                        if tradeGui and tradeGui.Visible then
+                            for itemName, isSelected in pairs(getgenv().SelectedTradeItems) do
+                                if isSelected then
+                                    if TradeRemotes and TradeRemotes:FindFirstChild("AddItem") then
+                                        TradeRemotes.AddItem:FireServer(itemName)
+                                    elseif TradeRemotes and TradeRemotes:FindFirstChild("TradeAddItem") then
+                                        TradeRemotes.TradeAddItem:FireServer(itemName)
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(1.5)
+                end
+            end)
         end
     end
 })
@@ -871,8 +958,8 @@ local WebhookInput = MiscTab:Input({
 })
 
 MiscTab:Keybind({
-    Title = "Toggle UI Key",
-    Key = "RightControl",
+    Title = "Toggle UI Key (กด F หรือ RightControl)",
+    Key = "F",
     Callback = function()
         pcall(function()
             local toggled = false
