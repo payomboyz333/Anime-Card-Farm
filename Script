@@ -6,7 +6,7 @@ local Window = WindUI:CreateWindow({
     Folder = "PayomboyZUI",
     Size = UDim2.fromOffset(480, 310),
     Transparent = true,
-    Theme = "Dark", 
+    Theme = "Red", 
     HideSearchBar = true,
     OpenButton = {
         Title = "Open PayomboyZ",
@@ -328,6 +328,78 @@ local AutoBuyToggle = MainTab:Toggle({
     end
 })
 
+--------------------------------------------------------------------------------
+-- CARD PACK ESP SYSTEM (ADDED EXTRA FEATURE / ระบบ ESP มองซองการ์ด)
+--------------------------------------------------------------------------------
+getgenv().CardESP = false
+
+local function applyESP(model)
+    if not model:IsA("Model") or model:FindFirstChild("CardESP_Tag") then return end
+    
+    local rarityLabel = model:FindFirstChild("Rarity", true)
+    local mutationLabel = model:FindFirstChild("Mutation", true)
+    local cardRarity = rarityLabel and string.gsub(rarityLabel.Text, "<[^>]+>", "") or "Card"
+    local cardMutation = mutationLabel and string.gsub(mutationLabel.Text, "<[^>]+>", "") or ""
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "CardESP_Tag"
+    highlight.Adornee = model
+    highlight.FillColor = Color3.fromRGB(255, 50, 50)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.Parent = model
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "CardESP_Text"
+    billboard.Adornee = model
+    billboard.Size = UDim2.new(0, 150, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = cardRarity .. (cardMutation ~= "" and ("\n[" .. cardMutation .. "]") or "")
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Parent = billboard
+    billboard.Parent = model
+end
+
+local function removeESP(model)
+    if model:FindFirstChild("CardESP_Tag") then model.CardESP_Tag:Destroy() end
+    if model:FindFirstChild("CardESP_Text") then model.CardESP_Text:Destroy() end
+end
+
+MainTab:Toggle({
+    Title = "Card Pack ESP (มองซองทะลุ)",
+    Value = getgenv().CardESP,
+    Callback = function(state)
+        getgenv().CardESP = state
+        task.spawn(function()
+            while getgenv().CardESP do
+                if getgenv().CardFolder then
+                    for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
+                        if model:IsA("Model") and model:GetAttribute("IgnoreTutoBeam") ~= nil then
+                            applyESP(model)
+                        end
+                    end
+                else
+                    findCardFolder()
+                end
+                task.wait(0.5)
+            end
+            if not getgenv().CardESP and getgenv().CardFolder then
+                for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
+                    removeESP(model)
+                end
+            end
+        end)
+    end
+})
+
 getgenv().AutoCarry = false
 getgenv().AutoCarryDelay = 5
 
@@ -599,13 +671,90 @@ local AutoUseLuckToggle = MainTab:Toggle({
 })
 
 --------------------------------------------------------------------------------
--- TRADE SYSTEM (ADDED EXTRA FEATURE / ระบบเทรดเสริม)
+-- TRADE SYSTEM (UPDATED EXTRA FEATURE / ระบบเลือกคนเทรด + ออโต้เทรด)
 --------------------------------------------------------------------------------
 getgenv().AutoAcceptTrade = false
 getgenv().AutoConfirmTrade = false
+getgenv().AutoSendTrade = false
+getgenv().TargetTradePlayer = ""
 
 local TradeRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") 
     or game:GetService("ReplicatedStorage"):FindFirstChild("TradeRemotes")
+
+local function getPlayerList()
+    local names = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= Players.LocalPlayer then
+            table.insert(names, plr.Name)
+        end
+    end
+    return names
+end
+
+local PlayerTradeDropdown
+
+TradeTab:Input({
+    Title = "Target Player Name (ระบุชื่อผู้รับแบบพิมพ์)",
+    PlaceholderText = "Type player name...",
+    Callback = function(text)
+        getgenv().TargetTradePlayer = text
+    end
+})
+
+PlayerTradeDropdown = TradeTab:Dropdown({
+    Title = "Select Target Player (ดรอปดาวน์เลือกผู้รับ)",
+    Values = getPlayerList(),
+    Value = "",
+    Callback = function(value)
+        if type(value) == "string" then
+            getgenv().TargetTradePlayer = value
+        elseif type(value) == "table" then
+            for _, v in pairs(value) do
+                getgenv().TargetTradePlayer = tostring(v)
+                break
+            end
+        end
+    end
+})
+
+TradeTab:Button({
+    Title = "Refresh Player List (รีเฟรชรายชื่อในเซิร์ฟ)",
+    Callback = function()
+        if PlayerTradeDropdown and PlayerTradeDropdown.Refresh then
+            pcall(function() PlayerTradeDropdown:Refresh(getPlayerList()) end)
+            WindUI:Notify({ Title = "Trade", Content = "Refreshed server player list!", Duration = 2 })
+        end
+    end
+})
+
+TradeTab:Toggle({
+    Title = "Auto Send Trade to Target Player",
+    Value = getgenv().AutoSendTrade,
+    Callback = function(state)
+        getgenv().AutoSendTrade = state
+        if state then
+            task.spawn(function()
+                while getgenv().AutoSendTrade do
+                    if getgenv().TargetTradePlayer ~= "" then
+                        local targetPlr = Players:FindFirstChild(getgenv().TargetTradePlayer)
+                        if targetPlr then
+                            pcall(function()
+                                if TradeRemotes then
+                                    if TradeRemotes:FindFirstChild("SendTradeRequest") then
+                                        TradeRemotes.SendTradeRequest:FireServer(targetPlr)
+                                    elseif TradeRemotes:FindFirstChild("TradeRequest") then
+                                        TradeRemotes.TradeRequest:FireServer(targetPlr)
+                                    end
+                                end
+                            end)
+                        end
+                    end
+                    task.wait(3)
+                end
+            end)
+        end
+    end
+})
 
 TradeTab:Toggle({
     Title = "Auto Accept Trade Request",
