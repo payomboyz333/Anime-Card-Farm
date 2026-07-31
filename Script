@@ -870,31 +870,6 @@ local WebhookInput = MiscTab:Input({
     end
 })
 
-MiscTab:Keybind({
-    Title = "Toggle UI Key",
-    Key = "RightControl",
-    Callback = function()
-        pcall(function()
-            local toggled = false
-            if Window and type(Window.Toggle) == "function" then
-                Window:Toggle()
-                toggled = true
-            end
-            if not toggled then
-                for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
-                    if v:IsA("ScreenGui") and v:FindFirstChild("Main") and v.Main:IsA("Frame") then
-                        -- Check if this is the WindUI ScreenGui
-                        local titleLabel = v.Main:FindFirstChild("Topbar", true)
-                        if titleLabel or v.Name == "WindUI" or v.Name == "PayomboyZUI" then
-                            v.Enabled = not v.Enabled
-                        end
-                    end
-                end
-            end
-        end)
-    end
-})
-
 local function SaveConfig(name)
     local data = {
         Rarities = getgenv().SelectedRarities or {},
