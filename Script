@@ -27,6 +27,16 @@ local MainTab = Window:Tab({
     Icon = "solar:home-bold",
 })
 
+local TradeTab = Window:Tab({
+    Title = "Trade",
+    Icon = "solar:transfer-horizontal-bold",
+})
+
+local MiscTab = Window:Tab({
+    Title = "Misc",
+    Icon = "solar:settings-bold",
+})
+
 local FilterConfig = {
     EnableRarityFilter = false,
     EnableMutationFilter = false,
@@ -588,9 +598,74 @@ local AutoUseLuckToggle = MainTab:Toggle({
     end
 })
 
-local MiscTab = Window:Tab({
-    Title = "Misc",
-    Icon = "solar:settings-bold",
+--------------------------------------------------------------------------------
+-- TRADE SYSTEM (ADDED EXTRA FEATURE / ระบบเทรดเสริม)
+--------------------------------------------------------------------------------
+getgenv().AutoAcceptTrade = false
+getgenv().AutoConfirmTrade = false
+
+local TradeRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") 
+    or game:GetService("ReplicatedStorage"):FindFirstChild("TradeRemotes")
+
+TradeTab:Toggle({
+    Title = "Auto Accept Trade Request",
+    Value = getgenv().AutoAcceptTrade,
+    Callback = function(state)
+        getgenv().AutoAcceptTrade = state
+        if state then
+            task.spawn(function()
+                while getgenv().AutoAcceptTrade do
+                    pcall(function()
+                        local player = game:GetService("Players").LocalPlayer
+                        local tradeGui = player.PlayerGui:FindFirstChild("TradeRequest") or player.PlayerGui:FindFirstChild("TradeGui")
+                        if tradeGui and tradeGui.Visible then
+                            local acceptBtn = tradeGui:FindFirstChild("Accept", true) or tradeGui:FindFirstChild("Yes", true)
+                            if acceptBtn and acceptBtn:IsA("GuiButton") then
+                                for _, c in ipairs(getconnections(acceptBtn.MouseButton1Click)) do
+                                    c:Fire()
+                                end
+                            end
+                        end
+                        if TradeRemotes and TradeRemotes:FindFirstChild("AcceptTradeRequest") then
+                            TradeRemotes.AcceptTradeRequest:FireServer()
+                        end
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+TradeTab:Toggle({
+    Title = "Auto Confirm / Accept Trade",
+    Value = getgenv().AutoConfirmTrade,
+    Callback = function(state)
+        getgenv().AutoConfirmTrade = state
+        if state then
+            task.spawn(function()
+                while getgenv().AutoConfirmTrade do
+                    pcall(function()
+                        local player = game:GetService("Players").LocalPlayer
+                        local mainTrade = player.PlayerGui:FindFirstChild("Trade") or player.PlayerGui:FindFirstChild("TradingFrame")
+                        if mainTrade and mainTrade.Visible then
+                            local confirmBtn = mainTrade:FindFirstChild("Confirm", true) or mainTrade:FindFirstChild("Accept", true) or mainTrade:FindFirstChild("Ready", true)
+                            if confirmBtn and confirmBtn:IsA("GuiButton") then
+                                for _, c in ipairs(getconnections(confirmBtn.MouseButton1Click)) do
+                                    c:Fire()
+                                end
+                            end
+                        end
+                        if TradeRemotes then
+                            if TradeRemotes:FindFirstChild("ConfirmTrade") then TradeRemotes.ConfirmTrade:FireServer() end
+                            if TradeRemotes:FindFirstChild("AcceptTrade") then TradeRemotes.AcceptTrade:FireServer() end
+                        end
+                    end)
+                    task.wait(1)
+                end
+            end)
+        end
+    end
 })
 
 local HttpService = game:GetService("HttpService")
@@ -682,6 +757,8 @@ local function SaveConfig(name)
         AutoCarryDelay = getgenv().AutoCarryDelay or 5,
         AntiAfk = getgenv().AntiAfkState or false,
         AutoUseLuck = getgenv().AutoUseLuck or false,
+        AutoAcceptTrade = getgenv().AutoAcceptTrade or false,
+        AutoConfirmTrade = getgenv().AutoConfirmTrade or false,
         Webhook = getgenv().DiscordWebhook or ""
     }
     if writefile then
