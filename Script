@@ -1,12 +1,12 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 
-local Window = Window or WindUI:CreateWindow({
+local Window = WindUI:CreateWindow({
     Title = "PayomboyZ",
-    Author = "Anime Card Farm",
+    Author = "โดย Dexq",
     Folder = "PayomboyZUI",
     Size = UDim2.fromOffset(480, 310),
     Transparent = true,
-    Theme = "Red", 
+    Theme = "Red",
     HideSearchBar = true,
     OpenButton = {
         Title = "Open PayomboyZ",
@@ -16,25 +16,15 @@ local Window = Window or WindUI:CreateWindow({
         Draggable = true,
         Scale = 0.8,
         Color = ColorSequence.new(
-            Color3.fromHex("#ff3c3c"),
-            Color3.fromHex("#a82323")
+            Color3.fromHex("#ff0000"),
+            Color3.fromHex("#8b0000")
         )
     }
 })
 
 local MainTab = Window:Tab({
-    Title = "หน้าหลัก",
+    Title = "หลัก",
     Icon = "solar:home-bold",
-})
-
-local TradeTab = Window:Tab({
-    Title = "แลกเปลี่ยน",
-    Icon = "solar:transfer-horizontal-bold",
-})
-
-local MiscTab = Window:Tab({
-    Title = "ตั้งค่า",
-    Icon = "solar:settings-bold",
 })
 
 local FilterConfig = {
@@ -53,6 +43,7 @@ local function getSpawnPackClickDetector()
             and workspace.MAP.Plots:FindFirstChild(tostring(plotNum))
         
         if plotFolder and plotFolder:FindFirstChild("Plot_N0") then
+            -- Find the spawn button within the player's plot
             for _, v in ipairs(plotFolder.Plot_N0:GetDescendants()) do
                 if v:IsA("ClickDetector") and v.Parent.Name == "ButtonPart" then
                     return v
@@ -60,6 +51,7 @@ local function getSpawnPackClickDetector()
             end
         end
     end
+    -- Fallback to the first found plot if player's plot cannot be identified
     for _, desc in ipairs(workspace:GetDescendants()) do
         if desc:IsA("ClickDetector") and desc.Parent and desc.Parent.Name == "ButtonPart" and desc.Parent.Parent and desc.Parent.Parent.Name == "Plot_N0" then
             return desc
@@ -70,23 +62,25 @@ end
 
 getgenv().AutoSpawnPack = false
 local AutoSpawnToggle = MainTab:Toggle({
-    Title = "เปิดซองอัตโนมัติ",
+    Title = "เลื่อนสายพานอัตโนมัติ",
     Callback = function(state)
         getgenv().AutoSpawnPack = state
         if state then
             task.spawn(function()
                 local cd = getSpawnPackClickDetector()
                 if not cd then
-                    WindUI:Notify({ Title = "Error", Content = "Spawn Pack button not found!", Duration = 3 })
+                    WindUI:Notify({ Title = "ข้อผิดพลาด", Content = "ไม่พบปุ่ม Spawn Pack!", Duration = 3 })
                     getgenv().AutoSpawnPack = false
                     return
                 end
                 
+                -- Maximum speed spawn loop with dynamic brake threshold to prevent conveyor belt overflow
                 while getgenv().AutoSpawnPack do
                     local activeCards = 0
                     if getgenv().CardFolder then
                         for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
                             if model:IsA("Model") and model:GetAttribute("IgnoreTutoBeam") ~= nil and model:FindFirstChildWhichIsA("ProximityPrompt", true) then
+                                -- Ignore cards that have been checked and rejected by the buy loop
                                 if getgenv().AutoBuyCards and model:GetAttribute("Rejected") then
                                     continue
                                 end
@@ -96,6 +90,7 @@ local AutoSpawnToggle = MainTab:Toggle({
                     end
                     
                     if getgenv().AutoBuyCards then
+                        -- Strict 1-by-1 logic when buying
                         if activeCards == 0 then
                             pcall(fireclickdetector, cd)
                             task.wait(0.3) 
@@ -103,6 +98,7 @@ local AutoSpawnToggle = MainTab:Toggle({
                             task.wait(0.05) 
                         end
                     else
+                        -- Fast spam logic when just afk spawning (with a small brake)
                         pcall(fireclickdetector, cd)
                         if activeCards >= 3 then
                             task.wait(0.2)
@@ -128,7 +124,7 @@ local RaritiesList = {
 getgenv().SelectedRarities = {}
 
 local RarityDropdown = MainTab:Dropdown({
-    Title = "เลือกระดับการ์ดที่ต้องการซื้อ",
+    Title = "เลือกความหายากเพื่อซื้อ",
     Multi = true,
     Values = RaritiesList,
     Value = {},
@@ -156,7 +152,7 @@ local MutationsList = {
 getgenv().SelectedMutations = {}
 
 local MutationDropdown = MainTab:Dropdown({
-    Title = "เลือก Mutation ที่ต้องการซื้อ",
+    Title = "เลือกมิวเทชันเพื่อซื้อ",
     Multi = true,
     Values = MutationsList,
     Value = {},
@@ -181,6 +177,7 @@ getgenv().PromptCooldowns = getgenv().PromptCooldowns or {}
 
 local RunService = game:GetService("RunService")
 
+-- Find the workspace folder containing all spawned cards
 local function findCardFolder()
     for _, desc in ipairs(workspace:GetDescendants()) do
         if desc:IsA("ProximityPrompt") then
@@ -194,18 +191,85 @@ local function findCardFolder()
     return false
 end
 
+local function GetAllInventorySummary()
+    local player = game:GetService("Players").LocalPlayer
+    local inventory = {}
+    
+    local function scanFolder(folder)
+        if not folder then return end
+        for _, item in ipairs(folder:GetChildren()) do
+            if item:IsA("Tool") then
+                local rarityAttr = item:GetAttribute("Rarity")
+                local cardNameAttr = item:GetAttribute("CardName")
+                local groupKey = rarityAttr or cardNameAttr or item.Name
+                
+                -- try to read from StringValues if attributes are missing
+                if not item:GetAttribute("Rarity") and item:FindFirstChild("Rarity") and item.Rarity:IsA("StringValue") then
+                    groupKey = item.Rarity.Value
+                end
+                
+                local mutation = item:GetAttribute("Mutation") or "Normal"
+                if not item:GetAttribute("Mutation") and item:FindFirstChild("Mutation") and item.Mutation:IsA("StringValue") then
+                    mutation = item.Mutation.Value
+                end
+                
+                if not string.find(string.lower(item.Name), "box") and groupKey ~= "Box" then
+                    if not inventory[groupKey] then
+                        inventory[groupKey] = {}
+                    end
+                    if not inventory[groupKey][mutation] then
+                        inventory[groupKey][mutation] = 0
+                    end
+                    inventory[groupKey][mutation] = inventory[groupKey][mutation] + 1
+                end
+            end
+        end
+    end
+    
+    pcall(function()
+        scanFolder(player:FindFirstChild("Backpack"))
+        if player.Character then
+            scanFolder(player.Character)
+        end
+    end)
+    
+    local resultLines = {}
+    for key, mutations in pairs(inventory) do
+        local mutStrings = {}
+        for mut, count in pairs(mutations) do
+            table.insert(mutStrings, mut .. " x" .. tostring(count))
+        end
+        table.insert(resultLines, tostring(key) .. ": " .. table.concat(mutStrings, " | "))
+    end
+    
+    if #resultLines > 0 then
+        local fullText = table.concat(resultLines, "\n")
+        if string.len(fullText) > 1000 then
+            return string.sub(fullText, 1, 1000) .. "..."
+        end
+        return fullText
+    else
+        return "None"
+    end
+end
+
 local function SendWebhook(url, rarity, mutation)
     local req = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
     if not req then return end
+    
+    local inventoryText = "Unknown"
+    pcall(function()
+        inventoryText = GetAllInventorySummary()
+    end)
     
     local data = {
         ["content"] = "",
         ["embeds"] = {
             {
-                ["title"] = "🎉 Card Bought!",
-                ["description"] = "Successfully bought a card matching your criteria.",
+                ["title"] = "🎉 ได้ซื้อการ์ด!",
+                ["description"] = "ซื้อการ์ดที่ตรงตามเงื่อนไขสำเร็จ.",
                 ["type"] = "rich",
-                ["color"] = 16724787,
+                ["color"] = 16711680,
                 ["fields"] = {
                     {
                         ["name"] = "Rarity",
@@ -216,6 +280,11 @@ local function SendWebhook(url, rarity, mutation)
                         ["name"] = "Mutation",
                         ["value"] = tostring(mutation),
                         ["inline"] = true
+                    },
+                    {
+                        ["name"] = "Full Inventory",
+                        ["value"] = inventoryText,
+                        ["inline"] = false
                     }
                 },
                 ["timestamp"] = DateTime.now():ToIsoDate()
@@ -235,6 +304,7 @@ local function SendWebhook(url, rarity, mutation)
     end)
 end
 
+-- Main heartbeat loop targeting ProximityPrompts instantly without queue delays
 local function instantBuyLoop()
     if not getgenv().AutoBuyCards then return end
     
@@ -243,6 +313,7 @@ local function instantBuyLoop()
     end
     if not getgenv().CardFolder then return end
 
+    -- Scan for new target cards on the conveyor belt
     for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
         if not model:IsA("Model") or model:GetAttribute("IgnoreTutoBeam") == nil then continue end
         
@@ -253,6 +324,7 @@ local function instantBuyLoop()
         local mutationLabel = model:FindFirstChild("Mutation", true)
         
         if rarityLabel then
+            -- Strip RichText tags (<font color=...>) to ensure accurate string matching
             local cleanRarityText = string.gsub(rarityLabel.Text, "<[^>]+>", "")
             local cardRarity = string.match(cleanRarityText, "^%s*(.-)%s*$") or ""
             if cardRarity ~= "" and cardRarity ~= "Label" then
@@ -277,6 +349,7 @@ local function instantBuyLoop()
                 end
                 
                 if matchRarity and matchMutation then
+                    -- Mass-spam interactions with a 0.05s internal throttle per prompt to bypass rate limits
                     local now = tick()
                     if not getgenv().PromptCooldowns[prompt] or now - getgenv().PromptCooldowns[prompt] > 0.05 then
                         getgenv().PromptCooldowns[prompt] = now
@@ -298,6 +371,7 @@ local function instantBuyLoop()
                         end
                     end
                 else
+                    -- Mark the card as rejected so the spawner doesn't wait for it
                     model:SetAttribute("Rejected", true)
                 end
             end
@@ -310,78 +384,9 @@ getgenv().BruteForceLoop = RunService.Heartbeat:Connect(instantBuyLoop)
 
 getgenv().AutoBuyCards = false
 local AutoBuyToggle = MainTab:Toggle({
-    Title = "ซื้อการ์ดที่เลือกอัตโนมัติ",
+    Title = "ซื้อที่เลือกตอนนี้",
     Callback = function(state)
         getgenv().AutoBuyCards = state
-    end
-})
-
-getgenv().CardESP = false
-
-local function applyESP(model)
-    if not model:IsA("Model") or model:FindFirstChild("CardESP_Tag") then return end
-    
-    local rarityLabel = model:FindFirstChild("Rarity", true)
-    local mutationLabel = model:FindFirstChild("Mutation", true)
-    local cardRarity = rarityLabel and string.gsub(rarityLabel.Text, "<[^>]+>", "") or "Card"
-    local cardMutation = mutationLabel and string.gsub(mutationLabel.Text, "<[^>]+>", "") or ""
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "CardESP_Tag"
-    highlight.Adornee = model
-    highlight.FillColor = Color3.fromRGB(255, 50, 50)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.Parent = model
-    
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "CardESP_Text"
-    billboard.Adornee = model
-    billboard.Size = UDim2.new(0, 150, 0, 40)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = cardRarity .. (cardMutation ~= "" and ("\n[" .. cardMutation .. "]") or "")
-    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textLabel.TextStrokeTransparency = 0
-    textLabel.TextScaled = true
-    textLabel.Font = Enum.Font.SourceSansBold
-    textLabel.Parent = billboard
-    billboard.Parent = model
-end
-
-local function removeESP(model)
-    if model:FindFirstChild("CardESP_Tag") then model.CardESP_Tag:Destroy() end
-    if model:FindFirstChild("CardESP_Text") then model.CardESP_Text:Destroy() end
-end
-
-MainTab:Toggle({
-    Title = "Card Pack ESP (มองซองทะลุ)",
-    Value = getgenv().CardESP,
-    Callback = function(state)
-        getgenv().CardESP = state
-        task.spawn(function()
-            while getgenv().CardESP do
-                if getgenv().CardFolder then
-                    for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
-                        if model:IsA("Model") and model:GetAttribute("IgnoreTutoBeam") ~= nil then
-                            applyESP(model)
-                        end
-                    end
-                else
-                    findCardFolder()
-                end
-                task.wait(0.5)
-            end
-            if not getgenv().CardESP and getgenv().CardFolder then
-                for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
-                    removeESP(model)
-                end
-            end
-        end)
     end
 })
 
@@ -389,7 +394,7 @@ getgenv().AutoCarry = false
 getgenv().AutoCarryDelay = 5
 
 local AutoCarryToggle = MainTab:Toggle({
-    Title = "เก็บเงินอัตโนมัติ",
+    Title = "เก็บกล่องอัตโนมัติ (เก็บเงิน)",
     Callback = function(state)
         getgenv().AutoCarry = state
         if state then
@@ -444,7 +449,7 @@ local AutoCarryToggle = MainTab:Toggle({
                         task.wait(1)
                         elapsed = elapsed + 1
                     end
-                    task.wait(1)
+                    task.wait(1) -- Safety yield
                 end
             end)
         end
@@ -463,6 +468,7 @@ local AutoSellBoxToggle = MainTab:Toggle({
                     local character = player.Character
                     local hrp = character and character:FindFirstChild("HumanoidRootPart")
                     
+                    -- Find Box in Backpack
                     local backpack = player:FindFirstChild("Backpack")
                     local boxTool = nil
                     
@@ -475,11 +481,13 @@ local AutoSellBoxToggle = MainTab:Toggle({
                         end
                     end
                     
+                    -- Equip it if found in backpack
                     if boxTool and character and character:FindFirstChild("Humanoid") then
                         character.Humanoid:EquipTool(boxTool)
                         task.wait(0.2)
                     end
                     
+                    -- If it's equipped in Character, teleport and fire the SellPart prompt
                     local isEquipped = false
                     if character then
                         for _, tool in ipairs(character:GetChildren()) do
@@ -526,7 +534,7 @@ local AutoSellBoxToggle = MainTab:Toggle({
 })
 
 local AutoCarrySlider = MainTab:Slider({
-    Title = "Auto Carry Delay (Minutes)",
+    Title = "ความล่าช้าการเก็บกล่อง (นาที)",
     Step = 1,
     Value = {
         Min = 1,
@@ -612,7 +620,7 @@ end
 
 getgenv().AutoUseLuck = false
 local AutoUseLuckToggle = MainTab:Toggle({
-    Title = "ใช้ยา Luck อัตโนมัติ",
+    Title = "ใช้ยาโชคอัตโนมัติ",
     Value = getgenv().AutoUseLuck,
     Callback = function(state)
         getgenv().AutoUseLuck = state
@@ -628,9 +636,10 @@ local AutoUseLuckToggle = MainTab:Toggle({
                         local amt2 = getPotionAmount("LuckPotion2")
                         local amt3 = getPotionAmount("LuckPotion3")
                         
+                        -- Notify current inventory
                         if WindUI and WindUI.Notify then
                             WindUI:Notify({
-                                Title = "Luck Inventory Check",
+                                Title = "ตรวจสอบคลังยานิรันดร์",
                                 Content = string.format("Remaining - III: %d | II: %d | I: %d", amt3, amt2, amt1),
                                 Duration = 3
                             })
@@ -651,227 +660,258 @@ local AutoUseLuckToggle = MainTab:Toggle({
     end
 })
 
---------------------------------------------------------------------------------
--- TRADE SYSTEM
---------------------------------------------------------------------------------
-getgenv().AutoAcceptTrade = false
-getgenv().AutoConfirmTrade = false
-getgenv().AutoSendTrade = false
-getgenv().TargetTradePlayer = ""
-getgenv().SelectedTradeCardInstance = nil
-
-local TradeRemotes = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes") 
-    or game:GetService("ReplicatedStorage"):FindFirstChild("TradeRemotes")
-
-local function getPlayerList()
-    local names = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= Players.LocalPlayer then
-            table.insert(names, plr.Name)
-        end
-    end
-    return names
-end
-
-local function getBackpackCards()
-    local items = {}
-    local backpack = Players.LocalPlayer:FindFirstChild("Backpack")
-    if backpack then
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                local mutation = tool:GetAttribute("Mutation") or "Normal"
-                table.insert(items, {
-                    Name = tool.Name .. " [" .. tostring(mutation) .. "]",
-                    Instance = tool
-                })
-            end
-        end
-    end
-    return items
-end
-
-local PlayerTradeDropdown
-
-TradeTab:Input({
-    Title = "ชื่อผู้เล่นเป้าหมาย",
-    PlaceholderText = "พิมพ์ชื่อผู้เล่น...",
-    Callback = function(text)
-        getgenv().TargetTradePlayer = text
-    end
-})
-
-PlayerTradeDropdown = TradeTab:Dropdown({
-    Title = "Select Target Player",
-    Values = getPlayerList(),
-    Value = "",
-    Callback = function(value)
-        if type(value) == "string" then
-            getgenv().TargetTradePlayer = value
-        elseif type(value) == "table" then
-            for _, v in pairs(value) do
-                getgenv().TargetTradePlayer = tostring(v)
-                break
-            end
-        end
-    end
-})
-
-TradeTab:Button({
-    Title = "รีเฟรชรายชื่อผู้เล่น",
-    Callback = function()
-        if PlayerTradeDropdown and PlayerTradeDropdown.Refresh then
-            pcall(function() PlayerTradeDropdown:Refresh(getPlayerList()) end)
-            WindUI:Notify({ Title = "แลกเปลี่ยน", Content = "Refreshed server player list!", Duration = 2 })
-        end
-    end
-})
-
-local currentBackpackItems = getBackpackCards()
-local cardNamesList = {}
-for _, item in ipairs(currentBackpackItems) do
-    table.insert(cardNamesList, item.Name)
-end
-
-local CardTradeDropdown = TradeTab:Dropdown({
-    Title = "Select Card / Pack from Inventory",
-    Values = cardNamesList,
-    Value = "",
-    Callback = function(value)
-        local selectedName = type(value) == "table" and value[1] or tostring(value)
-        for _, item in ipairs(currentBackpackItems) do
-            if item.Name == selectedName then
-                getgenv().SelectedTradeCardInstance = item.Instance
-                break
-            end
-        end
-    end
-})
-
-TradeTab:Button({
-    Title = "รีเฟรชรายการการ์ด",
-    Callback = function()
-        currentBackpackItems = getBackpackCards()
-        local newNames = {}
-        for _, item in ipairs(currentBackpackItems) do
-            table.insert(newNames, item.Name)
-        end
-        if CardTradeDropdown and CardTradeDropdown.Refresh then
-            pcall(function() CardTradeDropdown:Refresh(newNames) end)
-            WindUI:Notify({ Title = "แลกเปลี่ยน", Content = "Refreshed backpack cards!", Duration = 2 })
-        end
-    end
-})
-
-TradeTab:Button({
-    Title = "Add Selected Card to Trade",
-    Callback = function()
-        if getgenv().SelectedTradeCardInstance and getgenv().SelectedTradeCardInstance.Parent then
-            local addRemote = game:GetService("ReplicatedStorage"):FindFirstChild("AddTradeItem", true)
-                or game:GetService("ReplicatedStorage"):FindFirstChild("OfferItem", true)
-                or (TradeRemotes and TradeRemotes:FindFirstChild("AddItem"))
-            
-            if addRemote then
-                addRemote:FireServer(getgenv().SelectedTradeCardInstance)
-                WindUI:Notify({ Title = "แลกเปลี่ยน", Content = "Added item to trade!", Duration = 2 })
-            end
-        else
-            WindUI:Notify({ Title = "Error", Content = "No card selected or card was removed!", Duration = 3 })
-        end
-    end
-})
-
-TradeTab:Toggle({
-    Title = "Auto Send Trade to Target Player",
-    Value = getgenv().AutoSendTrade,
+getgenv().AutoTower = false
+local AutoTowerToggle = MainTab:Toggle({
+    Title = "หอคอยไม่มีที่สิ้นสุดอัตโนมัติ",
+    Value = getgenv().AutoTower,
     Callback = function(state)
-        getgenv().AutoSendTrade = state
+        getgenv().AutoTower = state
+        if not state then
+            local cam = workspace.CurrentCamera
+            local character = game:GetService("Players").LocalPlayer.Character
+            if cam and getgenv().TowerSavedCamCF then
+                cam.CameraType = Enum.CameraType.Custom
+                if character and character:FindFirstChild("Humanoid") then
+                    cam.CameraSubject = character.Humanoid
+                end
+                getgenv().TowerSavedCamCF = nil
+            end
+            if getgenv().TowerOriginalCFrame and character then
+                character:PivotTo(getgenv().TowerOriginalCFrame)
+                getgenv().TowerOriginalCFrame = nil
+            end
+        end
         if state then
             task.spawn(function()
-                while getgenv().AutoSendTrade do
-                    if getgenv().TargetTradePlayer ~= "" then
-                        local targetPlr = Players:FindFirstChild(getgenv().TargetTradePlayer)
-                        if targetPlr then
+                while getgenv().AutoTower do
+                    local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+                    if playerGui then
+                        local equipBtn, battleBtn, nextBtn, playBtn, openBtn, autoReplayBtn, hideBattleBtn, showBattleBtn
+                        
+                        local function isGuiVisible(gui)
+                            if not gui then return false end
+                            if gui:IsA("GuiObject") and not gui.Visible then return false end
+                            local current = gui.Parent
+                            while current and current:IsA("GuiObject") do
+                                if not current.Visible then return false end
+                                current = current.Parent
+                            end
+                            if current and current:IsA("ScreenGui") then
+                                return current.Enabled
+                            end
+                            return true
+                        end
+
+                        for _, v in ipairs(playerGui:GetDescendants()) do
+                            if (v:IsA("TextButton") or v:IsA("TextLabel")) and v.Text then
+                                local text = string.upper(string.match(v.Text, "^%s*(.-)%s*$") or "")
+                                if text == "EQUIP BEST" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then equipBtn = btn end
+                                elseif text == "BATTLE" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then battleBtn = btn end
+                                elseif text == "NEXT" or text == "NEXT FLOOR" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then nextBtn = btn end
+                                elseif text == "PLAY" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then playBtn = btn end
+                                elseif text == "AUTO REPLAY" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then autoReplayBtn = btn end
+                                elseif text == "HIDE BATTLE" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then hideBattleBtn = btn end
+                                elseif text == "SHOW BATTLE" then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn and isGuiVisible(btn) then showBattleBtn = btn end
+                                elseif string.find(text, "OPEN INFINITY TOWER") then
+                                    local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+                                    if btn then openBtn = btn end
+                                end
+                            end
+                        end
+                        
+                        local openPrompt
+                        for _, p in ipairs(workspace:GetDescendants()) do
+                            if p:IsA("ProximityPrompt") then
+                                local pText = string.upper(p.ActionText .. " " .. p.ObjectText)
+                                if string.find(pText, "OPEN INFINITY TOWER") or string.find(pText, "INFINITY TOWER") then
+                                    openPrompt = p
+                                    break
+                                end
+                            end
+                        end
+                        
+                        local function fireButton(btn)
+                            if not btn then return end
                             pcall(function()
-                                if TradeRemotes then
-                                    if TradeRemotes:FindFirstChild("SendTradeRequest") then
-                                        TradeRemotes.SendTradeRequest:FireServer(targetPlr)
-                                    elseif TradeRemotes:FindFirstChild("TradeRequest") then
-                                        TradeRemotes.TradeRequest:FireServer(targetPlr)
+                                local fired = false
+                                if getconnections then
+                                    for _, conn in pairs(getconnections(btn.Activated)) do
+                                        pcall(function() conn:Fire() end)
+                                        fired = true
                                     end
+                                    for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+                                        pcall(function() conn:Fire() end)
+                                        fired = true
+                                    end
+                                    for _, conn in pairs(getconnections(btn.MouseButton1Down)) do
+                                        pcall(function() conn:Fire() end)
+                                        fired = true
+                                    end
+                                end
+                                if not fired then
+                                    local vim = game:GetService("VirtualInputManager")
+                                    local absPos = btn.AbsolutePosition
+                                    local absSize = btn.AbsoluteSize
+                                    local center = absPos + (absSize / 2)
+                                    vim:SendMouseButtonEvent(center.X, center.Y + 36, 0, true, game, 1)
+                                    task.wait(0.1)
+                                    vim:SendMouseButtonEvent(center.X, center.Y + 36, 0, false, game, 1)
                                 end
                             end)
                         end
+                        
+                        local inBattle = equipBtn or battleBtn or autoReplayBtn or showBattleBtn
+                        
+                        if openPrompt and not inBattle then
+                            pcall(function()
+                                local hrp = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                                if hrp then
+                                    local targetPos
+                                    if openPrompt.Parent:IsA("BasePart") then targetPos = openPrompt.Parent.Position
+                                    elseif openPrompt.Parent:IsA("Attachment") then targetPos = openPrompt.Parent.WorldPosition
+                                    elseif openPrompt.Parent:IsA("Model") and openPrompt.Parent.PrimaryPart then targetPos = openPrompt.Parent.PrimaryPart.Position end
+                                    
+                                    if targetPos then
+                                        local dist = (hrp.Position - targetPos).Magnitude
+                                        if dist > 15 then
+                                            local character = game:GetService("Players").LocalPlayer.Character
+                                            if not getgenv().TowerOriginalCFrame then
+                                                getgenv().TowerOriginalCFrame = character:GetPivot()
+                                            end
+                                            
+                                            -- Freeze camera to prevent blinking
+                                            local cam = workspace.CurrentCamera
+                                            if cam then
+                                                getgenv().TowerSavedCamCF = cam.CFrame
+                                                cam.CameraType = Enum.CameraType.Scriptable
+                                            end
+                                            
+                                            character:PivotTo(CFrame.new(targetPos) + Vector3.new(0, 3, 0))
+                                            task.wait(0.1)
+                                        end
+                                    end
+                                end
+                                
+                                openPrompt.RequiresLineOfSight = false
+                                openPrompt.MaxActivationDistance = 99999
+                                fireproximityprompt(openPrompt)
+                            end)
+                            task.wait(0.1)
+                        end
+                        
+                        if openBtn and not (equipBtn or battleBtn) then
+                            fireButton(openBtn)
+                            task.wait(0.1)
+                        end
+                        
+                        if equipBtn then
+                            fireButton(equipBtn)
+                            task.wait(0.1)
+                        end
+                        if battleBtn then
+                            fireButton(battleBtn)
+                            task.wait(0.2)
+                            -- Teleport back after starting the battle
+                            local character = game:GetService("Players").LocalPlayer.Character
+                            if getgenv().TowerOriginalCFrame and character then
+                                character:PivotTo(getgenv().TowerOriginalCFrame)
+                                getgenv().TowerOriginalCFrame = nil
+                                
+                                -- Unfreeze camera
+                                local cam = workspace.CurrentCamera
+                                local char = game:GetService("Players").LocalPlayer.Character
+                                if cam and getgenv().TowerSavedCamCF then
+                                    cam.CameraType = Enum.CameraType.Custom
+                                    if char and char:FindFirstChild("Humanoid") then
+                                        cam.CameraSubject = char.Humanoid
+                                    end
+                                    getgenv().TowerSavedCamCF = nil
+                                end
+                            end
+                        end
+                        if autoReplayBtn then
+                            local color = autoReplayBtn.BackgroundColor3
+                            if autoReplayBtn.BackgroundTransparency > 0.5 and autoReplayBtn.Parent and autoReplayBtn.Parent:IsA("GuiObject") then
+                                color = autoReplayBtn.Parent.BackgroundColor3
+                            end
+                            if autoReplayBtn:IsA("ImageButton") and autoReplayBtn.ImageColor3 ~= Color3.new(1, 1, 1) then
+                                color = autoReplayBtn.ImageColor3
+                            end
+                            
+                            local isGreen = (color.G > color.R + 0.1)
+                            
+                            if isGreen then
+                                getgenv().AutoReplayToggled = true
+                            elseif not getgenv().AutoReplayToggled then
+                                fireButton(autoReplayBtn)
+                                getgenv().AutoReplayToggled = true
+                                task.wait(0.2)
+                            end
+                        end
+                        
+                        if not (autoReplayBtn or showBattleBtn or hideBattleBtn) then
+                            getgenv().AutoReplayToggled = false
+                        end
+                        
+                        -- If we are in battle (AutoReplay or ShowBattle is visible), teleport back to original spot!
+                        if autoReplayBtn or showBattleBtn then
+                            local character = game:GetService("Players").LocalPlayer.Character
+                            if getgenv().TowerOriginalCFrame and character then
+                                character:PivotTo(getgenv().TowerOriginalCFrame)
+                                getgenv().TowerOriginalCFrame = nil
+                                
+                                -- Unfreeze camera
+                                local cam = workspace.CurrentCamera
+                                local char = game:GetService("Players").LocalPlayer.Character
+                                if cam and getgenv().TowerSavedCamCF then
+                                    cam.CameraType = Enum.CameraType.Custom
+                                    if char and char:FindFirstChild("Humanoid") then
+                                        cam.CameraSubject = char.Humanoid
+                                    end
+                                    getgenv().TowerSavedCamCF = nil
+                                end
+                            end
+                        end
+                        
+                        if hideBattleBtn then
+                            fireButton(hideBattleBtn)
+                            task.wait(0.2)
+                        end
+                        if nextBtn then
+                            fireButton(nextBtn)
+                            task.wait(0.2)
+                        end
+                        if playBtn then
+                            fireButton(playBtn)
+                            task.wait(0.2)
+                        end
                     end
-                    task.wait(3)
+                    task.wait(0.2)
                 end
             end)
         end
     end
 })
 
-TradeTab:Toggle({
-    Title = "Auto Accept Trade Request",
-    Value = getgenv().AutoAcceptTrade,
-    Callback = function(state)
-        getgenv().AutoAcceptTrade = state
-        if state then
-            task.spawn(function()
-                while getgenv().AutoAcceptTrade do
-                    pcall(function()
-                        local player = game:GetService("Players.LocalPlayer")
-                        local tradeGui = player.PlayerGui:FindFirstChild("TradeRequest") or player.PlayerGui:FindFirstChild("TradeGui")
-                        if tradeGui and tradeGui.Visible then
-                            local acceptBtn = tradeGui:FindFirstChild("Accept", true) or tradeGui:FindFirstChild("Yes", true)
-                            if acceptBtn and acceptBtn:IsA("GuiButton") then
-                                for _, c in ipairs(getconnections(acceptBtn.MouseButton1Click)) do
-                                    c:Fire()
-                                end
-                            end
-                        end
-                        if TradeRemotes and TradeRemotes:FindFirstChild("AcceptTradeRequest") then
-                            TradeRemotes.AcceptTradeRequest:FireServer()
-                        end
-                    end)
-                    task.wait(1)
-                end
-            end)
-        end
-    end
+local MiscTab = Window:Tab({
+    Title = "การตั้งค่า",
+    Icon = "solar:settings-bold",
 })
 
-TradeTab:Toggle({
-    Title = "Auto Confirm / Accept Trade",
-    Value = getgenv().AutoConfirmTrade,
-    Callback = function(state)
-        getgenv().AutoConfirmTrade = state
-        if state then
-            task.spawn(function()
-                while getgenv().AutoConfirmTrade do
-                    pcall(function()
-                        local player = game:GetService("Players.LocalPlayer")
-                        local tradeGui = player.PlayerGui:FindFirstChild("TradeWindow") or player.PlayerGui:FindFirstChild("TradeGui")
-                        if tradeGui and tradeGui.Visible then
-                            local confirmBtn = tradeGui:FindFirstChild("Confirm", true) or tradeGui:FindFirstChild("Ready", true)
-                            if confirmBtn and confirmBtn:IsA("GuiButton") then
-                                for _, c in ipairs(getconnections(confirmBtn.MouseButton1Click)) do
-                                    c:Fire()
-                                end
-                            end
-                        end
-                        if TradeRemotes and TradeRemotes:FindFirstChild("ConfirmTrade") then
-                            TradeRemotes.ConfirmTrade:FireServer()
-                        end
-                    end)
-                    task.wait(1)
-                end
-            end)
-        end
-    end
-})
-
---------------------------------------------------------------------------------
--- MISC TAB & CONFIG SYSTEM
---------------------------------------------------------------------------------
 local HttpService = game:GetService("HttpService")
 local ConfigFolder = "Dexq_AnimeCardFarm"
 
@@ -892,7 +932,9 @@ local function GetConfigs()
     return configs
 end
 
-local ConfigData = { Autoload = "" }
+local ConfigData = {
+    Autoload = "",
+}
 
 local function SaveMainConfig()
     if writefile then
@@ -916,7 +958,7 @@ LoadMainConfig()
 
 getgenv().DiscordWebhook = ""
 local WebhookInput = MiscTab:Input({
-    Title = "Discord Webhook URL",
+    Title = "URL Discord Webhook",
     PlaceholderText = "https://discord.com/api/webhooks/...",
     Callback = function(text)
         getgenv().DiscordWebhook = text
@@ -924,7 +966,7 @@ local WebhookInput = MiscTab:Input({
 })
 
 MiscTab:Keybind({
-    Title = "Toggle UI Key",
+    Title = "คีย์เปิด/ปิด UI",
     Key = "RightControl",
     Callback = function()
         pcall(function()
@@ -936,6 +978,7 @@ MiscTab:Keybind({
             if not toggled then
                 for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
                     if v:IsA("ScreenGui") and v:FindFirstChild("Main") and v.Main:IsA("Frame") then
+                        -- Check if this is the WindUI ScreenGui
                         local titleLabel = v.Main:FindFirstChild("Topbar", true)
                         if titleLabel or v.Name == "WindUI" or v.Name == "DexqUI" then
                             v.Enabled = not v.Enabled
@@ -958,12 +1001,13 @@ local function SaveConfig(name)
         AutoCarryDelay = getgenv().AutoCarryDelay or 5,
         AntiAfk = getgenv().AntiAfkState or false,
         AutoUseLuck = getgenv().AutoUseLuck or false,
+        AutoTower = getgenv().AutoTower or false,
         Webhook = getgenv().DiscordWebhook or ""
     }
     if writefile then
         pcall(function()
             writefile(ConfigFolder .. "/" .. name .. ".json", HttpService:JSONEncode(data))
-            WindUI:Notify({ Title = "Config", Content = "Saved config: " .. name, Duration = 3 })
+            WindUI:Notify({ Title = "การตั้งค่า", Content = "บันทึกแล้ว: " .. name, Duration = 3 })
         end)
     end
 end
@@ -995,9 +1039,11 @@ local function LoadConfig(name)
             end
             safeToggleSet(AntiAfkToggle, data.AntiAfk or false)
             safeToggleSet(AutoUseLuckToggle, data.AutoUseLuck or false)
+            safeToggleSet(AutoTowerToggle, data.AutoTower or false)
             
             getgenv().DiscordWebhook = data.Webhook or ""
             pcall(function() WebhookInput:SetValue(getgenv().DiscordWebhook) end)
+            
             
             if RarityDropdown then
                 local arrR = {}
@@ -1033,26 +1079,26 @@ local function LoadConfig(name)
                 pcall(function() MutationDropdown:Refresh(MutationsList, arrM) end)
             end
             
-            WindUI:Notify({ Title = "Config", Content = "Loaded config: " .. name, Duration = 3 })
+            WindUI:Notify({ Title = "การตั้งค่า", Content = "โหลดแล้ว: " .. name, Duration = 3 })
         else
-            WindUI:Notify({ Title = "Config", Content = "Failed to load config: " .. name, Duration = 3 })
+            WindUI:Notify({ Title = "การตั้งค่า", Content = "โหลดไม่สำเร็จ: " .. name, Duration = 3 })
         end
     end
 end
 
 local ConfigNameInput = ""
 MiscTab:Input({
-    Title = "Config Name",
-    PlaceholderText = "Config name...",
+    Title = "ชื่อการตั้งค่า",
+    PlaceholderText = "ชื่อการตั้งค่า...",
     Callback = function(text)
         ConfigNameInput = text
     end
 })
 
-local ConfigDropdown
+local ConfigDropdown -- declare beforehand
 
 MiscTab:Button({
-    Title = "บันทึก Config",
+    Title = "บันทึกการตั้งค่า",
     Callback = function()
         if ConfigNameInput ~= "" then
             SaveConfig(ConfigNameInput)
@@ -1060,7 +1106,7 @@ MiscTab:Button({
                 pcall(function() ConfigDropdown:Refresh(GetConfigs()) end)
             end
         else
-            WindUI:Notify({ Title = "Config", Content = "Please enter a config name", Duration = 3 })
+            WindUI:Notify({ Title = "การตั้งค่า", Content = "กรุณาใส่ชื่อการตั้งค่า", Duration = 3 })
         end
     end
 })
@@ -1069,7 +1115,7 @@ local ConfigList = GetConfigs()
 local SelectedConfig = ConfigData.Autoload
 
 ConfigDropdown = MiscTab:Dropdown({
-    Title = "Config ที่บันทึกไว้",
+    Title = "การตั้งค่าที่บันทึก",
     Values = ConfigList,
     Value = ConfigData.Autoload,
     Callback = function(value)
@@ -1088,17 +1134,17 @@ ConfigDropdown = MiscTab:Dropdown({
 })
 
 MiscTab:Button({
-    Title = "รีเฟรชรายการ Config",
+    Title = "รีเฟรชรายการการตั้งค่า",
     Callback = function()
         if ConfigDropdown and ConfigDropdown.Refresh then
             pcall(function() ConfigDropdown:Refresh(GetConfigs()) end)
         end
-        WindUI:Notify({ Title = "Config", Content = "Config list refreshed", Duration = 3 })
+        WindUI:Notify({ Title = "การตั้งค่า", Content = "รีเฟรชรายการแล้ว", Duration = 3 })
     end
 })
 
 MiscTab:Button({
-    Title = "โหลด Config ที่เลือก",
+    Title = "โหลดการตั้งค่าที่เลือก",
     Callback = function()
         if SelectedConfig and SelectedConfig ~= "" then
             LoadConfig(SelectedConfig)
@@ -1107,7 +1153,7 @@ MiscTab:Button({
 })
 
 MiscTab:Button({
-    Title = "ลบ Config ที่เลือก",
+    Title = "ลบการตั้งค่าที่เลือก",
     Callback = function()
         if SelectedConfig and SelectedConfig ~= "" then
             if isfile and isfile(ConfigFolder .. "/" .. SelectedConfig .. ".json") then
@@ -1119,17 +1165,17 @@ MiscTab:Button({
                 if ConfigDropdown and ConfigDropdown.Refresh then
                     pcall(function() ConfigDropdown:Refresh(GetConfigs()) end)
                 end
-                WindUI:Notify({ Title = "Config", Content = "Deleted config: " .. SelectedConfig, Duration = 3 })
+                WindUI:Notify({ Title = "การตั้งค่า", Content = "ลบแล้ว: " .. SelectedConfig, Duration = 3 })
                 SelectedConfig = ""
             else
-                WindUI:Notify({ Title = "Config", Content = "Config not found!", Duration = 3 })
+                WindUI:Notify({ Title = "การตั้งค่า", Content = "ไม่พบการตั้งค่า!", Duration = 3 })
             end
         end
     end
 })
 
 MiscTab:Toggle({
-    Title = "Auto Load Selected Config",
+    Title = "โหลดการตั้งค่าอัตโนมัติ",
     Value = (ConfigData.Autoload ~= ""),
     Callback = function(state)
         if state then
@@ -1148,107 +1194,8 @@ if ConfigData.Autoload ~= "" then
     end)
 end
 
---------------------------------------------------------------------------------
--- HORST DESCRIPTION UPDATE LOOP
---------------------------------------------------------------------------------
-local function updateHorstDescription()
-    local localPlayer = Players.LocalPlayer
-    if not localPlayer then return end
-
-    local coins = "0"
-    local playerGui = localPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        local hud = playerGui:FindFirstChild("HUD")
-        local currencies = hud and hud:FindFirstChild("Currencies")
-        local coinsCounter = currencies and currencies:FindFirstChild("CoinsCounter")
-        local coinsLabel = coinsCounter and coinsCounter:FindFirstChild("TextLabel")
-
-        if coinsLabel and coinsLabel.Text then
-            coins = coinsLabel.Text
-        end
-    end
-
-    local cvStr = "Cv:0"
-    if playerGui then
-        local hud = playerGui:FindFirstChild("HUD")
-        local conveyor = hud and (hud:FindFirstChild("Conveyor") or hud:FindFirstChild("ConveyorLevel"))
-        local levelLabel = conveyor and (conveyor:FindFirstChild("Level") or conveyor:FindFirstChild("TextLabel"))
-        
-        if levelLabel then
-            local levelText = tostring(levelLabel.Text):match("%d+") or levelLabel.Text
-            cvStr = "Cv:" .. tostring(levelText)
-        else
-            local conveyorVal = localPlayer:FindFirstChild("ConveyorLevel") or localPlayer:FindFirstChild("Conveyor")
-            if conveyorVal then
-                cvStr = "Cv:" .. tostring(conveyorVal.Value)
-            end
-        end
-    end
-
-    local cardStats = {
-        Grail   = {Rad = 0, Gli = 0, Star = 0, Adm = 0, Unk = 0},
-        Academy = {Rad = 0, Gli = 0, Star = 0, Adm = 0, Unk = 0}
-    }
-
-    local backpack = localPlayer:FindFirstChild("Backpack")
-    if backpack then
-        for _, item in ipairs(backpack:GetChildren()) do
-            if item:IsA("Tool") then
-                local itemName = item.Name:lower()
-                local itemMutation = tostring(item:GetAttribute("Mutation") or ""):lower()
-                local fullText = itemName .. " " .. itemMutation
-
-                for rarity, data in pairs(cardStats) do
-                    if itemName:find(rarity:lower()) then
-                        if fullText:find("radioactive") then
-                            data.Rad = data.Rad + 1
-                        elseif fullText:find("glitch") then
-                            data.Gli = data.Gli + 1
-                        elseif fullText:find("starfallen") then
-                            data.Star = data.Star + 1
-                        elseif fullText:find("admin") then
-                            data.Adm = data.Adm + 1
-                        elseif fullText:find("unknow") or fullText:find("unknown") then
-                            data.Unk = data.Unk + 1
-                        end
-                        break
-                    end
-                end
-            end
-        end
-    end
-
-    local message = string.format(
-        "💰 %s ⚙️ %s - 🏆 Grail: [Rad:%d Gli:%d Star:%d Adm:%d Unk:%d] 📮 Academy: [Rad:%d Gli:%d Star:%d Adm:%d Unk:%d]",
-        coins, cvStr,
-        cardStats.Grail.Rad,   cardStats.Grail.Gli,   cardStats.Grail.Star,   cardStats.Grail.Adm,   cardStats.Grail.Unk,
-        cardStats.Academy.Rad, cardStats.Academy.Gli, cardStats.Academy.Star, cardStats.Academy.Adm, cardStats.Academy.Unk
-    )
-
-    local item_data = {
-        Coins = coins,
-        ConveyorLevel = cvStr,
-        Grail = cardStats.Grail,
-        Academy = cardStats.Academy
-    }
-    local EncodeJson = HttpService:JSONEncode(item_data)
-
-    if _G and type(_G.Horst_SetDescription) == "function" then
-        pcall(function()
-            _G.Horst_SetDescription(message, EncodeJson)
-        end)
-    end
-end
-
-task.spawn(function()
-    while true do
-        updateHorstDescription()
-        task.wait(2)
-    end
-end)
-
 WindUI:Notify({
-    Title = "PayomboyZ Loaded",
-    Content = "UI & Misc Tab loaded successfully!",
+    Title = "Dexq โหลดแล้ว",
+    Content = "เรียกใช้งานสำเร็จ",
     Duration = 5,
 })
