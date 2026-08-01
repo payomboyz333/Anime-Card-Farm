@@ -527,7 +527,8 @@ local AutoCarryToggle = MainTab:Toggle({
 					for _, prompt in ipairs(searchArea:GetDescendants()) do
 						if prompt:IsA("ProximityPrompt") then
 							local txt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name):lower()
-							if txt:find("carry") then
+							local fullTxt = prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name
+							if txt:find("carry") or txt:find("collect") or txt:find("cash") or fullTxt:find("พก") or fullTxt:find("เก็บ") then
 								pcall(function()
 									local targetPos
 									if prompt.Parent:IsA("BasePart") then
@@ -620,11 +621,18 @@ local AutoSellBoxToggle = MainTab:Toggle({
 									pcall(function()
 										local originalCFrame = hrp.CFrame
 										hrp.CFrame = sellPart.CFrame + Vector3.new(0, 3, 0)
-										task.wait(0.15)
+										task.wait(0.3)
 										prompt.RequiresLineOfSight = false
 										prompt.MaxActivationDistance = 99999
-										fireproximityprompt(prompt)
-										task.wait(0.1)
+										
+										local timeout = 0
+										-- วนกดย้ำๆ จนกว่ากล่องจะหายไปจากมือ (หรือครบ 3 วินาที)
+										while character:FindFirstChildWhichIsA("Tool") and timeout < 30 do
+											fireproximityprompt(prompt)
+											task.wait(0.1)
+											timeout = timeout + 1
+										end
+										
 										hrp.CFrame = originalCFrame
 									end)
 								end
