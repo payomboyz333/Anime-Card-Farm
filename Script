@@ -861,17 +861,25 @@ local function collect4BestBaseCards()
 		for _, desc in ipairs(plotFolder:GetDescendants()) do
 			if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
 				local pText = ""
+				local oText = ""
 				if desc:IsA("ProximityPrompt") then
-					pText = string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or ""))
+					pText = string.upper(desc.ActionText or "")
+					oText = string.upper(desc.ObjectText or "")
 				end
+				local combinedText = pText .. " " .. oText
 				
-				local isShopOrPack = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
-					or string.find(pText, "PACK") or string.find(pText, "แพ็ค") or string.find(pText, "แพ็ก")
-					or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
-					or string.find(pText, "OPEN") or string.find(pText, "เปิด")
-					or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
+				local isIgnoredPrompt = string.find(combinedText, "BUY") or string.find(combinedText, "ซื้อ")
+					or string.find(combinedText, "PACK") or string.find(combinedText, "แพ็ค") or string.find(combinedText, "แพ็ก")
+					or string.find(combinedText, "SPAWN") or string.find(combinedText, "สุ่ม")
+					or string.find(combinedText, "OPEN") or string.find(combinedText, "เปิด")
+					or string.find(combinedText, "TOWER") or string.find(combinedText, "ทาวเวอร์")
+					or string.find(combinedText, "UPGRADE") or string.find(combinedText, "อัปเกรด")
+					or string.find(combinedText, "CLAIM") or string.find(combinedText, "รับ")
+					or string.find(combinedText, "SELL") or string.find(combinedText, "ขาย")
+					or string.find(combinedText, "REBIRTH") or string.find(combinedText, "จุติ")
+					or string.find(combinedText, "JOIN") or string.find(combinedText, "ENTER")
 				
-				if not isShopOrPack then
+				if not isIgnoredPrompt then
 					local model = desc:FindFirstAncestorOfClass("Model")
 					if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") then
 						local rarityLabel = model:FindFirstChild("Rarity", true)
@@ -887,7 +895,18 @@ local function collect4BestBaseCards()
 								if tonumber(val) then score = tonumber(val) end
 							end
 						end
-						table.insert(cardList, { interact = desc, score = score, model = model })
+
+						local isPickupPrompt = (desc:IsA("ProximityPrompt") and (
+							pText == "E" or pText == "" or string.find(combinedText, "PICK") or string.find(combinedText, "TAKE")
+							or string.find(combinedText, "COLLECT") or string.find(combinedText, "EQUIP")
+							or string.find(combinedText, "HOLD") or string.find(combinedText, "GRAB")
+							or string.find(combinedText, "หยิบ") or string.find(combinedText, "เก็บ")
+							or string.find(combinedText, "CARD") or string.find(combinedText, "การ์ด")
+						)) or desc:IsA("ClickDetector")
+
+						if (score > 0 or isPickupPrompt) and not string.find(string.upper(model.Name), "PLOT") then
+							table.insert(cardList, { interact = desc, score = score, model = model })
+						end
 					end
 				end
 			end
@@ -916,15 +935,13 @@ local function collect4BestBaseCards()
 					
 					if targetPos and hrp then
 						hrp.CFrame = CFrame.new(targetPos) + Vector3.new(0, 2, 0)
-						task.wait(0.4)
+						task.wait(0.15)
 						
 						if item.interact:IsA("ProximityPrompt") then
 							item.interact.RequiresLineOfSight = false
 							item.interact.MaxActivationDistance = 99999
 							item.interact.HoldDuration = 0
 							if fireproximityprompt then
-								fireproximityprompt(item.interact, 1, true)
-								task.wait(0.2)
 								fireproximityprompt(item.interact)
 							end
 						elseif item.interact:IsA("ClickDetector") then
@@ -932,7 +949,7 @@ local function collect4BestBaseCards()
 								fireclickdetector(item.interact)
 							end
 						end
-						task.wait(0.4)
+						task.wait(0.15)
 					end
 				end)
 			end
@@ -940,7 +957,7 @@ local function collect4BestBaseCards()
 
 		if originalCFrame and hrp then
 			hrp.CFrame = originalCFrame
-			task.wait(0.5)
+			task.wait(0.3)
 		end
 	end)
 end
@@ -1897,11 +1914,9 @@ local DashboardTab = Window:Tab({
 
 local DashboardSection = DashboardTab:Section({ Title = "สถานะคลังการ์ด" })
 
-local function getInventoryDashboardText()
+local function getCardInventoryText()
 	local player = game:GetService("Players").LocalPlayer
-	local packs = {}
 	local cards = {}
-	local totalPacks = 0
 	local totalCards = 0
 	local function scanFolder(folder)
 		if not folder then return end
@@ -1909,14 +1924,8 @@ local function getInventoryDashboardText()
 			if item:IsA("Tool") then
 				local cardName = item:GetAttribute("CardName")
 				local packName = item:GetAttribute("TemplateName")
-				if packName then
-					local rarity = tostring(item:GetAttribute("Rarity") or "Unknown")
-					local mutation = tostring(item:GetAttribute("Mutation") or "Normal")
-					local key = rarity .. " | " .. mutation
-					if not packs[key] then packs[key] = 0 end
-					packs[key] = packs[key] + 1
-					totalPacks = totalPacks + 1
-				elseif cardName then
+				local itemName = string.lower(item.Name)
+				if (cardName or not packName) and not string.find(itemName, "pack") and not string.find(itemName, "แพ็ค") then
 					local rarity = tostring(item:GetAttribute("Rarity") or item:GetAttribute("CardGrade") or "Unknown")
 					if not item:GetAttribute("Rarity") and not item:GetAttribute("CardGrade") then
 						if item:FindFirstChild("Rarity") and item.Rarity:IsA("StringValue") then
@@ -1938,59 +1947,79 @@ local function getInventoryDashboardText()
 	end)
 
 	local lines = {}
-	table.insert(lines, "=== แพ็คการ์ด (" .. totalPacks .. " ใบ) ===")
-	if totalPacks > 0 then
-		for key, count in pairs(packs) do
-			table.insert(lines, "  " .. key .. " x" .. tostring(count))
-		end
-	else
-		table.insert(lines, "  ไม่มีแพ็คการ์ด")
-	end
-	table.insert(lines, "")
-	table.insert(lines, "=== การ์ด (" .. totalCards .. " ใบ) ===")
+	table.insert(lines, "=== สถานะการ์ด (Card: " .. totalCards .. " ใบ) ===")
 	if totalCards > 0 then
 		for key, count in pairs(cards) do
 			table.insert(lines, "  " .. key .. " x" .. tostring(count))
 		end
 	else
-		table.insert(lines, "  ไม่มีการ์ด")
+		table.insert(lines, "  ไม่มีการ์ดในคลัง")
+	end
+	return table.concat(lines, "\n")
+end
+
+local function getPackInventoryText()
+	local player = game:GetService("Players").LocalPlayer
+	local packs = {}
+	local totalPacks = 0
+	local function scanFolder(folder)
+		if not folder then return end
+		for _, item in ipairs(folder:GetChildren()) do
+			if item:IsA("Tool") then
+				local packName = item:GetAttribute("TemplateName")
+				local itemName = string.lower(item.Name)
+				if packName or string.find(itemName, "pack") or string.find(itemName, "แพ็ค") then
+					local rarity = tostring(item:GetAttribute("Rarity") or "Unknown")
+					local mutation = tostring(item:GetAttribute("Mutation") or "Normal")
+					local key = rarity .. " | " .. mutation
+					if not packs[key] then packs[key] = 0 end
+					packs[key] = packs[key] + 1
+					totalPacks = totalPacks + 1
+				end
+			end
+		end
+	end
+	pcall(function()
+		scanFolder(player:FindFirstChild("Backpack"))
+		if player.Character then scanFolder(player.Character) end
+	end)
+
+	local lines = {}
+	table.insert(lines, "=== สถานะแพ็คการ์ด (Pack Card: " .. totalPacks .. " ใบ) ===")
+	if totalPacks > 0 then
+		for key, count in pairs(packs) do
+			table.insert(lines, "  " .. key .. " x" .. tostring(count))
+		end
+	else
+		table.insert(lines, "  ไม่มีแพ็คการ์ดในคลัง")
 	end
 	return table.concat(lines, "\n")
 end
 
 DashboardTab:Button({
-	Title = "แสดงสถานะคลัง",
+	Title = "แสดงสถานะ Card",
 	Callback = function()
-		local text = getInventoryDashboardText()
-		if setclipboard then
-			setclipboard(text)
-		end
+		local text = getCardInventoryText()
+		if setclipboard then setclipboard(text) end
 		if WindUI and WindUI.Notify then
-			WindUI:Notify({
-				Title = "แดชบอร์ด",
-				Content = text,
-				Duration = 15,
-			})
+			WindUI:Notify({ Title = "แดชบอร์ด - Card", Content = text, Duration = 12 })
 		end
 	end,
 })
 
 DashboardTab:Button({
-	Title = "รีเฟรชข้อมูลคลัง",
+	Title = "แสดงสถานะ Pack Card",
 	Callback = function()
-		local text = getInventoryDashboardText()
+		local text = getPackInventoryText()
+		if setclipboard then setclipboard(text) end
 		if WindUI and WindUI.Notify then
-			WindUI:Notify({
-				Title = "แดชบอร์ด - อัปเดต",
-				Content = text,
-				Duration = 15,
-			})
+			WindUI:Notify({ Title = "แดชบอร์ด - Pack Card", Content = text, Duration = 12 })
 		end
 	end,
 })
 
--- ===== Card ESP =====
-getgenv().CardESP = false
+-- Auto-start ESP background loop (UI / Inventory Only, no 3D screen text)
+getgenv().CardESP = true
 getgenv().ESPBillboards = getgenv().ESPBillboards or {}
 
 local function clearCardESP()
@@ -1998,136 +2027,107 @@ local function clearCardESP()
 		pcall(function() bb:Destroy() end)
 	end
 	getgenv().ESPBillboards = {}
+
+	-- Clear any leftover 3D BillboardGuis from screen
+	pcall(function()
+		local coreGui = game:GetService("CoreGui")
+		for _, child in ipairs(coreGui:GetChildren()) do
+			if child:IsA("BillboardGui") and string.find(child.Name, "CardESP_") then
+				child:Destroy()
+			end
+		end
+	end)
 end
 
 local function updateCardESP()
 	clearCardESP()
-	if not getgenv().CardESP then return end
-	
 	local player = game:GetService("Players").LocalPlayer
-	local plotNum = player:FindFirstChild("PlotNumber") and player.PlotNumber.Value or 0
-	local plotFolder
-	if plotNum ~= 0 then
-		plotFolder = workspace:FindFirstChild("MAP")
-			and workspace.MAP:FindFirstChild("Plots")
-			and workspace.MAP.Plots:FindFirstChild(tostring(plotNum))
-	end
-	if not plotFolder then
-		for _, p in ipairs(workspace:GetDescendants()) do
-			if p.Name == player.Name or p:GetAttribute("Owner") == player.Name then
-				plotFolder = p
-				break
+	if not player then return end
+
+	-- 1. Scan Backpack (Rename Tools to show mutation in hotbar UI)
+	local backpack = player:FindFirstChild("Backpack")
+	if backpack then
+		for _, tool in ipairs(backpack:GetChildren()) do
+			if tool:IsA("Tool") then
+				local mutVal = tool:GetAttribute("Mutation")
+				if not mutVal then
+					local mutLabel = tool:FindFirstChild("Mutation", true)
+					if mutLabel and mutLabel:IsA("TextLabel") then mutVal = mutLabel.Text
+					elseif mutLabel and mutLabel:IsA("StringValue") then mutVal = mutLabel.Value end
+				end
+				if mutVal then
+					local clean = string.gsub(mutVal, "<[^>]+>", "")
+					clean = string.match(clean, "^%s*(.-)%s*$") or ""
+					if clean ~= "" and clean ~= "Label" and clean ~= "Normal" then
+						if not string.find(tool.Name, "%[" .. clean .. "%]") then
+							tool.Name = "[" .. clean .. "] " .. tool.Name
+						end
+					end
+				end
 			end
 		end
 	end
-	if not plotFolder then return end
 
-	local espModels = {}
-	for _, desc in ipairs(plotFolder:GetDescendants()) do
-		if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
-			local model = desc:FindFirstAncestorOfClass("Model")
-			if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") and not espModels[model] then
-				local isShopOrPack = false
-				if desc:IsA("ProximityPrompt") then
-					local pText = string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or ""))
-					isShopOrPack = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
-						or string.find(pText, "PACK") or string.find(pText, "แพ็ค") or string.find(pText, "แพ็ก")
-						or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
-						or string.find(pText, "OPEN") or string.find(pText, "เปิด")
-						or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
-				end
-				
-				if not isShopOrPack then
-					espModels[model] = true
-					pcall(function()
-				local mutationLabel = model:FindFirstChild("Mutation", true)
-				local rarityLabel = model:FindFirstChild("Rarity", true)
-				local mutationText = "Normal"
-				local rarityText = "?"
-				if mutationLabel and mutationLabel:IsA("TextLabel") then
-					local clean = string.gsub(mutationLabel.Text or "", "<[^>]+>", "")
-					clean = string.match(clean, "^%s*(.-)%s*$") or ""
-					if clean ~= "" and clean ~= "Label" then
-						mutationText = clean
+	-- 2. Scan PlayerGui (Overlay Mutation status inside Inventory GUI slots)
+	local playerGui = player:FindFirstChild("PlayerGui")
+	if playerGui then
+		local espGui2D = game:GetService("CoreGui"):FindFirstChild("PayomboyZ_InvESP")
+		if not espGui2D then
+			espGui2D = Instance.new("ScreenGui")
+			espGui2D.Name = "PayomboyZ_InvESP"
+			espGui2D.Parent = game:GetService("CoreGui")
+		end
+		espGui2D:ClearAllChildren()
+		table.insert(getgenv().ESPBillboards, espGui2D)
+
+		for _, vp in ipairs(playerGui:GetDescendants()) do
+			if vp:IsA("ViewportFrame") and vp.Visible then
+				local model = vp:FindFirstChildWhichIsA("Model")
+				if model then
+					local mutationLabel = model:FindFirstChild("Mutation", true)
+					if mutationLabel and mutationLabel:IsA("TextLabel") then
+						local clean = string.gsub(mutationLabel.Text or "", "<[^>]+>", "")
+						clean = string.match(clean, "^%s*(.-)%s*$") or ""
+						if clean ~= "" and clean ~= "Label" and clean ~= "Normal" then
+							local textLabel = Instance.new("TextLabel")
+							textLabel.Size = UDim2.new(1, 0, 0, 20)
+							textLabel.Position = UDim2.new(0, 0, 1, -20)
+							textLabel.BackgroundTransparency = 0.3
+							textLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+							
+							local mutColor = Color3.fromRGB(255, 255, 255)
+							local mutLower = string.lower(clean)
+							if mutLower == "shiny" or mutLower == "ชายนี่" then mutColor = Color3.fromRGB(255, 215, 0)
+							elseif mutLower == "rainbow" or mutLower == "เรนโบว์" then mutColor = Color3.fromRGB(255, 100, 255)
+							elseif mutLower == "negative" or mutLower == "เนกาทิฟ" then mutColor = Color3.fromRGB(100, 100, 255)
+							elseif mutLower == "golden" or mutLower == "โกลเด้น" then mutColor = Color3.fromRGB(255, 200, 50) end
+							
+							textLabel.TextColor3 = mutColor
+							textLabel.TextScaled = true
+							textLabel.Font = Enum.Font.GothamBold
+							textLabel.Text = clean
+							textLabel.ZIndex = 100
+							
+							pcall(function()
+								textLabel.Parent = vp.Parent
+								table.insert(getgenv().ESPBillboards, textLabel)
+							end)
+						end
 					end
-				end
-				if rarityLabel and rarityLabel:IsA("TextLabel") then
-					local clean = string.gsub(rarityLabel.Text or "", "<[^>]+>", "")
-					clean = string.match(clean, "^%s*(.-)%s*$") or ""
-					if clean ~= "" and clean ~= "Label" then
-						rarityText = clean
-					end
-				end
-
-				local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
-				if part then
-					local bb = Instance.new("BillboardGui")
-					bb.Name = "CardESP_" .. model.Name
-					bb.Adornee = part
-					bb.Size = UDim2.new(0, 200, 0, 60)
-					bb.StudsOffset = Vector3.new(0, 4, 0)
-					bb.AlwaysOnTop = true
-					bb.Parent = game:GetService("CoreGui")
-
-					local bg = Instance.new("Frame")
-					bg.Size = UDim2.new(1, 0, 1, 0)
-					bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-					bg.BackgroundTransparency = 0.3
-					bg.BorderSizePixel = 0
-					bg.Parent = bb
-					local corner = Instance.new("UICorner")
-					corner.CornerRadius = UDim.new(0, 6)
-					corner.Parent = bg
-
-					local mutColor = Color3.fromRGB(200, 200, 200)
-					local mutLower = string.lower(mutationText)
-					if mutLower == "shiny" or mutLower == "ชายนี่" then
-						mutColor = Color3.fromRGB(255, 215, 0)
-					elseif mutLower == "rainbow" or mutLower == "เรนโบว์" then
-						mutColor = Color3.fromRGB(255, 100, 255)
-					elseif mutLower == "negative" or mutLower == "เนกาทิฟ" then
-						mutColor = Color3.fromRGB(100, 100, 255)
-					elseif mutLower == "golden" or mutLower == "โกลเด้น" then
-						mutColor = Color3.fromRGB(255, 200, 50)
-					end
-
-					local label = Instance.new("TextLabel")
-					label.Size = UDim2.new(1, -8, 1, -4)
-					label.Position = UDim2.new(0, 4, 0, 2)
-					label.BackgroundTransparency = 1
-					label.Font = Enum.Font.GothamBold
-					label.TextColor3 = mutColor
-					label.TextScaled = true
-					label.Text = rarityText .. "\n" .. mutationText
-					label.Parent = bg
-
-					table.insert(getgenv().ESPBillboards, bb)
-				end
-			end)
 				end
 			end
 		end
 	end
 end
 
-DashboardTab:Toggle({
-	Title = "ESP สถานะการ์ด",
-	Value = getgenv().CardESP,
-	Callback = function(state)
-		getgenv().CardESP = state
-		if state then
-			task.spawn(function()
-				while getgenv().CardESP do
-					updateCardESP()
-					task.wait(3)
-				end
-				clearCardESP()
-			end)
-		else
-			clearCardESP()
+task.spawn(function()
+	while true do
+		if getgenv().CardESP then
+			pcall(updateCardESP)
 		end
-	end,
-})
+		task.wait(3)
+	end
+end)
 
 -- ===== Mobile Toggle Popup =====
 pcall(function()
