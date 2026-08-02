@@ -797,6 +797,178 @@ local function setupPotionToggle(title, titleTH, boostName, itemIdPrefix)
 		end,
 	})
 end
+local function checkAndCloseTowerRewards()
+	pcall(function()
+		local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+		if not playerGui then return end
+		for _, v in ipairs(playerGui:GetDescendants()) do
+			if (v:IsA("TextLabel") or v:IsA("TextButton")) and v.Text then
+				local txt = string.upper(v.Text)
+				if string.find(txt, "TOWER REWARD") or string.find(txt, "REWARD") or string.find(txt, "รางวัลทาวเวอร์") then
+					local frame = v:FindFirstAncestorWhichIsA("GuiObject")
+					if frame then
+						for _, child in ipairs(frame:GetDescendants()) do
+							if (child:IsA("TextButton") or child:IsA("ImageButton")) and (child.Name == "Close" or child.Name == "CloseButton" or (child:IsA("TextButton") and child.Text == "X")) then
+								if getconnections then
+									for _, conn in pairs(getconnections(child.MouseButton1Click)) do conn:Fire() end
+									for _, conn in pairs(getconnections(child.Activated)) do conn:Fire() end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end)
+end
+
+local RarityTiers = {
+	["secret"] = 100, ["mythical"] = 90, ["legendary"] = 80, ["epic"] = 70,
+	["rare"] = 60, ["uncommon"] = 50, ["common"] = 40,
+}
+local function getRarityScore(rarityText)
+	if not rarityText then return 0 end
+	local clean = string.gsub(rarityText, "<[^>]+>", "")
+	clean = string.match(clean, "^%s*(.-)%s*$") or ""
+	return RarityTiers[string.lower(clean)] or 0
+end
+
+local function collect4BestBaseCards()
+	pcall(function()
+		local player = game:GetService("Players").LocalPlayer
+		local character = player.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+
+		local plotNum = player:FindFirstChild("PlotNumber") and player.PlotNumber.Value or 0
+		local plotFolder
+		if plotNum ~= 0 then
+			plotFolder = workspace:FindFirstChild("MAP")
+				and workspace.MAP:FindFirstChild("Plots")
+				and workspace.MAP.Plots:FindFirstChild(tostring(plotNum))
+		end
+		if not plotFolder then
+			for _, p in ipairs(workspace:GetDescendants()) do
+				if p.Name == player.Name or p:GetAttribute("Owner") == player.Name then
+					plotFolder = p
+					break
+				end
+			end
+		end
+		if not plotFolder then return end
+
+		local cardList = {}
+		for _, desc in ipairs(plotFolder:GetDescendants()) do
+			if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
+				local pText = ""
+				if desc:IsA("ProximityPrompt") then
+					pText = string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or ""))
+				end
+				
+				local isShopOrPack = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
+					or string.find(pText, "PACK") or string.find(pText, "แพ็ค") or string.find(pText, "แพ็ก")
+					or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
+					or string.find(pText, "OPEN") or string.find(pText, "เปิด")
+					or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
+				
+				if not isShopOrPack then
+					local model = desc:FindFirstAncestorOfClass("Model")
+					if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") then
+						local rarityLabel = model:FindFirstChild("Rarity", true)
+						local score = 0
+						if rarityLabel and rarityLabel:IsA("TextLabel") then
+							score = getRarityScore(rarityLabel.Text)
+						end
+						if score == 0 then
+							local lvl = model:GetAttribute("Level") or model:GetAttribute("CardLevel") or 0
+							if tonumber(lvl) then score = tonumber(lvl) end
+							if score == 0 then
+								local val = model:GetAttribute("CashMultiplier") or model:GetAttribute("Multiplier")
+								if tonumber(val) then score = tonumber(val) end
+							end
+						end
+						table.insert(cardList, { interact = desc, score = score, model = model })
+					end
+				end
+			end
+		end
+
+		if #cardList == 0 then return end
+		table.sort(cardList, function(a, b) return a.score > b.score end)
+
+		local originalCFrame = hrp.CFrame
+
+		for i = 1, math.min(4, #cardList) do
+			local item = cardList[i]
+			if item and item.interact and item.interact.Parent then
+				pcall(function()
+					local targetPos
+					if item.interact.Parent:IsA("BasePart") then
+						targetPos = item.interact.Parent.Position
+					elseif item.interact.Parent:IsA("Attachment") then
+						targetPos = item.interact.Parent.WorldPosition
+					elseif item.model.PrimaryPart then
+						targetPos = item.model.PrimaryPart.Position
+					else
+						local part = item.model:FindFirstChildWhichIsA("BasePart")
+						if part then targetPos = part.Position end
+					end
+					
+					if targetPos and hrp then
+						hrp.CFrame = CFrame.new(targetPos) + Vector3.new(0, 2, 0)
+						task.wait(0.4)
+						
+						if item.interact:IsA("ProximityPrompt") then
+							item.interact.RequiresLineOfSight = false
+							item.interact.MaxActivationDistance = 99999
+							item.interact.HoldDuration = 0
+							if fireproximityprompt then
+								fireproximityprompt(item.interact, 1, true)
+								task.wait(0.2)
+								fireproximityprompt(item.interact)
+							end
+						elseif item.interact:IsA("ClickDetector") then
+							if fireclickdetector then
+								fireclickdetector(item.interact)
+							end
+						end
+						task.wait(0.4)
+					end
+				end)
+			end
+		end
+
+		if originalCFrame and hrp then
+			hrp.CFrame = originalCFrame
+			task.wait(0.5)
+		end
+	end)
+end
+
+local function reequipBaseCards()
+	pcall(function()
+		local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+		if playerGui then
+			for _, v in ipairs(playerGui:GetDescendants()) do
+				if (v:IsA("TextButton") or v:IsA("TextLabel")) and v.Text then
+					local text = string.upper(string.match(v.Text, "^%s*(.-)%s*$") or "")
+					if text == "EQUIP BEST" or text == "สวมใส่ดีที่สุด" or text == "สวมใส่ที่ดีที่สุด" then
+						local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+						if btn and btn.Visible then
+							pcall(function()
+								if getconnections then
+									for _, c in pairs(getconnections(btn.MouseButton1Click)) do c:Fire() end
+									for _, c in pairs(getconnections(btn.Activated)) do c:Fire() end
+								end
+							end)
+						end
+					end
+				end
+			end
+		end
+	end)
+end
+
 setupPotionToggle("Luck", "โชค", "PotionLuck", "LuckPotion")
 setupPotionToggle("Cash", "เงิน", "PotionCash", "CashPotion")
 setupPotionToggle("Mutation", "กลายพันธุ์", "PotionMutation", "MutationPotion")
@@ -827,6 +999,7 @@ local AutoTowerToggle = RaidTab:Toggle({
 				while getgenv().AutoTower do
 					local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
 					if playerGui then
+						checkAndCloseTowerRewards()
 						local equipBtn, battleBtn, nextBtn, playBtn, openBtn, autoReplayBtn, hideBattleBtn, showBattleBtn
 						local function isGuiVisible(gui)
 							if not gui then
@@ -958,8 +1131,16 @@ local AutoTowerToggle = RaidTab:Toggle({
 								end
 							end)
 						end
-						local inBattle = equipBtn or battleBtn or autoReplayBtn or showBattleBtn
-						if openPrompt and not inBattle then
+						local inTowerUI = equipBtn or battleBtn
+						local inBattle = autoReplayBtn or showBattleBtn
+
+						if openPrompt and not inTowerUI and not inBattle then
+							if not getgenv().TowerHasCollected then
+								collect4BestBaseCards()
+								getgenv().TowerHasCollected = true
+								task.wait(0.5)
+							end
+
 							pcall(function()
 								local hrp = game:GetService("Players").LocalPlayer.Character
 									and game:GetService("Players").LocalPlayer.Character
@@ -986,7 +1167,7 @@ local AutoTowerToggle = RaidTab:Toggle({
 												cam.CameraType = Enum.CameraType.Scriptable
 											end
 											character:PivotTo(CFrame.new(targetPos) + Vector3.new(0, 3, 0))
-											task.wait(0.1)
+											task.wait(0.2)
 										end
 									end
 								end
@@ -994,19 +1175,19 @@ local AutoTowerToggle = RaidTab:Toggle({
 								openPrompt.MaxActivationDistance = 99999
 								fireproximityprompt(openPrompt)
 							end)
-							task.wait(0.1)
+							task.wait(0.4)
 						end
-						if openBtn and not (equipBtn or battleBtn) then
+						if openBtn and not inTowerUI and not inBattle then
 							fireButton(openBtn)
-							task.wait(0.1)
+							task.wait(0.4)
 						end
 						if equipBtn then
 							fireButton(equipBtn)
-							task.wait(0.1)
+							task.wait(0.4)
 						end
 						if battleBtn then
 							fireButton(battleBtn)
-							task.wait(0.2)
+							task.wait(0.5)
 							local character = game:GetService("Players").LocalPlayer.Character
 							if getgenv().TowerOriginalCFrame and character then
 								character:PivotTo(getgenv().TowerOriginalCFrame)
@@ -1020,7 +1201,10 @@ local AutoTowerToggle = RaidTab:Toggle({
 									end
 									getgenv().TowerSavedCamCF = nil
 								end
+								task.wait(0.3)
+								-- reequipBaseCards() -- Disabled as per user request to avoid overlap with tower equip
 							end
+							getgenv().TowerHasCollected = false
 						end
 						if autoReplayBtn then
 							local color = autoReplayBtn.BackgroundColor3
@@ -1043,7 +1227,7 @@ local AutoTowerToggle = RaidTab:Toggle({
 							elseif not getgenv().AutoReplayToggled then
 								fireButton(autoReplayBtn)
 								getgenv().AutoReplayToggled = true
-								task.wait(0.2)
+								task.wait(0.3)
 							end
 						end
 						if not (autoReplayBtn or showBattleBtn or hideBattleBtn) then
@@ -1063,7 +1247,10 @@ local AutoTowerToggle = RaidTab:Toggle({
 									end
 									getgenv().TowerSavedCamCF = nil
 								end
+								task.wait(0.3)
+								-- reequipBaseCards() -- Disabled as per user request to avoid overlap with tower equip
 							end
+							getgenv().TowerHasCollected = false
 						end
 						if hideBattleBtn then
 							fireButton(hideBattleBtn)
@@ -1101,6 +1288,13 @@ local AutoBossRaidToggle = RaidTab:Toggle({
 		getgenv().AutoBossRaid = state
 		if state then
 			getgenv().AutoTower = false
+			pcall(function()
+				if AutoTowerToggle and AutoTowerToggle.Set then
+					AutoTowerToggle:Set(false)
+				elseif AutoTowerToggle and AutoTowerToggle.SetValue then
+					AutoTowerToggle:SetValue(false)
+				end
+			end)
 			task.spawn(function()
 				while getgenv().AutoBossRaid do
 					local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
@@ -1646,6 +1840,408 @@ TradeTab:Toggle({
 		end
 	end,
 })
+-- ===== Auto Accept Trade =====
+getgenv().AutoAcceptTrade = false
+TradeTab:Toggle({
+	Title = "รับของอัตโนมัติ",
+	Value = getgenv().AutoAcceptTrade,
+	Callback = function(state)
+		getgenv().AutoAcceptTrade = state
+		if state then
+			task.spawn(function()
+				while getgenv().AutoAcceptTrade do
+					pcall(function()
+						local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+						if playerGui then
+							for _, v in ipairs(playerGui:GetDescendants()) do
+								if (v:IsA("TextLabel") or v:IsA("TextButton")) and v.Text then
+									local text = string.upper(string.match(v.Text or "", "^%s*(.-)%s*$") or "")
+									if text == "ACCEPT" or text == "YES" or text == "รับ" or text == "ยอมรับ" or text == "ตกลง" then
+										local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
+										if btn and btn.Visible then
+											pcall(function()
+												local fired = false
+												if getconnections then
+													for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire(); fired = true end
+													for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire(); fired = true end
+													for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire(); fired = true end
+												end
+												if not fired then
+													local vim = game:GetService("VirtualInputManager")
+													local absPos = btn.AbsolutePosition
+													local absSize = btn.AbsoluteSize
+													local center = absPos + (absSize / 2)
+													vim:SendMouseButtonEvent(center.X, center.Y + 36, 0, true, game, 1)
+													task.wait(0.1)
+													vim:SendMouseButtonEvent(center.X, center.Y + 36, 0, false, game, 1)
+												end
+											end)
+										end
+									end
+								end
+							end
+						end
+					end)
+					task.wait(0.5)
+				end
+			end)
+		end
+	end,
+})
+
+-- ===== Inventory Dashboard Tab =====
+local DashboardTab = Window:Tab({
+	Title = "แดชบอร์ด",
+	Icon = "lucide:layout-dashboard",
+})
+
+local DashboardSection = DashboardTab:Section({ Title = "สถานะคลังการ์ด" })
+
+local function getInventoryDashboardText()
+	local player = game:GetService("Players").LocalPlayer
+	local packs = {}
+	local cards = {}
+	local totalPacks = 0
+	local totalCards = 0
+	local function scanFolder(folder)
+		if not folder then return end
+		for _, item in ipairs(folder:GetChildren()) do
+			if item:IsA("Tool") then
+				local cardName = item:GetAttribute("CardName")
+				local packName = item:GetAttribute("TemplateName")
+				if packName then
+					local rarity = tostring(item:GetAttribute("Rarity") or "Unknown")
+					local mutation = tostring(item:GetAttribute("Mutation") or "Normal")
+					local key = rarity .. " | " .. mutation
+					if not packs[key] then packs[key] = 0 end
+					packs[key] = packs[key] + 1
+					totalPacks = totalPacks + 1
+				elseif cardName then
+					local rarity = tostring(item:GetAttribute("Rarity") or item:GetAttribute("CardGrade") or "Unknown")
+					if not item:GetAttribute("Rarity") and not item:GetAttribute("CardGrade") then
+						if item:FindFirstChild("Rarity") and item.Rarity:IsA("StringValue") then
+							rarity = item.Rarity.Value
+						end
+					end
+					local mutation = tostring(item:GetAttribute("Mutation") or item:GetAttribute("CardMutation") or "Normal")
+					local key = rarity .. " | " .. mutation
+					if not cards[key] then cards[key] = 0 end
+					cards[key] = cards[key] + 1
+					totalCards = totalCards + 1
+				end
+			end
+		end
+	end
+	pcall(function()
+		scanFolder(player:FindFirstChild("Backpack"))
+		if player.Character then scanFolder(player.Character) end
+	end)
+
+	local lines = {}
+	table.insert(lines, "=== แพ็คการ์ด (" .. totalPacks .. " ใบ) ===")
+	if totalPacks > 0 then
+		for key, count in pairs(packs) do
+			table.insert(lines, "  " .. key .. " x" .. tostring(count))
+		end
+	else
+		table.insert(lines, "  ไม่มีแพ็คการ์ด")
+	end
+	table.insert(lines, "")
+	table.insert(lines, "=== การ์ด (" .. totalCards .. " ใบ) ===")
+	if totalCards > 0 then
+		for key, count in pairs(cards) do
+			table.insert(lines, "  " .. key .. " x" .. tostring(count))
+		end
+	else
+		table.insert(lines, "  ไม่มีการ์ด")
+	end
+	return table.concat(lines, "\n")
+end
+
+DashboardTab:Button({
+	Title = "แสดงสถานะคลัง",
+	Callback = function()
+		local text = getInventoryDashboardText()
+		if setclipboard then
+			setclipboard(text)
+		end
+		if WindUI and WindUI.Notify then
+			WindUI:Notify({
+				Title = "แดชบอร์ด",
+				Content = text,
+				Duration = 15,
+			})
+		end
+	end,
+})
+
+DashboardTab:Button({
+	Title = "รีเฟรชข้อมูลคลัง",
+	Callback = function()
+		local text = getInventoryDashboardText()
+		if WindUI and WindUI.Notify then
+			WindUI:Notify({
+				Title = "แดชบอร์ด - อัปเดต",
+				Content = text,
+				Duration = 15,
+			})
+		end
+	end,
+})
+
+-- ===== Card ESP =====
+getgenv().CardESP = false
+getgenv().ESPBillboards = getgenv().ESPBillboards or {}
+
+local function clearCardESP()
+	for _, bb in ipairs(getgenv().ESPBillboards) do
+		pcall(function() bb:Destroy() end)
+	end
+	getgenv().ESPBillboards = {}
+end
+
+local function updateCardESP()
+	clearCardESP()
+	if not getgenv().CardESP then return end
+	
+	local player = game:GetService("Players").LocalPlayer
+	local plotNum = player:FindFirstChild("PlotNumber") and player.PlotNumber.Value or 0
+	local plotFolder
+	if plotNum ~= 0 then
+		plotFolder = workspace:FindFirstChild("MAP")
+			and workspace.MAP:FindFirstChild("Plots")
+			and workspace.MAP.Plots:FindFirstChild(tostring(plotNum))
+	end
+	if not plotFolder then
+		for _, p in ipairs(workspace:GetDescendants()) do
+			if p.Name == player.Name or p:GetAttribute("Owner") == player.Name then
+				plotFolder = p
+				break
+			end
+		end
+	end
+	if not plotFolder then return end
+
+	local espModels = {}
+	for _, desc in ipairs(plotFolder:GetDescendants()) do
+		if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
+			local model = desc:FindFirstAncestorOfClass("Model")
+			if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") and not espModels[model] then
+				local isShopOrPack = false
+				if desc:IsA("ProximityPrompt") then
+					local pText = string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or ""))
+					isShopOrPack = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
+						or string.find(pText, "PACK") or string.find(pText, "แพ็ค") or string.find(pText, "แพ็ก")
+						or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
+						or string.find(pText, "OPEN") or string.find(pText, "เปิด")
+						or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
+				end
+				
+				if not isShopOrPack then
+					espModels[model] = true
+					pcall(function()
+				local mutationLabel = model:FindFirstChild("Mutation", true)
+				local rarityLabel = model:FindFirstChild("Rarity", true)
+				local mutationText = "Normal"
+				local rarityText = "?"
+				if mutationLabel and mutationLabel:IsA("TextLabel") then
+					local clean = string.gsub(mutationLabel.Text or "", "<[^>]+>", "")
+					clean = string.match(clean, "^%s*(.-)%s*$") or ""
+					if clean ~= "" and clean ~= "Label" then
+						mutationText = clean
+					end
+				end
+				if rarityLabel and rarityLabel:IsA("TextLabel") then
+					local clean = string.gsub(rarityLabel.Text or "", "<[^>]+>", "")
+					clean = string.match(clean, "^%s*(.-)%s*$") or ""
+					if clean ~= "" and clean ~= "Label" then
+						rarityText = clean
+					end
+				end
+
+				local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart")
+				if part then
+					local bb = Instance.new("BillboardGui")
+					bb.Name = "CardESP_" .. model.Name
+					bb.Adornee = part
+					bb.Size = UDim2.new(0, 200, 0, 60)
+					bb.StudsOffset = Vector3.new(0, 4, 0)
+					bb.AlwaysOnTop = true
+					bb.Parent = game:GetService("CoreGui")
+
+					local bg = Instance.new("Frame")
+					bg.Size = UDim2.new(1, 0, 1, 0)
+					bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+					bg.BackgroundTransparency = 0.3
+					bg.BorderSizePixel = 0
+					bg.Parent = bb
+					local corner = Instance.new("UICorner")
+					corner.CornerRadius = UDim.new(0, 6)
+					corner.Parent = bg
+
+					local mutColor = Color3.fromRGB(200, 200, 200)
+					local mutLower = string.lower(mutationText)
+					if mutLower == "shiny" or mutLower == "ชายนี่" then
+						mutColor = Color3.fromRGB(255, 215, 0)
+					elseif mutLower == "rainbow" or mutLower == "เรนโบว์" then
+						mutColor = Color3.fromRGB(255, 100, 255)
+					elseif mutLower == "negative" or mutLower == "เนกาทิฟ" then
+						mutColor = Color3.fromRGB(100, 100, 255)
+					elseif mutLower == "golden" or mutLower == "โกลเด้น" then
+						mutColor = Color3.fromRGB(255, 200, 50)
+					end
+
+					local label = Instance.new("TextLabel")
+					label.Size = UDim2.new(1, -8, 1, -4)
+					label.Position = UDim2.new(0, 4, 0, 2)
+					label.BackgroundTransparency = 1
+					label.Font = Enum.Font.GothamBold
+					label.TextColor3 = mutColor
+					label.TextScaled = true
+					label.Text = rarityText .. "\n" .. mutationText
+					label.Parent = bg
+
+					table.insert(getgenv().ESPBillboards, bb)
+				end
+			end)
+				end
+			end
+		end
+	end
+end
+
+DashboardTab:Toggle({
+	Title = "ESP สถานะการ์ด",
+	Value = getgenv().CardESP,
+	Callback = function(state)
+		getgenv().CardESP = state
+		if state then
+			task.spawn(function()
+				while getgenv().CardESP do
+					updateCardESP()
+					task.wait(3)
+				end
+				clearCardESP()
+			end)
+		else
+			clearCardESP()
+		end
+	end,
+})
+
+-- ===== Mobile Toggle Popup =====
+pcall(function()
+	if getgenv().MobileToggleBtn then
+		getgenv().MobileToggleBtn:Destroy()
+	end
+
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "PayomboyZMobileToggle"
+	screenGui.ResetOnSpawn = false
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	pcall(function()
+		screenGui.Parent = game:GetService("CoreGui")
+	end)
+	if not screenGui.Parent then
+		screenGui.Parent = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+	end
+
+	local btn = Instance.new("TextButton")
+	btn.Name = "PayomboyZToggle"
+	btn.Size = UDim2.new(0, 60, 0, 60)
+	btn.Position = UDim2.new(0, 15, 0.5, -45)
+	btn.BackgroundColor3 = Color3.fromRGB(200, 30, 30)
+	btn.BackgroundTransparency = 0
+	btn.Text = "พยอมบอย"
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 12
+	btn.TextWrapped = true
+	btn.AutoButtonColor = true
+	btn.Active = true
+	btn.Draggable = true
+	btn.Parent = screenGui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = btn
+
+	local btnStroke = Instance.new("UIStroke")
+	btnStroke.Color = Color3.fromRGB(0, 0, 0)
+	btnStroke.Thickness = 3
+	btnStroke.Parent = btn
+
+	local textStroke = Instance.new("UIStroke")
+	textStroke.Color = Color3.fromRGB(0, 0, 0)
+	textStroke.Thickness = 1
+	textStroke.Parent = btn
+
+	local targetWindGui = nil
+
+	btn.MouseButton1Click:Connect(function()
+		pcall(function()
+			if targetWindGui then
+				targetWindGui.Enabled = not targetWindGui.Enabled
+			elseif WindUI and WindUI.ToggleWindow then
+				WindUI:ToggleWindow()
+			elseif Window and Window.Visible ~= nil then
+				Window.Visible = not Window.Visible
+			end
+		end)
+	end)
+
+	task.spawn(function()
+		while task.wait(0.2) do
+			pcall(function()
+				local windGui
+				for _, gui in ipairs(game:GetService("CoreGui"):GetDescendants()) do
+					if gui:IsA("TextLabel") and gui.Text == "PayomboyZ" then
+						local sg = gui:FindFirstAncestorWhichIsA("ScreenGui")
+						if sg and sg.Name ~= "PayomboyZMobileToggle" then
+							windGui = sg
+							break
+						end
+					end
+				end
+				if not windGui then
+					local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+					if playerGui then
+						for _, gui in ipairs(playerGui:GetDescendants()) do
+							if gui:IsA("TextLabel") and gui.Text == "PayomboyZ" then
+								local sg = gui:FindFirstAncestorWhichIsA("ScreenGui")
+								if sg and sg.Name ~= "PayomboyZMobileToggle" then
+									windGui = sg
+									break
+								end
+							end
+						end
+					end
+				end
+				targetWindGui = windGui
+				if windGui then
+					if windGui.Enabled then
+						btn.BackgroundTransparency = 0.5
+						btnStroke.Transparency = 0.5
+						textStroke.Transparency = 0.5
+						btn.TextTransparency = 0.2
+						btn.Size = UDim2.new(0, 45, 0, 45)
+						btn.TextSize = 10
+					else
+						btn.BackgroundTransparency = 0
+						btnStroke.Transparency = 0
+						textStroke.Transparency = 0
+						btn.TextTransparency = 0
+						btn.Size = UDim2.new(0, 60, 0, 60)
+						btn.TextSize = 12
+					end
+				end
+			end)
+		end
+	end)
+
+	getgenv().MobileToggleBtn = screenGui
+end)
+
 local MiscTab = Window:Tab({
 	Title = "เบ็ดเตล็ด",
 	Icon = "solar:settings-bold",
