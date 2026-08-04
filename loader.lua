@@ -38,7 +38,7 @@ local VALID_KEYS = {
 
 -- 2. ลิงก์ Raw สคริปต์หลักของคุณ
 local SCRIPT_URL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/Script"
-local SCRIPT_URL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/Script"
+local SCRIPT_URL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/ARNSniper"
 
 -- ==========================================
 -- 🎨 UI BUILDER
