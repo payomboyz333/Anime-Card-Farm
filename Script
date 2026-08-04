@@ -845,8 +845,8 @@ local function parseSuffixValue(txt)
 		local num = tonumber(numStr) or 0
 		local mult = 1
 		if suffix == "DC" then mult = 1e33
-		elseif suffix == "NO" then mult = 1e30
-		elseif suffix == "OC" then mult = 1e27
+		elseif suffix == "N" then mult = 1e30
+		elseif suffix == "O" then mult = 1e27
 		elseif suffix == "SP" then mult = 1e24
 		elseif suffix == "SX" then mult = 1e21
 		elseif suffix == "QI" then mult = 1e18
