@@ -15,8 +15,8 @@ end
 
 local UserInputService = game:GetService("UserInputService")
 local isMobileDevice = UserInputService.TouchEnabled or not UserInputService.KeyboardEnabled
-local defaultWindowSize = isMobileDevice and UDim2.fromOffset(470, 320) or UDim2.fromOffset(540, 390)
-local defaultTabWidth = isMobileDevice and 125 or 145
+local defaultWindowSize = isMobileDevice and UDim2.fromOffset(340, 260) or UDim2.fromOffset(540, 390)
+local defaultTabWidth = isMobileDevice and 90 or 145
 
 local Window = Fluent:CreateWindow({
     Title = "PayomboyZ",
@@ -77,15 +77,8 @@ local function dismissPurchasePrompt()
 end
 
 local function rejectCurrentPromptCards()
-    pcall(function()
-        if getgenv().CardFolder then
-            for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
-                if model:IsA("Model") and not model:GetAttribute("Rejected") then
-                    model:SetAttribute("Rejected", true)
-                end
-            end
-        end
-    end)
+    -- แค่ปิด Robux prompt อย่างเดียว ไม่ reject การ์ดทุกใบบนสายพาน
+    -- (instantBuyLoop จะ reject เฉพาะการ์ดที่ fail ซ้ำๆ เองอยู่แล้ว)
     dismissPurchasePrompt()
 end
 
@@ -678,7 +671,7 @@ local function instantBuyLoop()
 
         -- Auto reject if attempt threshold reached (unaffordable/Robux) or timed out
         local buyAttempts = tonumber(model:GetAttribute("BuyAttempts")) or 0
-        if buyAttempts >= 5 or (tick() - firstSeen > 3.5) then
+        if buyAttempts >= 25 or (tick() - firstSeen > 12) then
             model:SetAttribute("Rejected", true)
             continue
         end
@@ -2510,7 +2503,7 @@ end
 Tabs.Dashboard:AddSection("📱 การปรับขนาด UI (Mobile Scale)")
 
 local isMobile = UserInputService.TouchEnabled or not UserInputService.KeyboardEnabled
-local initialScale = isMobile and 0.75 or 1.0
+local initialScale = isMobile and 0.80 or 1.0
 local currentUIScale = initialScale
 
 local function setUIScale(scaleVal)
@@ -2520,7 +2513,13 @@ local function setUIScale(scaleVal)
         for _, guiParent in ipairs(containers) do
             if guiParent then
                 for _, child in ipairs(guiParent:GetChildren()) do
-                    if child:IsA("ScreenGui") and (string.find(string.lower(child.Name), "fluent") or child.Name == "PayomboyZ_UI") then
+                    local cname = string.lower(child.Name)
+                    if child:IsA("ScreenGui") and (
+                        string.find(cname, "fluent") or
+                        string.find(cname, "payomboy") or
+                        string.find(cname, "dexq") or
+                        child.Name == "PayomboyZ_UI"
+                    ) then
                         local uiScale = child:FindFirstChildOfClass("UIScale")
                         if not uiScale then
                             uiScale = Instance.new("UIScale")
