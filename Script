@@ -119,11 +119,24 @@ local function LoadMainConfig()
 end
 LoadMainConfig()
 
+local function LoadSavedWebhook()
+    for _, folderName in ipairs(ConfigFolders) do
+        local path = folderName .. "/Webhook.txt"
+        if isfile and isfile(path) then
+            local st, content = pcall(readfile, path)
+            if st and content and content ~= "" then
+                return string.match(content, "^%s*(.-)%s*$") or content
+            end
+        end
+    end
+    return ""
+end
+
 getgenv().SelectedRarities = getgenv().SelectedRarities or {}
 getgenv().SelectedMutations = getgenv().SelectedMutations or {}
 getgenv().PromptCooldowns = getgenv().PromptCooldowns or {}
 getgenv().CardFolder = getgenv().CardFolder or nil
-getgenv().DiscordWebhook = getgenv().DiscordWebhook or ""
+getgenv().DiscordWebhook = (getgenv().DiscordWebhook and getgenv().DiscordWebhook ~= "") and getgenv().DiscordWebhook or LoadSavedWebhook()
 getgenv().AutoCarryDelay = getgenv().AutoCarryDelay or 5
 getgenv().RerollSpeed = getgenv().RerollSpeed or 0.05
 getgenv().SelectedTraits = getgenv().SelectedTraits or {}
@@ -410,8 +423,18 @@ end
 
 local function findCardFolder()
     local plot = findPlayerPlot()
-    if not plot then return false end
-    for _, desc in ipairs(plot:GetDescendants()) do
+    if plot then
+        for _, desc in ipairs(plot:GetDescendants()) do
+            if desc:IsA("ProximityPrompt") then
+                local model = desc:FindFirstAncestorOfClass("Model")
+                if model and model:GetAttribute("IgnoreTutoBeam") ~= nil then
+                    getgenv().CardFolder = model.Parent
+                    return true
+                end
+            end
+        end
+    end
+    for _, desc in ipairs(workspace:GetDescendants()) do
         if desc:IsA("ProximityPrompt") then
             local model = desc:FindFirstAncestorOfClass("Model")
             if model and model:GetAttribute("IgnoreTutoBeam") ~= nil then
@@ -468,10 +491,23 @@ local function GetAllInventorySummary()
 end
 
 local function SendWebhook(url, rarity, mutation)
-    local req = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-    if not req or not url or url == "" then return end
+    if not url or url == "" then return end
+    url = string.match(url, "^%s*(.-)%s*$") or url
+    if not string.find(url, "http") then return end
+
+    local req = (syn and syn.request) 
+             or (http and http.request) 
+             or http_request 
+             or (fluxus and fluxus.request) 
+             or request 
+             or (krnl and krnl.request) 
+             or (delta and delta.request)
+
+    if not req then return end
+
     local inventoryText = "Unknown"
     pcall(function() inventoryText = GetAllInventorySummary() end)
+
     local data = {
         ["content"] = "",
         ["embeds"] = {
@@ -1626,6 +1662,7 @@ end
 
 
 -- UI Component Setup
+
 local AutoTowerToggle = Tabs.Raid:AddToggle("AutoTower", { Title = "🏰 ลงหอคอยอัตโนมัติ (Auto Tower)", Default = false })
 AutoTowerToggle:OnChanged(function(state)
     getgenv().AutoTower = state
@@ -1664,7 +1701,19 @@ AutoTowerToggle:OnChanged(function(state)
                         if (v:IsA("TextButton") or v:IsA("TextLabel")) and v.Text then
                             local cleanText = string.gsub(v.Text, "<[^>]+>", "")
                             local text = string.upper(string.match(cleanText, "^%s*(.-)%s*$") or "")
-                            if text == "EQUIP BEST" or text == "สวมใส่ดีที่สุด" then
+                            
+                            local isInventoryBtn = false
+                            local parentObj = v.Parent
+                            while parentObj and parentObj:IsA("GuiObject") do
+                                local pName = string.lower(parentObj.Name)
+                                if pName:find("inventory") or pName:find("backpack") or pName:find("cardbag") or pName:find("bag") or pName:find("คลัง") then
+                                    isInventoryBtn = true
+                                    break
+                                end
+                                parentObj = parentObj.Parent
+                            end
+
+                            if (text == "EQUIP BEST" or text == "สวมใส่ดีที่สุด" or text == "สวมใส่ที่ดีที่สุด") and not isInventoryBtn then
                                 local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
                                 if btn and isGuiVisible(btn) then equipBtn = btn end
                             elseif text == "BATTLE" then
@@ -1800,7 +1849,18 @@ AutoBossToggle:OnChanged(function(state)
                                 alreadyFought = true
                             end
 
-                            if text == "EQUIP BEST" then
+                            local isInventoryBtn = false
+                            local parentObj = v.Parent
+                            while parentObj and parentObj:IsA("GuiObject") do
+                                local pName = string.lower(parentObj.Name)
+                                if pName:find("inventory") or pName:find("backpack") or pName:find("cardbag") or pName:find("bag") or pName:find("คลัง") then
+                                    isInventoryBtn = true
+                                    break
+                                end
+                                parentObj = parentObj.Parent
+                            end
+
+                            if (text == "EQUIP BEST" or text == "สวมใส่ดีที่สุด" or text == "สวมใส่ที่ดีที่สุด") and not isInventoryBtn then
                                 local btn = v:IsA("TextButton") and v or v:FindFirstAncestorWhichIsA("TextButton") or v:FindFirstAncestorWhichIsA("ImageButton")
                                 if btn and isGuiVisible(btn) then equipBtn = btn end
                             elseif text == "BATTLE" then
@@ -2274,8 +2334,22 @@ local WebhookInput = Tabs.Dashboard:AddInput("DiscordWebhook", {
     Numeric = false,
     Finished = false
 })
+
+if getgenv().DiscordWebhook and getgenv().DiscordWebhook ~= "" then
+    pcall(function() WebhookInput:SetValue(getgenv().DiscordWebhook) end)
+end
+
 WebhookInput:OnChanged(function(text)
     getgenv().DiscordWebhook = text
+    getgenv().NotifiedCards = {}
+    if writefile and text and text ~= "" then
+        pcall(function()
+            for _, folderName in ipairs(ConfigFolders) do
+                if isfolder and not isfolder(folderName) then pcall(makefolder, folderName) end
+                writefile(folderName .. "/Webhook.txt", text)
+            end
+        end)
+    end
 end)
 
 ---------------------------------------------------------
