@@ -411,9 +411,21 @@ end
 
 local function getSpawnPackClickDetector()
     local plotFolder = findPlayerPlot()
-    if plotFolder and plotFolder:FindFirstChild("Plot_N0") then
-        for _, v in ipairs(plotFolder.Plot_N0:GetDescendants()) do
-            if v:IsA("ClickDetector") and v.Parent and v.Parent.Name == "ButtonPart" then
+    if plotFolder then
+        if plotFolder:FindFirstChild("Plot_N0") then
+            for _, v in ipairs(plotFolder.Plot_N0:GetDescendants()) do
+                if v:IsA("ClickDetector") and v.Parent and v.Parent.Name == "ButtonPart" then
+                    return v
+                end
+            end
+        end
+        for _, v in ipairs(plotFolder:GetDescendants()) do
+            if v:IsA("ClickDetector") and v.Parent and (v.Parent.Name == "ButtonPart" or string.find(string.lower(v.Parent.Name), "spawn") or string.find(string.lower(v.Parent.Name), "button")) then
+                return v
+            end
+        end
+        for _, v in ipairs(plotFolder:GetDescendants()) do
+            if v:IsA("ClickDetector") then
                 return v
             end
         end
@@ -587,14 +599,24 @@ AutoSpawnToggle:OnChanged(function(state)
     getgenv().AutoSpawnPack = state
     if state then
         task.spawn(function()
-            local cd = getSpawnPackClickDetector()
-            if not cd then
-                Fluent:Notify({ Title = "ข้อผิดพลาด", Content = "ไม่พบปุ่มสุ่มแพ็กใน Plot!", Duration = 3 })
-                getgenv().AutoSpawnPack = false
-                AutoSpawnToggle:SetValue(false)
-                return
-            end
+            local cd = nil
+            local retryCount = 0
             while getgenv().AutoSpawnPack do
+                if not cd or not cd.Parent then
+                    cd = getSpawnPackClickDetector()
+                end
+                if not cd then
+                    retryCount = retryCount + 1
+                    if retryCount > 15 then
+                        Fluent:Notify({ Title = "ข้อผิดพลาด", Content = "ไม่พบปุ่มสุ่มแพ็กใน Plot!", Duration = 3 })
+                        getgenv().AutoSpawnPack = false
+                        AutoSpawnToggle:SetValue(false)
+                        return
+                    end
+                    task.wait(1)
+                    continue
+                end
+                retryCount = 0
                 if not getgenv().CardFolder then findCardFolder() end
                 local activeCards = 0
                 local hasMatchingCard = false
