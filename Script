@@ -647,8 +647,6 @@ local function instantBuyLoop()
     if not getgenv().CardFolder then findCardFolder() end
     if not getgenv().CardFolder then return end
 
-    pcall(dismissPurchasePrompt)
-
     for _, model in ipairs(getgenv().CardFolder:GetChildren()) do
         if not model:IsA("Model") or model:GetAttribute("IgnoreTutoBeam") == nil then continue end
         if model:GetAttribute("Rejected") == true then continue end
@@ -1994,10 +1992,16 @@ local function GetInventoryCardsForTrade()
     local function scanFolder(folder)
         if not folder then return end
         for _, item in ipairs(folder:GetChildren()) do
-            if item:IsA("Tool") and not isPackCard(item) then
+            if item:IsA("Tool") then
+                -- แสดงทุก Tool รวม Pack Card ด้วย ไม่ filter
+                local displayName = tostring(
+                    item:GetAttribute("CardName")
+                    or item:GetAttribute("TemplateName")
+                    or item.Name
+                )
                 local rarityAttr = getCardRank(item)
                 local mutation = getCardMutation(item)
-                local key = tostring(rarityAttr) .. " | " .. tostring(mutation)
+                local key = displayName .. " | " .. tostring(rarityAttr) .. " | " .. tostring(mutation)
                 inventory[key] = (inventory[key] or 0) + 1
             end
         end
@@ -2054,11 +2058,17 @@ AutoGiftToggle:OnChanged(function(state)
                         
                         local function getGiftableTool()
                             local function isSelected(t)
-                                if isPackCard(t) then return false end
+                                if not t:IsA("Tool") then return false end
+                                -- ถ้าไม่ได้เลือกเฉพาะเจาะจง → ส่งการ์ดทุกอัน
                                 if not next(getgenv().SelectedTradeCards) then return true end
-                                local key = tostring(getCardRank(t)) .. " | " .. tostring(getCardMutation(t))
+                                local displayName = tostring(
+                                    t:GetAttribute("CardName")
+                                    or t:GetAttribute("TemplateName")
+                                    or t.Name
+                                )
+                                local key = displayName .. " | " .. tostring(getCardRank(t)) .. " | " .. tostring(getCardMutation(t))
                                 for selectedText, _ in pairs(getgenv().SelectedTradeCards) do
-                                    if selectedText:find(key, 1, true) then return true end
+                                    if selectedText:find(displayName, 1, true) or selectedText:find(key, 1, true) then return true end
                                 end
                                 return false
                             end
@@ -2066,11 +2076,13 @@ AutoGiftToggle:OnChanged(function(state)
                             local backpack = LocalPlayer:FindFirstChild("Backpack")
                             if backpack then
                                 for _, t in ipairs(backpack:GetChildren()) do
-                                    if t:IsA("Tool") and isSelected(t) then return t end
+                                    if isSelected(t) then return t end
                                 end
                             end
-                            for _, t in ipairs(localChar:GetChildren()) do
-                                if t:IsA("Tool") and isSelected(t) then return t end
+                            if localChar then
+                                for _, t in ipairs(localChar:GetChildren()) do
+                                    if isSelected(t) then return t end
+                                end
                             end
                             return nil
                         end
@@ -2085,17 +2097,44 @@ AutoGiftToggle:OnChanged(function(state)
                             if localHrp then localHrp.CFrame = targetHrp.CFrame + Vector3.new(0, 3, 0) end
                             task.wait(0.1)
 
-                            for _, desc in ipairs(targetPlayer.Character:GetDescendants()) do
-                                if desc:IsA("ProximityPrompt") then
+                            -- ค้นหา gift prompt ทั้งบน character และ workspace รอบๆ
+                            local function tryFireGiftPrompts()
+                                local targetPos = targetHrp.Position
+                                local function checkPrompt(desc)
+                                    if not desc:IsA("ProximityPrompt") then return end
                                     local action = string.lower(desc.ActionText or "")
                                     local obj = string.lower(desc.ObjectText or "")
-                                    if action:find("gift") or obj:find("gift") or action:find("ส่ง") or action:find("trade") or action:find("แลก") then
+                                    local name = string.lower(desc.Name or "")
+                                    if action:find("gift") or obj:find("gift") or name:find("gift")
+                                        or action:find("ส่ง") or action:find("trade") or action:find("แลก")
+                                        or action:find("give") or obj:find("give") then
                                         desc.RequiresLineOfSight = false
                                         desc.MaxActivationDistance = 99999
                                         fireproximityprompt(desc)
                                     end
                                 end
+                                -- ค้นบน character
+                                for _, desc in ipairs(targetPlayer.Character:GetDescendants()) do
+                                    checkPrompt(desc)
+                                end
+                                -- ค้น workspace ในรัศมี 20 studs
+                                for _, desc in ipairs(workspace:GetDescendants()) do
+                                    if desc:IsA("ProximityPrompt") then
+                                        local pPos
+                                        pcall(function()
+                                            if desc.Parent:IsA("BasePart") then pPos = desc.Parent.Position
+                                            elseif desc.Parent:IsA("Attachment") then pPos = desc.Parent.WorldPosition
+                                            elseif desc.Parent and desc.Parent.Parent and desc.Parent.Parent:IsA("Model") and desc.Parent.Parent.PrimaryPart then
+                                                pPos = desc.Parent.Parent.PrimaryPart.Position
+                                            end
+                                        end)
+                                        if pPos and (pPos - targetPos).Magnitude <= 20 then
+                                            checkPrompt(desc)
+                                        end
+                                    end
+                                end
                             end
+                            tryFireGiftPrompts()
                             task.wait(0.5)
                         else
                             task.wait(1)
