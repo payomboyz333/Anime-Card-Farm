@@ -13,7 +13,7 @@ end)
 local GameRouter = {
     -- 1. Attack On Titan Revolution (AOTR)
     [13379208636] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/AOTR",
-    
+    [14916516914] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/AOTR",
     -- 2. Anime Card Farm
     [125039473548047] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/Script",
     
