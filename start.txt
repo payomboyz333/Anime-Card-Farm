@@ -1,30 +1,20 @@
 -- ==============================================================================
--- PayomboyZ Hub - Stage 1: Key UI & Entrypoint (Start.txt)
+-- PayomboyZ Hub - Stage 1: Key UI (Start.txt)
 -- URL: https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/start.txt
 -- ==============================================================================
 
 local LuarmorConfig = {
     ScriptId = "PayomboyZ_Hub",
     SavedKeyFile = "PayomboyZ_LuarmorKey.txt",
-    GetKeyURL = "https://luarmor.net", -- ลิงก์สำหรับสั่งซื้อ / รับคีย์
+    GetKeyURL = "https://luarmor.net",
     DiscordURL = "https://discord.gg/payomboyz",
     LogoPath = "543199739_2812856088914181_3062917809445648175_n.jpg",
-    LuarmorLoaderURL = "https://api.luarmor.net/files/v4/loaders/d0cd427b9eb4643f56e27412fc23b47c.lua"
+    StringURL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/string.txt"
 }
-
--- ==============================================================================
--- UTILITY & KEY SAVER ENGINE
--- ==============================================================================
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
-
-local function SaveKey(key)
-    pcall(function()
-        if writefile then writefile(LuarmorConfig.SavedKeyFile, key) end
-    end)
-end
 
 local function LoadSavedKey()
     local saved = ""
@@ -36,15 +26,6 @@ local function LoadSavedKey()
     return saved:gsub("%s+", "")
 end
 
-local function DeleteSavedKey()
-    pcall(function()
-        if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
-            delfile(LuarmorConfig.SavedKeyFile)
-        end
-    end)
-end
-
--- ฟังก์ชั่นแสดงการแจ้งเตือนสั้นๆ (Notification Toast)
 local function ShowToast(title, message, isError)
     pcall(function()
         local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -97,104 +78,23 @@ local function ShowToast(title, message, isError)
     end)
 end
 
--- Forward declare UI Generator Function
-local CreateLoaderUI
-
--- ==============================================================================
--- 🛡️ COMPREHENSIVE LUARMOR ERROR INTERCEPTOR (Auth Error & Whitelist Error)
--- ดักจับทั้ง "Auth Error", "Whitelist Error", "No key found", "Invalid key" ทั้งหมด
--- ==============================================================================
-
-local isRecoveringFromError = false
-
-local function InterceptLuarmorError(descendant)
-    pcall(function()
-        if not descendant or isRecoveringFromError then return end
-        
-        local text = ""
-        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-            text = descendant.Text:lower()
-        elseif descendant.Name then
-            text = descendant.Name:lower()
-        end
-        
-        -- ตรวจสอบเงื่อนไขแจ้งเตือนข้อผิดพลาดคีย์ของ Luarmor ทุกรูปแบบ
-        if text:find("auth error") 
-            or text:find("whitelist error") 
-            or text:find("no key found") 
-            or text:find("invalid key") 
-            or text:find("need a script_key") 
-            or text:find("not use it at all") 
-        then
-            isRecoveringFromError = true
-            
-            -- หา ScreenGui ตัวแม่ของป็อปอัป Luarmor Error แล้วทำลายทิ้งทันที!
-            local topGui = descendant
-            while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
-                topGui = topGui.Parent
-            end
-            
-            if topGui and topGui:IsA("ScreenGui") then
-                topGui:Destroy()
-            end
-            
-            -- ลบคีย์ที่ผิด/หมดอายุออกจากไฟล์ความจำทันที
-            DeleteSavedKey()
-            
-            -- เด้งป็อปอัปแจ้งเตือน + เรียกหน้าต่างใส่ Key ของเราขึ้นมาใหม่ทันที!
-            ShowToast("❌ PayomboyZ Hub", "Key ไม่ถูกต้อง หรือหมดอายุ! กรุณากรอก Key ใหม่", true)
-            
-            if CreateLoaderUI then
-                CreateLoaderUI("❌ Key ไม่ถูกต้อง หรือหมดอายุ! กรุณากรอก Key ใหม่", "")
-            end
-            
-            task.delay(1.5, function()
-                isRecoveringFromError = false
-            end)
-        end
-    end)
-end
-
--- ติดตั้ง Listener บนทุก Container ของ UI ใน Roblox ทันที
-pcall(function()
-    local containers = {
-        CoreGui, 
-        LocalPlayer:WaitForChild("PlayerGui"),
-        game:GetService("RobloxGui")
-    }
-    
-    for _, container in ipairs(containers) do
-        container.DescendantAdded:Connect(InterceptLuarmorError)
-        for _, desc in ipairs(container:GetDescendants()) do
-            InterceptLuarmorError(desc)
-        end
-    end
-end)
-
--- ฟังก์ชั่นส่ง Key ให้ Luarmor Loader (เพื่อวิ่งต่อไปยัง String.txt)
-local function PassKeyToLuarmor(userKey)
+local function PassToKeyChecker(userKey)
     if not userKey or userKey == "" then return end
     userKey = userKey:gsub("%s+", "")
     
-    SaveKey(userKey)
+    -- บันทึกคีย์ลงเครื่อง
+    pcall(function()
+        if writefile then writefile(LuarmorConfig.SavedKeyFile, userKey) end
+    end)
     
-    -- กำหนดคีย์เข้าสู่ Environment ของ Executor ให้ครบถ้วน
-    if getgenv then getgenv().script_key = userKey end
-    if getrenv then pcall(function() getrenv().script_key = userKey end) end
-    _G.script_key = userKey
-    shared.script_key = userKey
-    script_key = userKey
+    -- ส่งคีย์ไปให้หน้า String.txt (หน้าที่ทำหน้าที่เช็คคีย์)
+    if getgenv then getgenv().PayomboyZ_InputKey = userKey end
     
-    -- ส่งคีย์ไปยัง Luarmor Loader (ซึ่งจะปลดล็อกและรัน String.txt)
-    script_key = userKey;
-    loadstring(game:HttpGet(LuarmorConfig.LuarmorLoaderURL))()
+    -- รัน String.txt
+    loadstring(game:HttpGet(LuarmorConfig.StringURL))()
 end
 
--- ==============================================================================
--- LOADER UI CREATION FUNCTION (MacLib UI Style)
--- ==============================================================================
-
-CreateLoaderUI = function(initialStatus, defaultKeyText)
+local function CreateLoaderUI(initialStatus, defaultKeyText)
     if CoreGui:FindFirstChild("PayomboyZ_LuarmorLoader") then
         CoreGui.PayomboyZ_LuarmorLoader:Destroy()
     end
@@ -210,7 +110,6 @@ CreateLoaderUI = function(initialStatus, defaultKeyText)
     pcall(function() LoaderGui.Parent = CoreGui end)
     if not LoaderGui.Parent then LoaderGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
-    -- Main Container Frame
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Size = UDim2.new(0, 460, 0, 280)
@@ -230,7 +129,6 @@ CreateLoaderUI = function(initialStatus, defaultKeyText)
     MainStroke.Color = Color3.fromHex("2a2e39")
     MainStroke.Parent = MainFrame
 
-    -- Left Decorative Brand Sidebar
     local Sidebar = Instance.new("Frame")
     Sidebar.Size = UDim2.new(0, 130, 1, 0)
     Sidebar.BackgroundColor3 = Color3.fromHex("121418")
@@ -248,7 +146,6 @@ CreateLoaderUI = function(initialStatus, defaultKeyText)
     SideFix.BorderSizePixel = 0
     SideFix.Parent = Sidebar
 
-    -- Logo Image
     local LogoImg = Instance.new("ImageLabel")
     LogoImg.Name = "PayomboyZ_Logo"
     LogoImg.Size = UDim2.new(0, 56, 0, 56)
@@ -302,7 +199,6 @@ CreateLoaderUI = function(initialStatus, defaultKeyText)
     ShieldLabel.TextColor3 = Color3.fromHex("4f80ff")
     ShieldLabel.Parent = ShieldWidget
 
-    -- Main Content Area
     local Content = Instance.new("Frame")
     Content.Size = UDim2.new(1, -130, 1, 0)
     Content.Position = UDim2.new(0, 130, 0, 0)
@@ -442,14 +338,14 @@ CreateLoaderUI = function(initialStatus, defaultKeyText)
             return
         end
         
-        StatusText.Text = "⏳ บันทึก Key เรียบร้อย! กำลังเชื่อมต่อ Luarmor..."
+        StatusText.Text = "⏳ บันทึก Key เรียบร้อย! กำลังตรวจสอบกับระบบ..."
         StatusText.TextColor3 = Color3.fromHex("4f80ff")
         
         task.wait(0.4)
         if LoaderGui then LoaderGui:Destroy() end
         task.wait(0.2)
         
-        PassKeyToLuarmor(userKey)
+        PassToKeyChecker(userKey)
     end)
 
     GetKeyBtn.MouseButton1Click:Connect(function()
@@ -470,14 +366,24 @@ CreateLoaderUI = function(initialStatus, defaultKeyText)
 end
 
 -- ==============================================================================
--- 🚀 CHECK SAVED KEY & ENTER ENTRYPOINT
+-- 🚀 AUTO-LOAD LOGIC: ส่งคีย์ที่มีอยู่ให้ String.txt เช็คทันที
 -- ==============================================================================
 
-local savedKey = LoadSavedKey()
-if savedKey and savedKey ~= "" then
-    ShowToast("🔑 PayomboyZ Hub", "พบ Key เดิม! กำลังตรวจสอบกับระบบ...", false)
-    task.wait(0.4)
-    PassKeyToLuarmor(savedKey)
+local ForceShowUI = false
+if getgenv and getgenv().PayomboyZ_ShowUI then
+    ForceShowUI = getgenv().PayomboyZ_ShowUI
+end
+
+if ForceShowUI then
+    CreateLoaderUI(getgenv().PayomboyZ_ErrorMsg or "❌ Key ไม่ถูกต้อง กรุณากรอกใหม่", "")
+    if getgenv then getgenv().PayomboyZ_ShowUI = false end
 else
-    CreateLoaderUI()
+    local savedKey = LoadSavedKey()
+    if savedKey and savedKey ~= "" then
+        ShowToast("🔑 PayomboyZ Hub", "พบ Key เดิม! กำลังเชื่อมต่อระบบ...", false)
+        task.wait(0.5)
+        PassToKeyChecker(savedKey)
+    else
+        CreateLoaderUI()
+    end
 end
