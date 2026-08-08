@@ -23,7 +23,6 @@ local GameRouter = {
     [122446657157717] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/ARNSniper",
     
     -- สคริปต์สำรอง (Default Fallback)
-    ["Default"] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/AOTR"
 }
 
 -- ตรวจสอบ PlaceId ของเกมปัจจุบันและโหลดสคริปต์ประจำแมพนั้นๆ
