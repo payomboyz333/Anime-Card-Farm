@@ -13,7 +13,12 @@ local Settings = {
     ShowDistance = true,
     TeamCheck = true,  -- ซ่อน ESP ของทีมเดียวกัน
     MaxDistance = 1000, -- ระยะสูงสุดที่จะแสดง tracer (studs)
-    FPSBoost = false
+    FPSBoost = false,
+    HitboxExpander = false,
+    HighlightESP = false,
+    AimbotEnabled = false,
+    ShowFOV = false,
+    FOVRadius = 150
 }
 
 -- ==========================================
@@ -39,7 +44,7 @@ UI.Parent = success and coreGui or player:WaitForChild("PlayerGui")
 -- ==========================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 170)
+MainFrame.Size = UDim2.new(0, 420, 0, 270)
 MainFrame.Position = UDim2.new(0.5, -210, 0.5, -65)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
@@ -178,6 +183,27 @@ tracerGui.IgnoreGuiInset = true
 tracerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 tracerGui.Parent = UI.Parent
 
+local FOVGui = Instance.new("ScreenGui")
+FOVGui.Name = "PayomFOV"
+FOVGui.ResetOnSpawn = false
+FOVGui.IgnoreGuiInset = true
+FOVGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+FOVGui.Parent = UI.Parent
+
+local FOVFrame = Instance.new("Frame")
+FOVFrame.BackgroundTransparency = 1
+FOVFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVFrame.Size = UDim2.new(0, Settings.FOVRadius * 2, 0, Settings.FOVRadius * 2)
+FOVFrame.Visible = Settings.ShowFOV
+local FOVCorner = Instance.new("UICorner")
+FOVCorner.CornerRadius = UDim.new(0.5, 0)
+FOVCorner.Parent = FOVFrame
+local FOVStroke = Instance.new("UIStroke")
+FOVStroke.Color = Color3.fromRGB(255, 255, 255)
+FOVStroke.Thickness = 1.5
+FOVStroke.Parent = FOVFrame
+FOVFrame.Parent = FOVGui
+
 local tracers = {}    -- เก็บ Frame ของ tracer แต่ละคน
 local espLabels = {}  -- เก็บ Label ชื่อ+ระยะทาง
 
@@ -306,6 +332,23 @@ createToggle("FPSBoostToggle", "🚀 FPS Boost", Settings.FPSBoost, function(sta
     toggleFPSBoost(state)
 end)
 
+createToggle("HitboxToggle", "🎯 ขยายเป้า (Hitbox)", Settings.HitboxExpander, function(state)
+    Settings.HitboxExpander = state
+end)
+
+createToggle("HighlightToggle", "✨ มองทะลุ (Highlight)", Settings.HighlightESP, function(state)
+    Settings.HighlightESP = state
+end)
+
+createToggle("AimbotToggle", "🔫 ล็อคหัว (Aimbot)", Settings.AimbotEnabled, function(state)
+    Settings.AimbotEnabled = state
+end)
+
+createToggle("FOVToggle", "⭕ แสดงวงกลม FOV", Settings.ShowFOV, function(state)
+    Settings.ShowFOV = state
+    if FOVFrame then FOVFrame.Visible = state end
+end)
+
 -- ==========================================
 -- ปุ่ม Minimize และ Close
 -- ==========================================
@@ -331,6 +374,9 @@ CloseBtn.MouseButton1Click:Connect(function()
     -- ทำลาย ESP gui ก่อน แล้วค่อยทำลาย UI หลัก
     if tracerGui and tracerGui.Parent then
         tracerGui:Destroy()
+    end
+    if FOVGui and FOVGui.Parent then
+        FOVGui:Destroy()
     end
     UI:Destroy()
 end)
@@ -360,12 +406,128 @@ local function getColorByDistance(dist)
 end
 
 -- ==========================================
+-- ลูปทำงานเบื้องหลัง: Hitbox & Highlight
+-- ==========================================
+task.spawn(function()
+    while task.wait(0.1) do
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= player then
+                pcall(function()
+                    local char = p.Character
+                    if not char then return end
+                    
+                    -- 1. จัดการ Highlight ESP (มองทะลุเรืองแสง)
+                    local hl = char:FindFirstChild("PayomHighlight")
+                    if Settings.HighlightESP and not (Settings.TeamCheck and isSameTeam(p)) then
+                        local humanoid = char:FindFirstChildOfClass("Humanoid")
+                        if humanoid and humanoid.Health > 0 then
+                            if not hl then
+                                hl = Instance.new("Highlight")
+                                hl.Name = "PayomHighlight"
+                                hl.FillColor = Color3.fromRGB(255, 50, 50)
+                                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                hl.FillTransparency = 0.6
+                                hl.OutlineTransparency = 0.2
+                                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                hl.Parent = char
+                            end
+                        else
+                            if hl then hl:Destroy() end
+                        end
+                    else
+                        if hl then hl:Destroy() end
+                    end
+
+                    -- 2. จัดการ Hitbox Expander (ขยายเป้ายิง)
+                    local root = char:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        if not root:FindFirstChild("OrigSize") then
+                            local origSize = Instance.new("Vector3Value")
+                            origSize.Name = "OrigSize"
+                            origSize.Value = root.Size
+                            origSize.Parent = root
+                        end
+
+                        if Settings.HitboxExpander and not (Settings.TeamCheck and isSameTeam(p)) then
+                            local humanoid = char:FindFirstChildOfClass("Humanoid")
+                            if humanoid and humanoid.Health > 0 then
+                                root.Size = Vector3.new(5, 5, 5)
+                                root.Transparency = 0.7
+                                root.BrickColor = BrickColor.new("Hot pink")
+                                root.Material = Enum.Material.Neon
+                                root.CanCollide = false
+                            else
+                                root.Size = root.OrigSize.Value
+                                root.Transparency = 1
+                            end
+                        else
+                            root.Size = root.OrigSize.Value
+                            root.Transparency = 1
+                        end
+                    end
+                end)
+            end
+        end
+    end
+end)
+
+-- ==========================================
 -- RenderStepped Loop: อัปเดต ESP ทุก frame
 -- ==========================================
 local lastTime = tick()
 local frameCount = 0
+local aimbotting = false
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        aimbotting = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        aimbotting = false
+    end
+end)
+
+local function getClosestPlayerToCursor()
+    local closestPlayer = nil
+    local shortestDistance = Settings.FOVRadius
+    local mousePos = UserInputService:GetMouseLocation()
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            if Settings.TeamCheck and isSameTeam(p) then continue end
+            local char = p.Character
+            if char and char:FindFirstChild("Head") and char:FindFirstChildOfClass("Humanoid") and char.Humanoid.Health > 0 then
+                local vector, onScreen = Camera:WorldToViewportPoint(char.Head.Position)
+                if onScreen then
+                    local dist = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
+                    if dist < shortestDistance then
+                        shortestDistance = dist
+                        closestPlayer = p
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
 
 RunService.RenderStepped:Connect(function()
+    if Settings.ShowFOV and FOVFrame then
+        local mousePos = UserInputService:GetMouseLocation()
+        FOVFrame.Position = UDim2.new(0, mousePos.X, 0, mousePos.Y)
+    end
+    
+    if Settings.AimbotEnabled and aimbotting then
+        local target = getClosestPlayerToCursor()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+        end
+    end
+
     frameCount = frameCount + 1
     if tick() - lastTime >= 1 then
         local fps = frameCount
