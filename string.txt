@@ -22,59 +22,67 @@ if not userKey or userKey == "" then return end
 local ErrorWatcherActive = true
 
 task.spawn(function()
-    while ErrorWatcherActive and task.wait(0.2) do
+    local startTime = tick()
+    while ErrorWatcherActive do
+        task.wait(0.5)
+        -- เลิกดักจับถ้าผ่านไป 30 วินาที แล้วไม่เจอ Error (แปลว่าเข้าสคริปต์หลักสำเร็จ)
+        if tick() - startTime > 30 then 
+            ErrorWatcherActive = false
+            break 
+        end
+        
         pcall(function()
-            -- เพิ่ม gethui() เพื่อดักจับ UI ของ Luarmor ใน Executor ที่ซ่อน GUI ไว้ลึกๆ (เช่น Delta, Codex)
-            local containers = {
-                CoreGui, 
-                LocalPlayer:WaitForChild("PlayerGui"),
-                game:GetService("RobloxGui")
-            }
-            if gethui then
-                table.insert(containers, gethui())
-            end
+            local containers = { CoreGui, LocalPlayer:WaitForChild("PlayerGui") }
+            if gethui then table.insert(containers, gethui()) end
             
             for _, container in ipairs(containers) do
-                for _, descendant in ipairs(container:GetDescendants()) do
-                    local text = ""
-                    if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                        text = descendant.Text:lower()
-                    elseif descendant.Name then
-                        text = descendant.Name:lower()
-                    end
-                    
-                    if text:find("auth error") 
-                        or text:find("whitelist error") 
-                        or text:find("no key found") 
-                        or text:find("invalid key") 
-                        or text:find("need a script_key") 
-                    then
-                        ErrorWatcherActive = false
-                        
-                        -- ทำลาย Error Popup ทิ้ง
-                        local topGui = descendant
-                        while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
-                            topGui = topGui.Parent
+                local descendants = {}
+                pcall(function() descendants = container:GetDescendants() end)
+                
+                for _, descendant in ipairs(descendants) do
+                    pcall(function()
+                        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                            local text = tostring(descendant.Text):lower()
+                            if text:find("auth error") 
+                                or text:find("whitelist error") 
+                                or text:find("no key found") 
+                                or text:find("invalid key") 
+                                or text:find("need a script_key") 
+                                or text:find("hwid") 
+                                or text:find("not whitelisted")
+                            then
+                                ErrorWatcherActive = false
+                                
+                                -- 1. ลบคีย์ที่เซฟไว้ทิ้งทันที
+                                pcall(function()
+                                    if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
+                                        delfile(LuarmorConfig.SavedKeyFile)
+                                    end
+                                end)
+                                
+                                -- 2. ทำลาย Popup UI ของ Luarmor
+                                local topGui = descendant
+                                while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
+                                    topGui = topGui.Parent
+                                end
+                                if topGui and topGui:IsA("ScreenGui") then
+                                    topGui:Destroy()
+                                end
+                                
+                                -- 3. สั่งให้เปิดหน้า Start.txt ขึ้นมาใหม่
+                                if getgenv then 
+                                    getgenv().PayomboyZ_ShowUI = true 
+                                    getgenv().PayomboyZ_ErrorMsg = "❌ คีย์ผิด หรือ HWID ไม่ตรง! กรุณาใช้คีย์ใหม่"
+                                end
+                                
+                                task.wait(0.5)
+                                loadstring(game:HttpGet(LuarmorConfig.StartURL))()
+                            end
                         end
-                        if topGui and topGui:IsA("ScreenGui") then
-                            topGui:Destroy()
-                        end
-                        
-                        -- ลบคีย์ที่หมดอายุทิ้ง เพื่อกันการโหลดซ้ำซาก
-                        if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
-                            delfile(LuarmorConfig.SavedKeyFile)
-                        end
-                        
-                        -- สั่งให้เปิดหน้า Start.txt ขึ้นมาใหม่ทันที
-                        if getgenv then 
-                            getgenv().PayomboyZ_ShowUI = true 
-                            getgenv().PayomboyZ_ErrorMsg = "❌ คีย์หมดอายุหรือไม่ถูกต้อง! กรุณาใส่คีย์ใหม่"
-                        end
-                        
-                        loadstring(game:HttpGet(LuarmorConfig.StartURL))()
-                        return
-                    end
+                    end)
+                    if not ErrorWatcherActive then break end
                 end
+                if not ErrorWatcherActive then break end
             end
         end)
     end
@@ -92,8 +100,4 @@ script_key = userKey
 
 pcall(function()
     loadstring(game:HttpGet(LuarmorConfig.LuarmorLoaderURL))()
-end)
-
-task.delay(4, function()
-    ErrorWatcherActive = false
 end)
