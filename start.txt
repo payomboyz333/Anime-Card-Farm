@@ -101,8 +101,8 @@ end
 local CreateLoaderUI
 
 -- ==============================================================================
--- 🛡️ LUARMOR EXPIRED / INVALID KEY INTERCEPTOR
--- หาก Luarmor แจ้งว่าคีย์ผิด/หมดอายุ -> ทำลายแจ้งเตือน ลบคีย์เก่า แล้วเปิด UI ให้ใส่ใหม่ทันที
+-- 🛡️ COMPREHENSIVE LUARMOR ERROR INTERCEPTOR (Auth Error & Whitelist Error)
+-- ดักจับทั้ง "Auth Error", "Whitelist Error", "No key found", "Invalid key" ทั้งหมด
 -- ==============================================================================
 
 local isRecoveringFromError = false
@@ -118,10 +118,17 @@ local function InterceptLuarmorError(descendant)
             text = descendant.Name:lower()
         end
         
-        if text:find("invalid key") or text:find("whitelist error") or text:find("not use it at all") then
+        -- ตรวจสอบเงื่อนไขแจ้งเตือนข้อผิดพลาดคีย์ของ Luarmor ทุกรูปแบบ
+        if text:find("auth error") 
+            or text:find("whitelist error") 
+            or text:find("no key found") 
+            or text:find("invalid key") 
+            or text:find("need a script_key") 
+            or text:find("not use it at all") 
+        then
             isRecoveringFromError = true
             
-            -- หา ScreenGui ตัวแม่ของมันแล้วทำลายทิ้งทันที!
+            -- หา ScreenGui ตัวแม่ของป็อปอัป Luarmor Error แล้วทำลายทิ้งทันที!
             local topGui = descendant
             while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
                 topGui = topGui.Parent
@@ -131,25 +138,32 @@ local function InterceptLuarmorError(descendant)
                 topGui:Destroy()
             end
             
-            -- ลบคีย์ที่หมดอายุออกจากเครื่อง
+            -- ลบคีย์ที่ผิด/หมดอายุออกจากไฟล์ความจำทันที
             DeleteSavedKey()
             
-            -- แสดงป็อปอัปและเปิดหน้าต่าง UI สำหรับใส่คีย์ใหม่ขึ้นมาให้ผู้ใช้ทันที!
-            ShowToast("❌ PayomboyZ Hub", "Key เดิมของคุณหมดอายุแล้ว! กรุณากรอก Key ใหม่", true)
+            -- เด้งป็อปอัปแจ้งเตือน + เรียกหน้าต่างใส่ Key ของเราขึ้นมาใหม่ทันที!
+            ShowToast("❌ PayomboyZ Hub", "Key ไม่ถูกต้อง หรือหมดอายุ! กรุณากรอก Key ใหม่", true)
             
             if CreateLoaderUI then
-                CreateLoaderUI("❌ Key หมดอายุแล้ว! กรุณากรอก Key ใหม่", "")
+                CreateLoaderUI("❌ Key ไม่ถูกต้อง หรือหมดอายุ! กรุณากรอก Key ใหม่", "")
             end
             
-            task.delay(2, function()
+            task.delay(1.5, function()
                 isRecoveringFromError = false
             end)
         end
     end)
 end
 
+-- ติดตั้ง Listener บนทุก Container ของ UI ใน Roblox ทันที
 pcall(function()
-    for _, container in ipairs({CoreGui, LocalPlayer:WaitForChild("PlayerGui")}) do
+    local containers = {
+        CoreGui, 
+        LocalPlayer:WaitForChild("PlayerGui"),
+        game:GetService("RobloxGui")
+    }
+    
+    for _, container in ipairs(containers) do
         container.DescendantAdded:Connect(InterceptLuarmorError)
         for _, desc in ipairs(container:GetDescendants()) do
             InterceptLuarmorError(desc)
@@ -164,7 +178,7 @@ local function PassKeyToLuarmor(userKey)
     
     SaveKey(userKey)
     
-    -- กำหนดคีย์เข้าสู่ Environment ของ Executor
+    -- กำหนดคีย์เข้าสู่ Environment ของ Executor ให้ครบถ้วน
     if getgenv then getgenv().script_key = userKey end
     if getrenv then pcall(function() getrenv().script_key = userKey end) end
     _G.script_key = userKey
