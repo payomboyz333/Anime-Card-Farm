@@ -6,6 +6,7 @@
 local LuarmorConfig = {
     ScriptId = "PayomboyZ_Hub",
     SavedKeyFile = "PayomboyZ_LuarmorKey.txt",
+    AttemptFile = "PayomboyZ_Attempt.txt",
     GetKeyURL = "https://luarmor.net",
     DiscordURL = "https://discord.gg/payomboyz",
     LogoPath = "543199739_2812856088914181_3062917809445648175_n.jpg",
@@ -87,7 +88,12 @@ local function PassToKeyChecker(userKey)
         if writefile then writefile(LuarmorConfig.SavedKeyFile, userKey) end
     end)
     
-    -- ส่งคีย์ไปให้หน้า String.txt (หน้าที่ทำหน้าที่เช็คคีย์)
+    -- สร้างไฟล์ประวัติการรัน (ใช้เช็คว่ารอบที่แล้วแครชเพราะคีย์ผิดหรือไม่)
+    pcall(function()
+        if writefile then writefile(LuarmorConfig.AttemptFile, "loading") end
+    end)
+    
+    -- ส่งคีย์ไปให้หน้า String.txt (หน้าที่ทำหน้าที่เช็คคีย์กับ Luarmor)
     if getgenv then getgenv().PayomboyZ_InputKey = userKey end
     
     -- รัน String.txt
@@ -366,7 +372,7 @@ local function CreateLoaderUI(initialStatus, defaultKeyText)
 end
 
 -- ==============================================================================
--- 🚀 AUTO-LOAD LOGIC: ส่งคีย์ที่มีอยู่ให้ String.txt เช็คทันที
+-- 🚀 AUTO-LOAD DEATH LOOP PROTECTOR (เช็คประวัติการหลุด)
 -- ==============================================================================
 
 local ForceShowUI = false
@@ -374,16 +380,37 @@ if getgenv and getgenv().PayomboyZ_ShowUI then
     ForceShowUI = getgenv().PayomboyZ_ShowUI
 end
 
+local lastAttemptFailed = false
+pcall(function()
+    if isfile and isfile(LuarmorConfig.AttemptFile) then
+        -- แปลว่ารอบที่แล้วมีการพยายามส่งคีย์ให้ Luarmor แต่รันไม่ถึง Loader.lua (Luarmor ดักแครชไว้)
+        lastAttemptFailed = true
+        delfile(LuarmorConfig.AttemptFile)
+        
+        -- คีย์นี้ผิดแน่นอน! ลบทิ้งเลยเพื่อป้องกันไม่ให้ AutoLoad ทำงานวนลูป
+        if isfile(LuarmorConfig.SavedKeyFile) then
+            delfile(LuarmorConfig.SavedKeyFile)
+        end
+    end
+end)
+
 if ForceShowUI then
     CreateLoaderUI(getgenv().PayomboyZ_ErrorMsg or "❌ Key ไม่ถูกต้อง กรุณากรอกใหม่", "")
     if getgenv then getgenv().PayomboyZ_ShowUI = false end
 else
     local savedKey = LoadSavedKey()
-    if savedKey and savedKey ~= "" then
+    
+    -- หากมีคีย์อยู่ และรอบที่แล้วไม่ได้แครช -> ล็อกอินอัตโนมัติ!
+    if savedKey and savedKey ~= "" and not lastAttemptFailed then
         ShowToast("🔑 PayomboyZ Hub", "พบ Key เดิม! กำลังเชื่อมต่อระบบ...", false)
         task.wait(0.5)
         PassToKeyChecker(savedKey)
     else
-        CreateLoaderUI()
+        -- ถ้าไม่มีคีย์ หรือรอบที่แล้วแครช -> โชว์หน้า UI และให้กรอกใหม่
+        local msg = nil
+        if lastAttemptFailed then
+            msg = "❌ ตรวจพบว่าคีย์เดิมของคุณหมดอายุหรือไม่ถูกต้อง! กรุณากรอกใหม่"
+        end
+        CreateLoaderUI(msg, "")
     end
 end
