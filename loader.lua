@@ -3,6 +3,13 @@
 -- URL: https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/Loader.lua
 -- ==============================================================================
 
+-- [SUCCESSFUL LOAD]: ลบไฟล์ประวัติการลองโหลดออก เพื่อยืนยันว่าคีย์นี้ผ่าน 100%
+pcall(function()
+    if isfile and isfile("PayomboyZ_Attempt.txt") and delfile then
+        delfile("PayomboyZ_Attempt.txt")
+    end
+end)
+
 local GameRouter = {
     -- 1. Attack On Titan Revolution (AOTR)
     [13379208636] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/AOTR",
