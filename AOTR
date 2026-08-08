@@ -9,7 +9,7 @@ task.spawn(function()
     if not player then return end
 
     local placeId = game.PlaceId
-    if placeId ~= 14916516914 then return end 
+    if placeId ~= 3379208636 then return end 
 
     local playerGui = player:WaitForChild("PlayerGui", 10)
     if not playerGui then return end
