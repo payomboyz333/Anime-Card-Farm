@@ -2732,7 +2732,7 @@ task.spawn(function()
     setUIScale(initialScale)
 end)
 
--- Mobile Floating Draggable Toggle Button & Check ID
+-- Mobile Floating Draggable Toggle Button
 pcall(function()
     if CoreGui:FindFirstChild("PayomboyZ_MobileToggle") then
         CoreGui.PayomboyZ_MobileToggle:Destroy()
@@ -2744,81 +2744,109 @@ pcall(function()
     mobileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     mobileGui.Parent = CoreGui
 
-    -- === Pop-up Toggle Button (MacLib Profile Style) ===
-    local toggleFrame = Instance.new("Frame")
-    toggleFrame.Name = "ProfileToggleFrame"
-    toggleFrame.Size = UDim2.new(0, 200, 0, 56)
-    toggleFrame.Position = UDim2.new(0, 15, 0.4, 0)
-    toggleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    toggleFrame.Active = true
-    toggleFrame.Draggable = true
-    toggleFrame.Parent = mobileGui
+    local toggleWrapper = Instance.new("TextButton")
+    toggleWrapper.Name = "FloatingToggleButton"
+    toggleWrapper.Size = UDim2.new(0, 180, 0, 50) -- ขยายให้กว้างขึ้นเพื่อใส่ชื่อ, FPS และ Ping
+    toggleWrapper.Position = UDim2.new(0, 15, 0.35, 0)
+    toggleWrapper.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    toggleWrapper.Text = "" -- ไม่แสดงข้อความของปุ่มหลัก
+    toggleWrapper.AutoButtonColor = false
+    toggleWrapper.Active = true
+    toggleWrapper.Draggable = true
+    toggleWrapper.Parent = mobileGui
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = toggleFrame
+    corner.CornerRadius = UDim.new(0, 25) -- ขอบมนแบบแคปซูล
+    corner.Parent = toggleWrapper
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(60, 180, 80) -- สีเขียวแบบในรูป
-    stroke.Thickness = 1.5
-    stroke.Parent = toggleFrame
+    stroke.Color = Color3.fromRGB(60, 180, 80)
+    stroke.Thickness = 2
+    stroke.Parent = toggleWrapper
 
+    -- ภาพ Avatar ซ้ายมือ
     local avatarImg = Instance.new("ImageLabel")
     avatarImg.Name = "Avatar"
     avatarImg.Size = UDim2.new(0, 40, 0, 40)
-    avatarImg.Position = UDim2.new(0, 8, 0, 8)
+    avatarImg.Position = UDim2.new(0, 5, 0, 5)
     avatarImg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     
-    -- ใช้ชื่อไฟล์ภาพที่คุณระบุ
     local customImagePath = "543199739_2812856088914181_3062917809445648175_n.jpg"
     if isfile and isfile(customImagePath) and getcustomasset then
         avatarImg.Image = getcustomasset(customImagePath)
     else
         avatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
     end
-    avatarImg.Parent = toggleFrame
+    avatarImg.Parent = toggleWrapper
 
     local avCorner = Instance.new("UICorner")
-    avCorner.CornerRadius = UDim.new(1, 0) -- วงกลม
+    avCorner.CornerRadius = UDim.new(1, 0) -- ทำให้รูปกลม
     avCorner.Parent = avatarImg
 
+    -- ป้ายชื่อ (Title)
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Name = "Title"
-    nameLabel.Size = UDim2.new(0, 130, 0, 20)
-    nameLabel.Position = UDim2.new(0, 56, 0, 10)
+    nameLabel.Size = UDim2.new(0, 125, 0, 18)
+    nameLabel.Position = UDim2.new(0, 50, 0, 6)
     nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = "PayomboyZ"
+    nameLabel.Text = LocalPlayer.DisplayName
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextSize = 16
+    nameLabel.TextSize = 13
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.Parent = toggleFrame
+    nameLabel.Parent = toggleWrapper
 
-    local subLabel = Instance.new("TextLabel")
-    subLabel.Name = "SubTitle"
-    subLabel.Size = UDim2.new(0, 130, 0, 15)
-    subLabel.Position = UDim2.new(0, 56, 0, 30)
-    subLabel.BackgroundTransparency = 1
-    subLabel.Text = "@PayomboyZ"
-    subLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    subLabel.TextSize = 13
-    subLabel.Font = Enum.Font.Gotham
-    subLabel.TextXAlignment = Enum.TextXAlignment.Left
-    subLabel.Parent = toggleFrame
+    -- ป้าย FPS & Ping (เท่ๆ)
+    local fpsLabel = Instance.new("TextLabel")
+    fpsLabel.Name = "FPSLabel"
+    fpsLabel.Size = UDim2.new(0, 125, 0, 15)
+    fpsLabel.Position = UDim2.new(0, 50, 0, 25)
+    fpsLabel.BackgroundTransparency = 1
+    fpsLabel.Text = "FPS: -- • Ping: --"
+    fpsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    fpsLabel.TextSize = 11
+    fpsLabel.Font = Enum.Font.Gotham
+    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fpsLabel.Parent = toggleWrapper
 
-    local clickBtn = Instance.new("TextButton")
-    clickBtn.Name = "ClickZone"
-    clickBtn.Size = UDim2.new(1, 0, 1, 0)
-    clickBtn.BackgroundTransparency = 1
-    clickBtn.Text = ""
-    clickBtn.Parent = toggleFrame
+    -- ระบบนับ FPS & Ping (ทำงานพื้นหลัง)
+    local RunService = game:GetService("RunService")
+    local Stats = game:GetService("Stats")
+    local frames = 0
+    local timer = 0
+    RunService.RenderStepped:Connect(function(dt)
+        frames = frames + 1
+        timer = timer + dt
+        if timer >= 1 then
+            local currentFps = math.floor(frames / timer)
+            
+            local pingValue = 0
+            pcall(function()
+                pingValue = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            end)
+            
+            fpsLabel.Text = "FPS: " .. tostring(currentFps) .. " • Ping: " .. tostring(pingValue) .. "ms"
+            
+            -- ไล่สีตามความลื่นไหล
+            if currentFps >= 50 and pingValue < 150 then
+                fpsLabel.TextColor3 = Color3.fromRGB(80, 255, 120) -- เขียว
+            elseif currentFps >= 30 and pingValue < 300 then
+                fpsLabel.TextColor3 = Color3.fromRGB(255, 200, 50) -- เหลือง
+            else
+                fpsLabel.TextColor3 = Color3.fromRGB(255, 80, 80) -- แดง
+            end
+            
+            frames = 0
+            timer = 0
+        end
+    end)
 
-    clickBtn.MouseButton1Click:Connect(function()
+    toggleWrapper.MouseButton1Click:Connect(function()
         Window:Minimize()
     end)
 end)
 
--- === Inject Check ID (ซ้ายล่างด้านในหน้าต่าง UI) ===
+-- === Inject Check ID Profile Box (ซ้ายล่างด้านในหน้าต่าง UI) ===
 task.spawn(function()
     task.wait(1.5)
     local fluentWindow = nil
@@ -2826,7 +2854,6 @@ task.spawn(function()
         if desc:IsA("TextLabel") and desc.Text == "PayomboyZ" then
             local parent = desc.Parent
             while parent and not parent:IsA("ScreenGui") do
-                -- หน้าต่างหลักของ Fluent ปกติจะเป็น Frame ใหญ่
                 if parent:IsA("Frame") and parent.Name == "Frame" and parent.Size.Y.Offset > 200 then
                     fluentWindow = parent
                     break
@@ -2838,19 +2865,62 @@ task.spawn(function()
     end
 
     if fluentWindow then
-        local checkIdLabel = Instance.new("TextLabel")
-        checkIdLabel.Name = "FluentCheckID"
-        checkIdLabel.BackgroundTransparency = 1
-        local jobIdShort = game.JobId ~= "" and string.sub(game.JobId, 1, 8) or "None"
-        checkIdLabel.Text = "Check ID: " .. LocalPlayer.UserId .. " | JobId: " .. jobIdShort
-        checkIdLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-        checkIdLabel.TextSize = 12
-        checkIdLabel.Font = Enum.Font.Gotham
-        checkIdLabel.TextXAlignment = Enum.TextXAlignment.Left
-        checkIdLabel.Size = UDim2.new(0, 200, 0, 20)
-        checkIdLabel.Position = UDim2.new(0, 15, 1, -25) -- ซ้ายล่างใน UI
-        checkIdLabel.ZIndex = 99999
-        checkIdLabel.Parent = fluentWindow
+        -- สร้าง Profile Box ด้านใน UI และให้ชื่อเปลี่ยนตามชื่อผู้เล่นจริง
+        local profileFrame = Instance.new("Frame")
+        profileFrame.Name = "CheckIDProfile"
+        profileFrame.Size = UDim2.new(0, 200, 0, 50)
+        profileFrame.Position = UDim2.new(0, 10, 1, -60) -- มุมล่างซ้าย
+        profileFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        profileFrame.ZIndex = 99999
+        profileFrame.Parent = fluentWindow
+
+        local pCorner = Instance.new("UICorner")
+        pCorner.CornerRadius = UDim.new(0, 8)
+        pCorner.Parent = profileFrame
+
+        local pStroke = Instance.new("UIStroke")
+        pStroke.Color = Color3.fromRGB(60, 180, 80)
+        pStroke.Thickness = 1.5
+        pStroke.Parent = profileFrame
+
+        local avatarImg = Instance.new("ImageLabel")
+        avatarImg.Name = "Avatar"
+        avatarImg.Size = UDim2.new(0, 36, 0, 36)
+        avatarImg.Position = UDim2.new(0, 7, 0, 7)
+        avatarImg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        avatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
+        avatarImg.ZIndex = 99999
+        avatarImg.Parent = profileFrame
+
+        local avCorner = Instance.new("UICorner")
+        avCorner.CornerRadius = UDim.new(1, 0)
+        avCorner.Parent = avatarImg
+
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "Title"
+        nameLabel.Size = UDim2.new(0, 130, 0, 18)
+        nameLabel.Position = UDim2.new(0, 50, 0, 7)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = LocalPlayer.DisplayName
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.TextSize = 14
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.ZIndex = 99999
+        nameLabel.Parent = profileFrame
+
+        local subLabel = Instance.new("TextLabel")
+        subLabel.Name = "SubTitle"
+        subLabel.Size = UDim2.new(0, 130, 0, 15)
+        subLabel.Position = UDim2.new(0, 50, 0, 25)
+        subLabel.BackgroundTransparency = 1
+        subLabel.Text = "@" .. LocalPlayer.Name
+        subLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        subLabel.TextSize = 12
+        subLabel.Font = Enum.Font.Gotham
+        subLabel.TextXAlignment = Enum.TextXAlignment.Left
+        subLabel.ZIndex = 99999
+        subLabel.Parent = profileFrame
     end
 end)
 
