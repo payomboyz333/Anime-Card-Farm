@@ -539,79 +539,10 @@ end
 local savedKey = LoadSavedKey()
 
 if savedKey and savedKey ~= "" then
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    local AutoGui = Instance.new("ScreenGui")
-    AutoGui.Name = "PayomboyZ_AutoLogin"
-    AutoGui.ResetOnSpawn = false
-    pcall(function() AutoGui.Parent = CoreGui end)
-    if not AutoGui.Parent then AutoGui.Parent = PlayerGui end
-
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 360, 0, 50)
-    Frame.Position = UDim2.new(0.5, -180, 0, 40)
-    Frame.BackgroundColor3 = Color3.fromRGB(14, 3, 6)
-    Frame.BorderSizePixel = 0
-    Frame.Parent = AutoGui
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 8)
-    Corner.Parent = Frame
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Color3.fromRGB(255, 68, 93)
-    Stroke.Thickness = 1.2
-    Stroke.Parent = Frame
-
-    local TText = Instance.new("TextLabel")
-    TText.Size = UDim2.new(1, -110, 1, 0)
-    TText.Position = UDim2.new(0, 15, 0, 0)
-    TText.BackgroundTransparency = 1
-    TText.Text = "⏳ พบ Key เดิม! เข้าสู่ระบบใน 3..."
-    TText.Font = Enum.Font.GothamBold
-    TText.TextSize = 13
-    TText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TText.TextXAlignment = Enum.TextXAlignment.Left
-    TText.Parent = Frame
-
-    local CancelBtn = Instance.new("TextButton")
-    CancelBtn.Size = UDim2.new(0, 85, 0, 30)
-    CancelBtn.Position = UDim2.new(1, -95, 0.5, -15)
-    CancelBtn.BackgroundColor3 = Color3.fromRGB(167, 10, 37)
-    CancelBtn.Text = "ยกเลิก"
-    CancelBtn.Font = Enum.Font.GothamBold
-    CancelBtn.TextSize = 12
-    CancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CancelBtn.Parent = Frame
-    local CancelCorner = Instance.new("UICorner")
-    CancelCorner.CornerRadius = UDim.new(0, 6)
-    CancelCorner.Parent = CancelBtn
-    local CancelStroke = Instance.new("UIStroke")
-    CancelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    CancelStroke.Color = Color3.fromRGB(255, 68, 93)
-    CancelStroke.Transparency = 0.2
-    CancelStroke.Thickness = 1
-    CancelStroke.Parent = CancelBtn
-
-    local cancelled = false
-    CancelBtn.MouseButton1Click:Connect(function()
-        cancelled = true
-        AutoGui:Destroy()
-        if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
-            delfile(LuarmorConfig.SavedKeyFile)
-        end
-        CreateLoaderUI("⚠️ ยกเลิกการเข้าสู่ระบบอัตโนมัติ กรุณากรอก Key ใหม่", "")
-    end)
-
-    task.spawn(function()
-        for i = 3, 1, -1 do
-            if cancelled then return end
-            TText.Text = "⏳ พบ Key เดิม! เข้าสู่ระบบใน " .. i .. "..."
-            task.wait(1)
-        end
-        
-        if not cancelled then
-            AutoGui:Destroy()
-            PassToKeyChecker(savedKey)
-        end
-    end)
+    -- แบบเดิมที่ "ฉลาดและไว": เจอคีย์เดิมข้าม UI เลย ไม่ต้องหน่วง 3 วินาที!
+    ShowToast("🔑 PayomboyZ Hub", "พบ Key เดิม! กำลังเข้าใช้งานอัตโนมัติ...", false)
+    task.wait(0.5)
+    PassToKeyChecker(savedKey)
 else
     CreateLoaderUI()
 end
