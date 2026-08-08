@@ -19,6 +19,9 @@ local GameRouter = {
     
     -- 3. Arena Sniper (Sniper Arena)
     [122446657157717] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/ARNSniper",
+
+    -- 4. Roll Anime To Fight (RATF)
+    [107653945083776] = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/RollATFight",
     
     -- สคริปต์สำรอง (Default Fallback)
 }
