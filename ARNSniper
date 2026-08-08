@@ -12,7 +12,8 @@ local Settings = {
     ShowNames = true,
     ShowDistance = true,
     TeamCheck = true,  -- ซ่อน ESP ของทีมเดียวกัน
-    MaxDistance = 1000 -- ระยะสูงสุดที่จะแสดง tracer (studs)
+    MaxDistance = 1000, -- ระยะสูงสุดที่จะแสดง tracer (studs)
+    FPSBoost = false
 }
 
 -- ==========================================
@@ -38,7 +39,7 @@ UI.Parent = success and coreGui or player:WaitForChild("PlayerGui")
 -- ==========================================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 130)
+MainFrame.Size = UDim2.new(0, 420, 0, 170)
 MainFrame.Position = UDim2.new(0.5, -210, 0.5, -65)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
@@ -114,6 +115,18 @@ MinimizeBtn.TextSize = 18
 MinimizeBtn.Parent = MainFrame
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
 
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Name = "StatsLabel"
+StatsLabel.Size = UDim2.new(0, 130, 0, 30)
+StatsLabel.Position = UDim2.new(1, -210, 0, 6)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.Text = "FPS: -- | Ping: -- ms"
+StatsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatsLabel.Font = Enum.Font.GothamBold
+StatsLabel.TextSize = 12
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
+StatsLabel.Parent = MainFrame
+
 -- ==========================================
 -- กรอบเนื้อหา (Content)
 -- ==========================================
@@ -124,11 +137,11 @@ Content.Position = UDim2.new(0, 10, 0, 50)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.FillDirection = Enum.FillDirection.Horizontal
-UIListLayout.Parent = Content
+local UIGridLayout = Instance.new("UIGridLayout")
+UIGridLayout.CellSize = UDim2.new(0, 185, 0, 38)
+UIGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIGridLayout.Parent = Content
 
 -- ==========================================
 -- ฟังก์ชันสร้างปุ่ม Toggle
@@ -243,6 +256,42 @@ createToggle("TeamCheckToggle", "🤝 ซ่อนทีมเดียวกั
     Settings.TeamCheck = state
 end)
 
+local function toggleFPSBoost(state)
+    local Lighting = game:GetService("Lighting")
+    local Terrain = workspace:FindFirstChildOfClass("Terrain")
+    
+    if state then
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 0
+        end
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and not v:IsA("MeshPart") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Enabled = false
+            end
+        end
+        if setfpscap then pcall(setfpscap, 999) end
+    else
+        Lighting.GlobalShadows = true
+        Lighting.FogEnd = 100000
+        if setfpscap then pcall(setfpscap, 60) end
+    end
+end
+
+createToggle("FPSBoostToggle", "🚀 FPS Boost", Settings.FPSBoost, function(state)
+    Settings.FPSBoost = state
+    toggleFPSBoost(state)
+end)
+
 -- ==========================================
 -- ปุ่ม Minimize และ Close
 -- ==========================================
@@ -299,7 +348,24 @@ end
 -- ==========================================
 -- RenderStepped Loop: อัปเดต ESP ทุก frame
 -- ==========================================
+local lastTime = tick()
+local frameCount = 0
+
 RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    if tick() - lastTime >= 1 then
+        local fps = frameCount
+        local ping = 0
+        pcall(function()
+            ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        if StatsLabel then
+            StatsLabel.Text = string.format("FPS: %d | Ping: %d ms", fps, ping)
+        end
+        frameCount = 0
+        lastTime = tick()
+    end
+
     if not Settings.ESPEnabled then return end
 
     local myCharacter = player.Character
