@@ -539,10 +539,73 @@ end
 local savedKey = LoadSavedKey()
 
 if savedKey and savedKey ~= "" then
-    -- แบบเดิมที่ "ฉลาดและไว": เจอคีย์เดิมข้าม UI เลย ไม่ต้องหน่วง 3 วินาที!
-    ShowToast("🔑 PayomboyZ Hub", "พบ Key เดิม! กำลังเข้าใช้งานอัตโนมัติ...", false)
-    task.wait(0.5)
+    -- ==============================================================================
+    -- 🚀 INSTANT AUTO-LOGIN & ESCAPE HATCH (ฉลาด ไว และแก้บั๊กค้าง 100%)
+    -- ==============================================================================
+    
+    -- สร้างปุ่ม "ยกเลิกคีย์" (Escape Hatch) ไว้บนสุดของจอ เผื่อกรณี Luarmor ค้าง
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local EscapeGui = Instance.new("ScreenGui")
+    EscapeGui.Name = "PayomboyZ_Escape"
+    EscapeGui.ResetOnSpawn = false
+    EscapeGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    pcall(function() EscapeGui.Parent = CoreGui end)
+    if not EscapeGui.Parent then EscapeGui.Parent = PlayerGui end
+
+    local EscBtn = Instance.new("TextButton")
+    EscBtn.Size = UDim2.new(0, 160, 0, 32)
+    EscBtn.Position = UDim2.new(0.5, -80, 0, -40) -- ซ่อนไว้ด้านบนก่อน
+    EscBtn.BackgroundColor3 = Color3.fromRGB(255, 68, 93)
+    EscBtn.Text = "❌ ลบคีย์เดิม (Reset Key)"
+    EscBtn.Font = Enum.Font.GothamBold
+    EscBtn.TextSize = 12
+    EscBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    EscBtn.BorderSizePixel = 0
+    EscBtn.Parent = EscapeGui
+
+    local EscCorner = Instance.new("UICorner")
+    EscCorner.CornerRadius = UDim.new(0, 6)
+    EscCorner.Parent = EscBtn
+
+    local EscStroke = Instance.new("UIStroke")
+    EscStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    EscStroke.Color = Color3.fromRGB(255, 255, 255)
+    EscStroke.Transparency = 0.2
+    EscStroke.Thickness = 1
+    EscStroke.Parent = EscBtn
+
+    -- แอนิเมชั่นเลื่อนปุ่มลงมาตรงกลางบน
+    task.spawn(function()
+        local ts = game:GetService("TweenService")
+        ts:Create(EscBtn, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -80, 0, 20)}):Play()
+    end)
+
+    EscBtn.MouseButton1Click:Connect(function()
+        -- ถ้าลูกค้ากดปุ่มนี้ แปลว่ามันค้างหน้า Auth Error
+        if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
+            delfile(LuarmorConfig.SavedKeyFile)
+        end
+        EscBtn.Text = "✅ ลบคีย์แล้ว! ระบบกำลังรีสตาร์ท..."
+        EscBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        task.wait(1.5)
+        -- เตะออกเพื่อให้เข้าเกมใหม่ (เป็นวิธีรีเซ็ตที่ชัวร์ที่สุด)
+        LocalPlayer:Kick("รีเซ็ตคีย์สำเร็จ! กรุณาเข้าเกมใหม่อีกครั้งเพื่อกรอกคีย์ใหม่ครับ 🚀")
+    end)
+
+    -- ทำลายปุ่มทิ้งอัตโนมัติเมื่อผ่านไป 12 วินาที (แปลว่าเข้าเกมสำเร็จแล้ว)
+    task.delay(12, function()
+        if EscapeGui then
+            local ts = game:GetService("TweenService")
+            local tw = ts:Create(EscBtn, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -80, 0, -50)})
+            tw:Play()
+            tw.Completed:Connect(function() EscapeGui:Destroy() end)
+        end
+    end)
+
+    -- ข้ามหน้าต่าง UI แล้วพุ่งไปหา Luarmor ทันที! (ไม่มีหน่วงเวลา)
+    ShowToast("🔑 PayomboyZ Hub", "พบ Key เดิม! กำลังเชื่อมต่ออัตโนมัติ...", false)
     PassToKeyChecker(savedKey)
 else
+    -- ถ้าไม่มีคีย์ ก็สร้าง UI ให้กรอก
     CreateLoaderUI()
 end
