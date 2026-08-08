@@ -5,7 +5,7 @@
 
 local LuarmorConfig = {
     SavedKeyFile = "PayomboyZ_LuarmorKey.txt",
-    LuarmorLoaderURL = "https://api.luarmor.net/files/v4/loaders/d0cd427b9eb4643f56e27412fc23b47c.lua",
+    LuarmorLoaderURL = "https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua",
     StartURL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/start.txt"
 }
 
