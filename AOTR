@@ -9,7 +9,7 @@ task.spawn(function()
     if not player then return end
 
     local placeId = game.PlaceId
-    if placeId ~= 3379208636 then return end 
+    if placeId ~= 14916516914 then return end 
 
     local playerGui = player:WaitForChild("PlayerGui", 10)
     if not playerGui then return end
@@ -4903,10 +4903,12 @@ if IsLobbyLobby() then
             Default = "None",
             Multi = false,
             Callback = function(v)
-                if v == "None" then 
-                    selected[category] = nil 
-                else 
-                    selected[category] = v 
+                if v == "ซ้าย" then
+                    selected[category] = "Left"
+                elseif v == "ขวา" then
+                    selected[category] = "Right"
+                else
+                    selected[category] = nil
                 end
             end
         })
