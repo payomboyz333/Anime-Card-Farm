@@ -13,26 +13,26 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- รับคีย์จาก Start.txt
 local userKey = getgenv and getgenv().PayomboyZ_InputKey or nil
 if not userKey or userKey == "" then return end
 
 -- ==============================================================================
--- 🛡️ LUARMOR ERROR WATCHER (เบรคลูป Auto-Load กรณีคีย์ผิด/หมดอายุ)
+-- 🛡️ LUARMOR ERROR WATCHER (อัปเกรดให้ฉลาดและครอบคลุมทุก Executor)
 -- ==============================================================================
--- สคริปต์นี้จะทำงานอยู่เบื้องหลังระหว่างที่ Luarmor เช็คคีย์
--- หาก Luarmor เด้งแจ้งเตือนว่าคีย์ผิด มันจะลบคีย์เก่าทิ้งทันที และเรียก Start.txt เพื่อเปิด UI ใหม่อีกรอบ!
-
 local ErrorWatcherActive = true
 
 task.spawn(function()
     while ErrorWatcherActive and task.wait(0.2) do
         pcall(function()
+            -- เพิ่ม gethui() เพื่อดักจับ UI ของ Luarmor ใน Executor ที่ซ่อน GUI ไว้ลึกๆ (เช่น Delta, Codex)
             local containers = {
                 CoreGui, 
                 LocalPlayer:WaitForChild("PlayerGui"),
                 game:GetService("RobloxGui")
             }
+            if gethui then
+                table.insert(containers, gethui())
+            end
             
             for _, container in ipairs(containers) do
                 for _, descendant in ipairs(container:GetDescendants()) do
@@ -43,16 +43,15 @@ task.spawn(function()
                         text = descendant.Name:lower()
                     end
                     
-                    -- เจอแจ้งเตือนคีย์ผิดของ Luarmor
                     if text:find("auth error") 
                         or text:find("whitelist error") 
                         or text:find("no key found") 
                         or text:find("invalid key") 
                         or text:find("need a script_key") 
                     then
-                        ErrorWatcherActive = false -- ปิดลูป
+                        ErrorWatcherActive = false
                         
-                        -- 1. ทำลาย Error Popup ของ Luarmor ทิ้ง
+                        -- ทำลาย Error Popup ทิ้ง
                         local topGui = descendant
                         while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
                             topGui = topGui.Parent
@@ -61,15 +60,15 @@ task.spawn(function()
                             topGui:Destroy()
                         end
                         
-                        -- 2. ลบคีย์ที่หมดอายุออกจากเครื่อง เพื่อกันไม่ให้เกิด Auto-Load วนลูป!
+                        -- ลบคีย์ที่หมดอายุทิ้ง เพื่อกันการโหลดซ้ำซาก
                         if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
                             delfile(LuarmorConfig.SavedKeyFile)
                         end
                         
-                        -- 3. สั่งให้ Start.txt เปิดหน้าต่าง UI อีกครั้ง พร้อมโชว์ Error
+                        -- สั่งให้เปิดหน้า Start.txt ขึ้นมาใหม่ทันที
                         if getgenv then 
                             getgenv().PayomboyZ_ShowUI = true 
-                            getgenv().PayomboyZ_ErrorMsg = "❌ Key ไม่ถูกต้อง หรือหมดอายุ! กรุณากรอก Key ใหม่"
+                            getgenv().PayomboyZ_ErrorMsg = "❌ คีย์หมดอายุหรือไม่ถูกต้อง! กรุณาใส่คีย์ใหม่"
                         end
                         
                         loadstring(game:HttpGet(LuarmorConfig.StartURL))()
@@ -91,12 +90,10 @@ _G.script_key = userKey
 shared.script_key = userKey
 script_key = userKey
 
--- รัน Luarmor Loader (ถ้าคีย์ถูก มันจะข้ามไปยัง Loader.lua แต่ถ้าผิด Watcher ด้านบนจะจับไว้)
-local success, err = pcall(function()
+pcall(function()
     loadstring(game:HttpGet(LuarmorConfig.LuarmorLoaderURL))()
 end)
 
--- ปิดการทำงานของ Watcher ทันทีที่ Luarmor โหลดเสร็จโดยไม่มี Error หลุดมาใน 2 วินาที
-task.delay(2.5, function()
+task.delay(4, function()
     ErrorWatcherActive = false
 end)
