@@ -2732,7 +2732,7 @@ task.spawn(function()
     setUIScale(initialScale)
 end)
 
--- Mobile Floating Draggable Toggle Button
+-- Mobile Floating Draggable Toggle Button & Check ID
 pcall(function()
     if CoreGui:FindFirstChild("PayomboyZ_MobileToggle") then
         CoreGui.PayomboyZ_MobileToggle:Destroy()
@@ -2744,31 +2744,114 @@ pcall(function()
     mobileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     mobileGui.Parent = CoreGui
 
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Name = "FloatingButton"
-    toggleBtn.Size = UDim2.new(0, 50, 0, 50)
-    toggleBtn.Position = UDim2.new(0, 15, 0.35, 0)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 20, 30)
-    toggleBtn.Text = "🔴\nPayomboyZ"
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 9
-    toggleBtn.Active = true
-    toggleBtn.Draggable = true
-    toggleBtn.Parent = mobileGui
+    -- === Pop-up Toggle Button (MacLib Profile Style) ===
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = "ProfileToggleFrame"
+    toggleFrame.Size = UDim2.new(0, 200, 0, 56)
+    toggleFrame.Position = UDim2.new(0, 15, 0.4, 0)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    toggleFrame.Active = true
+    toggleFrame.Draggable = true
+    toggleFrame.Parent = mobileGui
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 14)
-    corner.Parent = toggleBtn
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = toggleFrame
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(255, 60, 60)
-    stroke.Thickness = 2
-    stroke.Parent = toggleBtn
+    stroke.Color = Color3.fromRGB(60, 180, 80) -- สีเขียวแบบในรูป
+    stroke.Thickness = 1.5
+    stroke.Parent = toggleFrame
 
-    toggleBtn.MouseButton1Click:Connect(function()
+    local avatarImg = Instance.new("ImageLabel")
+    avatarImg.Name = "Avatar"
+    avatarImg.Size = UDim2.new(0, 40, 0, 40)
+    avatarImg.Position = UDim2.new(0, 8, 0, 8)
+    avatarImg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    
+    -- ใช้ชื่อไฟล์ภาพที่คุณระบุ
+    local customImagePath = "543199739_2812856088914181_3062917809445648175_n.jpg"
+    if isfile and isfile(customImagePath) and getcustomasset then
+        avatarImg.Image = getcustomasset(customImagePath)
+    else
+        avatarImg.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
+    end
+    avatarImg.Parent = toggleFrame
+
+    local avCorner = Instance.new("UICorner")
+    avCorner.CornerRadius = UDim.new(1, 0) -- วงกลม
+    avCorner.Parent = avatarImg
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "Title"
+    nameLabel.Size = UDim2.new(0, 130, 0, 20)
+    nameLabel.Position = UDim2.new(0, 56, 0, 10)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "PayomboyZ"
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextSize = 16
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = toggleFrame
+
+    local subLabel = Instance.new("TextLabel")
+    subLabel.Name = "SubTitle"
+    subLabel.Size = UDim2.new(0, 130, 0, 15)
+    subLabel.Position = UDim2.new(0, 56, 0, 30)
+    subLabel.BackgroundTransparency = 1
+    subLabel.Text = "@PayomboyZ"
+    subLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    subLabel.TextSize = 13
+    subLabel.Font = Enum.Font.Gotham
+    subLabel.TextXAlignment = Enum.TextXAlignment.Left
+    subLabel.Parent = toggleFrame
+
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Name = "ClickZone"
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.Parent = toggleFrame
+
+    clickBtn.MouseButton1Click:Connect(function()
         Window:Minimize()
     end)
+end)
+
+-- === Inject Check ID (ซ้ายล่างด้านในหน้าต่าง UI) ===
+task.spawn(function()
+    task.wait(1.5)
+    local fluentWindow = nil
+    for _, desc in ipairs(CoreGui:GetDescendants()) do
+        if desc:IsA("TextLabel") and desc.Text == "PayomboyZ" then
+            local parent = desc.Parent
+            while parent and not parent:IsA("ScreenGui") do
+                -- หน้าต่างหลักของ Fluent ปกติจะเป็น Frame ใหญ่
+                if parent:IsA("Frame") and parent.Name == "Frame" and parent.Size.Y.Offset > 200 then
+                    fluentWindow = parent
+                    break
+                end
+                parent = parent.Parent
+            end
+            if fluentWindow then break end
+        end
+    end
+
+    if fluentWindow then
+        local checkIdLabel = Instance.new("TextLabel")
+        checkIdLabel.Name = "FluentCheckID"
+        checkIdLabel.BackgroundTransparency = 1
+        local jobIdShort = game.JobId ~= "" and string.sub(game.JobId, 1, 8) or "None"
+        checkIdLabel.Text = "Check ID: " .. LocalPlayer.UserId .. " | JobId: " .. jobIdShort
+        checkIdLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+        checkIdLabel.TextSize = 12
+        checkIdLabel.Font = Enum.Font.Gotham
+        checkIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+        checkIdLabel.Size = UDim2.new(0, 200, 0, 20)
+        checkIdLabel.Position = UDim2.new(0, 15, 1, -25) -- ซ้ายล่างใน UI
+        checkIdLabel.ZIndex = 99999
+        checkIdLabel.Parent = fluentWindow
+    end
 end)
 
 Fluent:Notify({
