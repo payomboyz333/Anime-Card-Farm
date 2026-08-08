@@ -270,20 +270,34 @@ local function toggleFPSBoost(state)
             Terrain.WaterTransparency = 0
         end
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v:IsA("MeshPart") then
-                v.Material = Enum.Material.SmoothPlastic
-                v.Reflectance = 0
-            elseif v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency = 1
-            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
-                v.Enabled = false
-            end
+            pcall(function()
+                if v:IsA("BasePart") and not v:IsA("Terrain") then
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    v.Transparency = 1
+                elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                    v.Enabled = false
+                end
+            end)
         end
-        if setfpscap then pcall(setfpscap, 999) end
+        pcall(function()
+            if getgenv and getgenv().setfpscap then
+                getgenv().setfpscap(999)
+            elseif setfpscap then
+                setfpscap(999)
+            end
+        end)
     else
         Lighting.GlobalShadows = true
         Lighting.FogEnd = 100000
-        if setfpscap then pcall(setfpscap, 60) end
+        pcall(function()
+            if getgenv and getgenv().setfpscap then
+                getgenv().setfpscap(60)
+            elseif setfpscap then
+                setfpscap(60)
+            end
+        end)
     end
 end
 
@@ -357,7 +371,12 @@ RunService.RenderStepped:Connect(function()
         local fps = frameCount
         local ping = 0
         pcall(function()
-            ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+            local networkPing = player:GetNetworkPing()
+            if networkPing then
+                ping = math.floor(networkPing * 1000)
+            else
+                ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+            end
         end)
         if StatsLabel then
             StatsLabel.Text = string.format("FPS: %d | Ping: %d ms", fps, ping)
