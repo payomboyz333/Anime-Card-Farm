@@ -1,1627 +1,600 @@
-local CoreGui = game:GetService("CoreGui")
-local HttpService = game:GetService("HttpService")
+-- ==============================================================================
+-- PayomboyZ Hub - Stage 1: Key UI Parody Edition (ซื้อคีย์เถอะน้อง!)
+-- URL: https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/start.txt
+-- ==============================================================================
+
+local LuarmorConfig = {
+    ScriptId = "PayomboyZ_Hub_Parody",
+    SavedKeyFile = "PayomboyZ_LuarmorKey.txt",
+    GetKeyURL = "https://discordapp.com/channels/1533260775458607256/1533265542394155158",
+    DiscordURL = "https://discord.gg/5DEAQBj2y",
+    LogoPath = "543199739_2812856088914181_3062917809445648175_n.jpg",
+    StringURL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/string.txt"
+}
+
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
-local StarterGui = game:GetService("StarterGui")
-local VirtualUser = game:GetService("VirtualUser")
+local LocalPlayer = Players.LocalPlayer
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-local Window = Fluent:CreateWindow({
-    Title = "Roll Anime to Fight! ⚔️",
-    SubTitle = "Made by PayomboyZ HUB",
-    TabWidth = 200,
-    Size = UDim2.fromOffset(580, 400),
-    Acrylic = true,
-    Theme = "Rose",
-    MinimizeKey = Enum.KeyCode.K
-})
-
-task.spawn(function()
-    local titleLabel
-    local subLabel
-
-    repeat
-        for _, v in ipairs(CoreGui:GetDescendants()) do
-            if v:IsA("TextLabel") then
-                if v.Text == "Roll Anime to Fight! ⚔️" then
-                    titleLabel = v
-                    titleLabel.RichText = true
-                elseif v.Text == "Made by PayomboyZ HUB" then
-                    subLabel = v
-                    subLabel.RichText = true
-                end
-            end
-        end
-        task.wait(0.2)
-    until titleLabel and subLabel
-
-    while titleLabel.Parent and subLabel.Parent do
-        local hue = (tick() * 0.15) % 1
-        local color = Color3.fromHSV(hue, 1, 1)
-
-        local r = math.floor(color.R * 255)
-        local g = math.floor(color.G * 255)
-        local b = math.floor(color.B * 255)
-        
-        local fps = math.floor(workspace:GetRealPhysicsFPS())
-        local ping = 0
-        pcall(function()
-            ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
-
-        titleLabel.Text = string.format(
-            '<b><font color="rgb(%d,%d,%d)">Roll Anime to Fight! ⚔️ | FPS: %d | Ping: %d</font></b>',
-            r, g, b, fps, ping
-        )
-
-        subLabel.Text = string.format(
-            '<b><font color="rgb(%d,%d,%d)">Made by PayomboyZ HUB 🌹</font></b>',
-            r, g, b
-        )
-
-        task.wait(0.1)
-    end
-end)
-
-player.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
-
-StarterGui:SetCore("SendNotification", {
-    Title = "PayomboyZ HUB",
-    Text = "AntiAFK Active",
-    Duration = 5
-})
-
-local MainTab = Window:AddTab({ Title = "หน้าหลัก", Icon = "pin" })
-local Setting = Window:AddTab({ Title = "ตั้งค่า", Icon = "settings" })
-local Options = Fluent.Options
-
-local ConfigFolder = "PayomboyZ"
-local ConfigFile = ConfigFolder .. "/config.json"
-
-local CharacterFallbackValues = {
-    "Zoro",
-    "Krillin",
-    "Luffy",
-    "Ussop",
-    "Itadori",
-    "Maki",
-    "Goku",
-    "Sakura",
-    "Mob",
-    "Junwoo",
-    "Tanjiro",
-    "Shinra",
-}
-
-local RarityFallbackValues = {
-    "Common",
-    "Rare",
-    "Epic",
-    "Legendary",
-    "Mythic",
-    "God",
-    "Secret",
-    "Limited",
-}
-
-local MutationFallbackValues = {
-    "Normal",
-    "Gold",
-    "Diamond",
-    "Demon",
-    "Destroyer",
-    "Hollow",
-    "Slayer",
-    "Cursed",
-    "Astronaut",
-}
-
-local function getModule(...)
-    local current = ReplicatedStorage
-
-    for _, name in ipairs({ ... }) do
-        current = current and current:FindFirstChild(name)
-    end
-
-    if current and current:IsA("ModuleScript") then
-        return current
-    end
-
-    return nil
-end
-
-local function sortedValues(set)
-    local values = {}
-
-    for value in pairs(set) do
-        table.insert(values, value)
-    end
-
-    table.sort(values)
-    return values
-end
-
-local function getRarityValues()
-    local values = {}
-    local module = getModule("Modules", "Characters", "CharactersInfo")
-
-    if module then
-        local ok, data = pcall(require, module)
-        local characters = ok and type(data) == "table" and (data.Characters or data)
-
-        if type(characters) == "table" then
-            for _, character in pairs(characters) do
-                if type(character) == "table" and character.Rarity ~= nil then
-                    values[tostring(character.Rarity)] = true
-                end
-            end
-        end
-    end
-
-    if not next(values) then
-        for _, rarity in ipairs(RarityFallbackValues) do
-            values[rarity] = true
-        end
-    end
-
-    return sortedValues(values)
-end
-
-local function getCharacterValues()
-    local values = {}
-
-    local function addName(name)
-        if name ~= nil then
-            name = tostring(name):gsub("<.->", ""):match("^%s*(.-)%s*$")
-            if name and name ~= "" then
-                values[name] = true
-            end
-        end
-    end
-
-    local function addWorkspaceModelName(model)
-        addName(model.Name)
-
-        local head = model:FindFirstChild("Head")
-        local buyUI = head and head:FindFirstChild("BuyUI")
-        local frame = buyUI and buyUI:FindFirstChild("Frame")
-        local nameFrame = frame and frame:FindFirstChild("Name")
-        local label = nameFrame and nameFrame:FindFirstChild("TextLabel")
-
-        if label and label:IsA("TextLabel") then
-            addName(label.Text)
-            return
-        end
-
-        local fallbackBuyUI = model:FindFirstChild("BuyUI", true)
-        if fallbackBuyUI then
-            local fallbackName = fallbackBuyUI:FindFirstChild("Name", true)
-            if fallbackName then
-                label = fallbackName:FindFirstChildWhichIsA("TextLabel", true)
-                if label then
-                    addName(label.Text)
-                end
-            end
-        end
-    end
-
-    local module = getModule("Modules", "Characters", "CharactersInfo")
-
-    if module then
-        local ok, data = pcall(require, module)
-        local characters = ok and type(data) == "table" and (data.Characters or data)
-
-        if type(characters) == "table" then
-            for key, character in pairs(characters) do
-                if type(character) == "table" then
-                    addName(character.Name or key)
-                    addName(character.DisplayName)
-                    addName(character.Display)
-                else
-                    addName(key)
-                end
-            end
-        end
-    end
-
-    local plots = workspace:FindFirstChild("Plots")
-    if plots then
-        for _, plot in ipairs(plots:GetChildren()) do
-            local characters = plot:FindFirstChild("Characters")
-            if characters then
-                for _, model in ipairs(characters:GetChildren()) do
-                    if model:IsA("Model") then
-                        addWorkspaceModelName(model)
-                    end
-                end
-            end
-        end
-    end
-
-    if not next(values) then
-        for _, name in ipairs(CharacterFallbackValues) do
-            values[name] = true
-        end
-    end
-
-    return sortedValues(values)
-end
-
-local function getMutationValues()
-    local values = {}
-    local module = getModule("Modules", "Shared", "MutationInfo")
-
-    if module then
-        local ok, data = pcall(require, module)
-        local mutations = ok and type(data) == "table" and (data.Mutations or data)
-
-        if type(mutations) == "table" then
-            for mutationName, mutationData in pairs(mutations) do
-                local name = tostring(mutationName)
-                local damage = 0
-
-                if type(mutationData) == "table" then
-                    name = tostring(mutationData.Name or mutationName)
-                    damage = tonumber(mutationData.Damage) or 0
-                end
-
-                values[name] = {
-                    Name = name,
-                    Damage = damage,
-                }
-            end
-        end
-    end
-
-    if not next(values) then
-        for index, mutation in ipairs(MutationFallbackValues) do
-            values[mutation] = {
-                Name = mutation,
-                Damage = index - 1,
-            }
-        end
-    end
-
-    local fallbackDamage = {}
-    for index, mutation in ipairs(MutationFallbackValues) do
-        fallbackDamage[mutation:lower()] = index - 1
-    end
-
-    values.Normal = values.Normal or {
-        Name = "Normal",
-        Damage = -math.huge,
-    }
-
-    local ordered = {}
-    for _, mutation in pairs(values) do
-        table.insert(ordered, mutation)
-    end
-
-    table.sort(ordered, function(a, b)
-        if a.Damage ~= b.Damage then
-            return a.Damage < b.Damage
-        end
-
-        return a.Name < b.Name
-    end)
-
-    local orderedValues = {}
-    for _, mutation in ipairs(ordered) do
-        table.insert(orderedValues, mutation.Name)
-    end
-
-    return orderedValues
-end
-
-local RarityValues = getRarityValues()
-local CharacterValues = getCharacterValues()
-local MutationValues = getMutationValues()
-
-local function normalizeMultiValue(value, allowedValues)
-    local selected = {}
-
-    if type(value) ~= "table" then
-        return selected
-    end
-
-    for _, item in ipairs(allowedValues) do
-        if value[item] == true or table.find(value, item) then
-            selected[item] = true
-        end
-    end
-
-    return selected
-end
-
-local function selectedToList(selectedValues, allowedValues)
-    local selected = {}
-
-    for _, item in ipairs(allowedValues) do
-        if selectedValues[item] then
-            table.insert(selected, item)
-        end
-    end
-
-    return selected
-end
-
-local AutoBuyPlotEnabled = false
-local AutoSpinWheelEnabled = false
-local AutoClaimBattlepassEnabled = false
-local AutoClaimPremiumBattlepassEnabled = false
-local SelectedRarities = {}
-local SelectedMutations = {}
-local SelectedRarities2 = {}
-local SelectedMutations2 = {}
-local SelectedNames3 = {}
-local SelectedMutations3 = {}
-local SelectedNames4 = {}
-local SelectedMutations4 = {}
-
-local function getOptionValue(optionName, fallback)
-    local value = fallback
-
+local function LoadSavedKey()
+    local saved = ""
     pcall(function()
-        if Options and Options[optionName] and Options[optionName].Value ~= nil then
-            value = Options[optionName].Value
+        if isfile and isfile(LuarmorConfig.SavedKeyFile) and readfile then
+            saved = readfile(LuarmorConfig.SavedKeyFile)
         end
     end)
-
-    return value
+    return saved:gsub("%s+", "")
 end
 
-local function saveConfig()
-    if not isfolder(ConfigFolder) then
-        makefolder(ConfigFolder)
-    end
+local function ShowToast(title, message, isError)
+    pcall(function()
+        local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+        local ToastGui = Instance.new("ScreenGui")
+        ToastGui.Name = "PayomboyZ_Toast"
+        ToastGui.ResetOnSpawn = false
+        pcall(function() ToastGui.Parent = CoreGui end)
+        if not ToastGui.Parent then ToastGui.Parent = PlayerGui end
 
-    local configTable = {
-        Rarities1 = getOptionValue("Rarities1", SelectedRarities),
-        Mutations1 = getOptionValue("Mutations1", SelectedMutations),
-        Rarities2 = getOptionValue("Rarities2", SelectedRarities2),
-        Mutations2 = getOptionValue("Mutations2", SelectedMutations2),
-        Names3 = getOptionValue("Names3", SelectedNames3),
-        Mutations3 = getOptionValue("Mutations3", SelectedMutations3),
-        Names4 = getOptionValue("Names4", SelectedNames4),
-        Mutations4 = getOptionValue("Mutations4", SelectedMutations4),
-        AutoBuyPlot = getOptionValue("AutoBuyPlot", AutoBuyPlotEnabled),
-        AutoSpinWheel = getOptionValue("AutoSpinWheel", AutoSpinWheelEnabled),
-        AutoClaimBattlepass = getOptionValue("AutoClaimBattlepass", AutoClaimBattlepassEnabled),
-        AutoClaimPremiumBattlepass = getOptionValue("AutoClaimPremiumBattlepass", AutoClaimPremiumBattlepassEnabled),
+        local Frame = Instance.new("Frame")
+        Frame.Size = UDim2.new(0, 340, 0, 58)
+        Frame.Position = UDim2.new(1, -360, 0, 20)
+        Frame.BackgroundColor3 = Color3.fromRGB(15, 3, 6)
+        Frame.BorderSizePixel = 0
+        Frame.Parent = ToastGui
+
+        local Corner = Instance.new("UICorner")
+        Corner.CornerRadius = UDim.new(0, 7)
+        Corner.Parent = Frame
+
+        local Stroke = Instance.new("UIStroke")
+        Stroke.Color = isError and Color3.fromRGB(255, 77, 101) or Color3.fromRGB(255, 180, 0)
+        Stroke.Transparency = 0.2
+        Stroke.Thickness = 1.25
+        Stroke.Parent = Frame
+
+        local TText = Instance.new("TextLabel")
+        TText.Size = UDim2.new(1, -20, 0, 20)
+        TText.Position = UDim2.new(0, 10, 0, 6)
+        TText.BackgroundTransparency = 1
+        TText.Text = title
+        TText.Font = Enum.Font.GothamBold
+        TText.TextSize = 13
+        TText.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TText.TextXAlignment = Enum.TextXAlignment.Left
+        TText.Parent = Frame
+
+        local MText = Instance.new("TextLabel")
+        MText.Size = UDim2.new(1, -20, 0, 18)
+        MText.Position = UDim2.new(0, 10, 0, 29)
+        MText.BackgroundTransparency = 1
+        MText.Text = message
+        MText.Font = Enum.Font.Gotham
+        MText.TextSize = 11
+        MText.TextColor3 = Color3.fromRGB(255, 220, 220)
+        MText.TextXAlignment = Enum.TextXAlignment.Left
+        MText.Parent = Frame
+
+        task.delay(4, function()
+            ToastGui:Destroy()
+        end)
+    end)
+end
+
+local function PassToKeyChecker(userKey)
+    if not userKey or userKey == "" then return end
+    userKey = userKey:gsub("%s+", "")
+    
+    pcall(function()
+        if writefile then writefile(LuarmorConfig.SavedKeyFile, userKey) end
+    end)
+    
+    if getgenv then getgenv().PayomboyZ_InputKey = userKey end
+    loadstring(game:HttpGet(LuarmorConfig.StringURL))()
+end
+
+-- ==============================================================================
+-- 🎨 PARODY KEY UI GENERATOR (เวอร์ชันแกะสลักความงก)
+-- ==============================================================================
+local function CreateLoaderUI(initialStatus, defaultKeyText)
+    if CoreGui:FindFirstChild("PayomboyZ_LuarmorLoader") then CoreGui.PayomboyZ_LuarmorLoader:Destroy() end
+    if LocalPlayer.PlayerGui:FindFirstChild("PayomboyZ_LuarmorLoader") then LocalPlayer.PlayerGui.PayomboyZ_LuarmorLoader:Destroy() end
+
+    local LoaderGui = Instance.new("ScreenGui")
+    LoaderGui.Name = "PayomboyZ_LuarmorLoader"
+    LoaderGui.ResetOnSpawn = false
+    LoaderGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    LoaderGui.IgnoreGuiInset = true
+
+    pcall(function() LoaderGui.Parent = CoreGui end)
+    if not LoaderGui.Parent then LoaderGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+    local LoaderTheme = {
+        Background = Color3.fromRGB(5, 1, 3),
+        Panel = Color3.fromRGB(14, 3, 6),
+        PanelAlt = Color3.fromRGB(28, 5, 10),
+        Field = Color3.fromRGB(19, 4, 8),
+        FieldStroke = Color3.fromRGB(255, 170, 0),
+        RowStroke = Color3.fromRGB(133, 11, 31),
+        Button = Color3.fromRGB(167, 10, 37),
+        ButtonDark = Color3.fromRGB(48, 5, 12),
+        Accent = Color3.fromRGB(255, 68, 93),
+        GlowSoft = Color3.fromRGB(208, 16, 48),
+        Text = Color3.fromRGB(255, 255, 255),
+        Muted = Color3.fromRGB(255, 200, 200),
+        Good = Color3.fromRGB(255, 255, 255),
+        Bad = Color3.fromRGB(255, 77, 101)
     }
 
-    local success, jsonString = pcall(function()
-        return HttpService:JSONEncode(configTable)
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.Size = UDim2.new(0, 520, 0, 330)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    MainFrame.BackgroundColor3 = LoaderTheme.Background
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = LoaderGui
+
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 7)
+    MainCorner.Parent = MainFrame
+
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    MainStroke.Thickness = 1.5
+    MainStroke.Transparency = 0.14
+    MainStroke.Color = LoaderTheme.Accent
+    MainStroke.Parent = MainFrame
+
+    local MainGradient = Instance.new("UIGradient")
+    MainGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 3, 8)),
+        ColorSequenceKeypoint.new(1, LoaderTheme.Background)
+    })
+    MainGradient.Rotation = 90
+    MainGradient.Parent = MainFrame
+
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Size = UDim2.new(1, 0, 0, 46)
+    Sidebar.BackgroundColor3 = LoaderTheme.Panel
+    Sidebar.BorderSizePixel = 0
+    Sidebar.Parent = MainFrame
+
+    local SideCorner = Instance.new("UICorner")
+    SideCorner.CornerRadius = UDim.new(0, 7)
+    SideCorner.Parent = Sidebar
+
+    local SideFix = Instance.new("Frame")
+    SideFix.Size = UDim2.new(1, 0, 0, 1)
+    SideFix.Position = UDim2.new(0, 0, 1, -1)
+    SideFix.BackgroundColor3 = LoaderTheme.GlowSoft
+    SideFix.BackgroundTransparency = 0.25
+    SideFix.BorderSizePixel = 0
+    SideFix.Parent = Sidebar
+
+    local HeaderGradient = Instance.new("UIGradient")
+    HeaderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, LoaderTheme.PanelAlt),
+        ColorSequenceKeypoint.new(1, LoaderTheme.Panel)
+    })
+    HeaderGradient.Rotation = 0
+    HeaderGradient.Parent = Sidebar
+
+    local HeaderStroke = Instance.new("UIStroke")
+    HeaderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    HeaderStroke.Color = LoaderTheme.GlowSoft
+    HeaderStroke.Transparency = 0.55
+    HeaderStroke.Thickness = 1
+    HeaderStroke.Parent = Sidebar
+
+    local LogoImg = Instance.new("ImageLabel")
+    LogoImg.Name = "PayomboyZ_Logo"
+    LogoImg.Size = UDim2.new(0, 26, 0, 26)
+    LogoImg.Position = UDim2.new(0, 14, 0, 10)
+    LogoImg.BackgroundColor3 = LoaderTheme.PanelAlt
+    LogoImg.BackgroundTransparency = 0
+    LogoImg.ScaleType = Enum.ScaleType.Fit
+    LogoImg.Parent = Sidebar
+
+    local LogoCorner = Instance.new("UICorner")
+    LogoCorner.CornerRadius = UDim.new(1, 0)
+    LogoCorner.Parent = LogoImg
+
+    local LogoStroke = Instance.new("UIStroke")
+    LogoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    LogoStroke.Color = LoaderTheme.Accent
+    LogoStroke.Transparency = 0.3
+    LogoStroke.Thickness = 1
+    LogoStroke.Parent = LogoImg
+
+    local profileImageLoaded = pcall(function()
+        LogoImg.Image = Players:GetUserThumbnailAsync(
+            LocalPlayer.UserId,
+            Enum.ThumbnailType.HeadShot,
+            Enum.ThumbnailSize.Size150x150
+        )
     end)
 
-    if success then
-        writefile(ConfigFile, jsonString)
-    end
-end
-
-local function loadConfig()
-    if not isfile(ConfigFile) then
-        return
-    end
-
-    local success, decoded = pcall(function()
-        return HttpService:JSONDecode(readfile(ConfigFile))
-    end)
-
-    if not success or type(decoded) ~= "table" then
-        return
+    if not profileImageLoaded and getcustomasset then
+        pcall(function()
+            if isfile and isfile(LuarmorConfig.LogoPath) then
+                LogoImg.Image = getcustomasset(LuarmorConfig.LogoPath)
+            elseif isfile and isfile("AOTR/" .. LuarmorConfig.LogoPath) then
+                LogoImg.Image = getcustomasset("AOTR/" .. LuarmorConfig.LogoPath)
+            end
+        end)
     end
 
-    local loadedRarities = normalizeMultiValue(decoded.Rarities1, RarityValues)
-    local loadedMutations = normalizeMultiValue(decoded.Mutations1 or decoded.Mutations, MutationValues)
-    local loadedRarities2 = normalizeMultiValue(decoded.Rarities2, RarityValues)
-    local loadedMutations2 = normalizeMultiValue(decoded.Mutations2, MutationValues)
-    local loadedNames3 = normalizeMultiValue(decoded.Names3, CharacterValues)
-    local loadedMutations3 = normalizeMultiValue(decoded.Mutations3, MutationValues)
-    local loadedNames4 = normalizeMultiValue(decoded.Names4, CharacterValues)
-    local loadedMutations4 = normalizeMultiValue(decoded.Mutations4, MutationValues)
+    local SubBrand = Instance.new("TextLabel")
+    SubBrand.Size = UDim2.new(1, -242, 0, 18)
+    SubBrand.Position = UDim2.new(0, 50, 0, 5)
+    SubBrand.BackgroundTransparency = 1
+    SubBrand.Text = "PAYOMBOYZ HUB (อย่าหาใช้ของฟรี!)"
+    SubBrand.Font = Enum.Font.GothamBold
+    SubBrand.TextSize = 12
+    SubBrand.TextColor3 = LoaderTheme.Text
+    SubBrand.TextXAlignment = Enum.TextXAlignment.Left
+    SubBrand.Parent = Sidebar
 
-    if next(loadedRarities) then
-        SelectedRarities = loadedRarities
-    end
-
-    if next(loadedMutations) then
-        SelectedMutations = loadedMutations
-    end
-
-    if next(loadedRarities2) then
-        SelectedRarities2 = loadedRarities2
-    end
-
-    if next(loadedMutations2) then
-        SelectedMutations2 = loadedMutations2
-    end
-
-    if next(loadedNames3) then
-        SelectedNames3 = loadedNames3
-    end
-
-    if next(loadedMutations3) then
-        SelectedMutations3 = loadedMutations3
-    end
-
-    if next(loadedNames4) then
-        SelectedNames4 = loadedNames4
-    end
-
-    if next(loadedMutations4) then
-        SelectedMutations4 = loadedMutations4
-    end
-
-    AutoBuyPlotEnabled = decoded.AutoBuyPlot == true
-    AutoSpinWheelEnabled = decoded.AutoSpinWheel == true
-    AutoClaimBattlepassEnabled = decoded.AutoClaimBattlepass == true
-    AutoClaimPremiumBattlepassEnabled = decoded.AutoClaimPremiumBattlepass == true
+    local BrandCaption = Instance.new("TextLabel")
+    BrandCaption.Size = UDim2.new(1, -242, 0, 15)
+    BrandCaption.Position = UDim2.new(0, 50, 0, 23)
+    BrandCaption.BackgroundTransparency = 1
+    BrandCaption.Text = "NO FREE KEY ZONE"
+    BrandCaption.Font = Enum.Font.GothamMedium
+    BrandCaption.TextSize = 10
+    BrandCaption.TextColor3 = LoaderTheme.Text
+    BrandCaption.RichText = true
+    BrandCaption.TextXAlignment = Enum.TextXAlignment.Left
+    BrandCaption.Parent = Sidebar
 
     task.spawn(function()
-        repeat
-            task.wait()
-        until Options
-            and Options.Rarities1
-            and Options.Mutations1
-            and Options.Rarities2
-            and Options.Mutations2
-            and Options.Names3
-            and Options.Mutations3
-            and Options.Names4
-            and Options.Mutations4
-            and Options.AutoBuyPlot
-            and Options.AutoSpinWheel
-            and Options.AutoClaimBattlepass
-            and Options.AutoClaimPremiumBattlepass
-
-        if decoded.Rarities1 ~= nil then
-            Options.Rarities1:SetValue(decoded.Rarities1)
-        end
-
-        if decoded.Mutations1 ~= nil then
-            Options.Mutations1:SetValue(decoded.Mutations1)
-        elseif decoded.Mutations ~= nil then
-            Options.Mutations1:SetValue(decoded.Mutations)
-        end
-
-        if decoded.Rarities2 ~= nil then
-            Options.Rarities2:SetValue(decoded.Rarities2)
-        end
-
-        if decoded.Mutations2 ~= nil then
-            Options.Mutations2:SetValue(decoded.Mutations2)
-        end
-
-        if decoded.Names3 ~= nil then
-            Options.Names3:SetValue(decoded.Names3)
-        end
-
-        if decoded.Mutations3 ~= nil then
-            Options.Mutations3:SetValue(decoded.Mutations3)
-        end
-
-        if decoded.Names4 ~= nil then
-            Options.Names4:SetValue(decoded.Names4)
-        end
-
-        if decoded.Mutations4 ~= nil then
-            Options.Mutations4:SetValue(decoded.Mutations4)
-        end
-
-        if decoded.AutoBuyPlot ~= nil then
-            Options.AutoBuyPlot:SetValue(decoded.AutoBuyPlot)
-        end
-
-        if decoded.AutoSpinWheel ~= nil then
-            Options.AutoSpinWheel:SetValue(decoded.AutoSpinWheel)
-        end
-
-        if decoded.AutoClaimBattlepass ~= nil then
-            Options.AutoClaimBattlepass:SetValue(decoded.AutoClaimBattlepass)
-        end
-
-        if decoded.AutoClaimPremiumBattlepass ~= nil then
-            Options.AutoClaimPremiumBattlepass:SetValue(decoded.AutoClaimPremiumBattlepass)
-        end
-    end)
-end
-
-loadConfig()
-
-local targetConfig = {}
-
-local function buildTargetConfig()
-    local config = {}
-    local added = {}
-
-    local function addTarget(mode, targetValue, mutation)
-        local key = tostring(mode) .. "\31" .. tostring(targetValue):lower() .. "\31" .. tostring(mutation):lower()
-        if not added[key] then
-            added[key] = true
-            table.insert(config, {
-                Mode = mode,
-                Value = targetValue,
-                Mutation = mutation,
-            })
-        end
-    end
-
-    local function collectSelectedValues(selectedValues, allowedValues)
-        local list = {}
-
-        for _, value in ipairs(allowedValues) do
-            if selectedValues[value] then
-                table.insert(list, value)
+        local rgbConnection
+        rgbConnection = RunService.RenderStepped:Connect(function()
+            if not BrandCaption.Parent then
+                rgbConnection:Disconnect()
+                return
             end
-        end
 
-        return list
-    end
+            local hue = (tick() * 0.15) % 1
+            local color = Color3.fromHSV(hue, 1, 1)
+            local r = math.floor(color.R * 255)
+            local g = math.floor(color.G * 255)
+            local b = math.floor(color.B * 255)
 
-    local function addSelectedTargets(mode, selectedValues, selectedMutations)
-        local sourceValues = mode == "Rarity" and RarityValues or CharacterValues
-        local selectedList = collectSelectedValues(selectedValues, sourceValues)
-        if #selectedList == 0 then
+            BrandCaption.Text = string.format(
+                '<b><font color="rgb(%d,%d,%d)">💸 อยากสบายต้องเปย์พยอมบอยเท่านั้น 💸</font></b>',
+                r,
+                g,
+                b
+            )
+        end)
+    end)
+
+    local ShieldWidget = Instance.new("Frame")
+    ShieldWidget.Size = UDim2.new(0, 116, 0, 28)
+    ShieldWidget.Position = UDim2.new(1, -156, 0.5, -14)
+    ShieldWidget.BackgroundColor3 = LoaderTheme.PanelAlt
+    ShieldWidget.BorderSizePixel = 0
+    ShieldWidget.Parent = Sidebar
+
+    local ShieldCorner = Instance.new("UICorner")
+    ShieldCorner.CornerRadius = UDim.new(0, 6)
+    ShieldCorner.Parent = ShieldWidget
+
+    local ShieldStroke = Instance.new("UIStroke")
+    ShieldStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    ShieldStroke.Color = LoaderTheme.RowStroke
+    ShieldStroke.Transparency = 0.2
+    ShieldStroke.Thickness = 1
+    ShieldStroke.Parent = ShieldWidget
+
+    local ShieldGradient = Instance.new("UIGradient")
+    ShieldGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(63, 6, 17)),
+        ColorSequenceKeypoint.new(1, LoaderTheme.PanelAlt)
+    })
+    ShieldGradient.Rotation = 0
+    ShieldGradient.Parent = ShieldWidget
+
+    local ShieldLabel = Instance.new("TextLabel")
+    ShieldLabel.Size = UDim2.new(1, 0, 1, 0)
+    ShieldLabel.BackgroundTransparency = 1
+    ShieldLabel.Text = "🚫 ห้ามงกน้าาา"
+    ShieldLabel.Font = Enum.Font.GothamBold
+    ShieldLabel.TextSize = 10
+    ShieldLabel.TextColor3 = LoaderTheme.Text
+    ShieldLabel.Parent = ShieldWidget
+
+    local Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, 0, 1, 0)
+    Content.BackgroundTransparency = 1
+    Content.Parent = MainFrame
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 24, 0, 24)
+    CloseBtn.Position = UDim2.new(1, -34, 0, 11)
+    CloseBtn.BackgroundColor3 = LoaderTheme.ButtonDark
+    CloseBtn.BorderSizePixel = 0
+    CloseBtn.Text = "❌"
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 12
+    CloseBtn.TextColor3 = LoaderTheme.Text
+    CloseBtn.Parent = Content
+
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 6)
+    CloseCorner.Parent = CloseBtn
+
+    local CloseStroke = Instance.new("UIStroke")
+    CloseStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    CloseStroke.Color = LoaderTheme.GlowSoft
+    CloseStroke.Transparency = 0.55
+    CloseStroke.Thickness = 1
+    CloseStroke.Parent = CloseBtn
+    CloseBtn.MouseButton1Click:Connect(function() LoaderGui:Destroy() end)
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -44, 0, 26)
+    Title.Position = UDim2.new(0, 22, 0, 66)
+    Title.BackgroundTransparency = 1
+    Title.Text = "⚠️ อย่าหัดใช้ของฟรีนะจ๊ะ!"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 17
+    Title.TextColor3 = LoaderTheme.Text
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = Content
+
+    local Desc = Instance.new("TextLabel")
+    Desc.Size = UDim2.new(1, -44, 0, 34)
+    Desc.Position = UDim2.new(0, 22, 0, 94)
+    Desc.BackgroundTransparency = 1
+    Desc.Text = "อยากเทพ อยากฟาร์มสบาย ซื้อแล้วไปรับคีย์ได้ที่พยอมบอยเลยน้าาาาาา (อย่าสุ่มคีย์มั่วซั่ว มันไม่ผ่านหรอก!)"
+    Desc.Font = Enum.Font.Gotham
+    Desc.TextSize = 11
+    Desc.TextColor3 = LoaderTheme.Muted
+    Desc.TextTransparency = 0
+    Desc.TextWrapped = true
+    Desc.TextXAlignment = Enum.TextXAlignment.Left
+    Desc.TextYAlignment = Enum.TextYAlignment.Top
+    Desc.Parent = Content
+
+    local InputContainer = Instance.new("Frame")
+    InputContainer.Size = UDim2.new(1, -44, 0, 44)
+    InputContainer.Position = UDim2.new(0, 22, 0, 140)
+    InputContainer.BackgroundColor3 = LoaderTheme.Field
+    InputContainer.BorderSizePixel = 0
+    InputContainer.Parent = Content
+
+    local InputCorner = Instance.new("UICorner")
+    InputCorner.CornerRadius = UDim.new(0, 6)
+    InputCorner.Parent = InputContainer
+
+    local InputStroke = Instance.new("UIStroke")
+    InputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    InputStroke.Thickness = 1
+    InputStroke.Transparency = 0.25
+    InputStroke.Color = LoaderTheme.FieldStroke
+    InputStroke.Parent = InputContainer
+
+    local InputAccent = Instance.new("Frame")
+    InputAccent.Size = UDim2.new(0, 3, 1, -16)
+    InputAccent.Position = UDim2.new(0, 10, 0, 8)
+    InputAccent.BackgroundColor3 = LoaderTheme.Accent
+    InputAccent.BorderSizePixel = 0
+    InputAccent.Parent = InputContainer
+
+    local InputAccentCorner = Instance.new("UICorner")
+    InputAccentCorner.CornerRadius = UDim.new(1, 0)
+    InputAccentCorner.Parent = InputAccent
+
+    local KeyPrefix = Instance.new("TextLabel")
+    KeyPrefix.Size = UDim2.new(0, 32, 1, 0)
+    KeyPrefix.Position = UDim2.new(0, 22, 0, 0)
+    KeyPrefix.BackgroundTransparency = 1
+    KeyPrefix.Text = "KEY"
+    KeyPrefix.Font = Enum.Font.GothamBold
+    KeyPrefix.TextSize = 10
+    KeyPrefix.TextColor3 = LoaderTheme.Text
+    KeyPrefix.TextXAlignment = Enum.TextXAlignment.Left
+    KeyPrefix.Parent = InputContainer
+
+    local KeyTextBox = Instance.new("TextBox")
+    KeyTextBox.Size = UDim2.new(1, -72, 1, 0)
+    KeyTextBox.Position = UDim2.new(0, 60, 0, 0)
+    KeyTextBox.BackgroundTransparency = 1
+    KeyTextBox.PlaceholderText = "กรอก Key ที่เปย์มาจากพยอมบอยตรงนี้เลยจ้า..."
+    KeyTextBox.PlaceholderColor3 = LoaderTheme.Muted
+    KeyTextBox.Text = defaultKeyText or ""
+    KeyTextBox.Font = Enum.Font.GothamMedium
+    KeyTextBox.TextSize = 12
+    KeyTextBox.TextColor3 = LoaderTheme.Text
+    KeyTextBox.TextXAlignment = Enum.TextXAlignment.Left
+    KeyTextBox.ClearTextOnFocus = false
+    KeyTextBox.Parent = InputContainer
+
+    local StatusText = Instance.new("TextLabel")
+    StatusText.Size = UDim2.new(1, -44, 0, 18)
+    StatusText.Position = UDim2.new(0, 22, 0, 193)
+    StatusText.BackgroundTransparency = 1
+    StatusText.Text = initialStatus or "รอคนสายเปย์มากรอก Key อยู่เนี่ย..."
+    StatusText.Font = Enum.Font.GothamMedium
+    StatusText.TextSize = 11
+    StatusText.TextColor3 = initialStatus and LoaderTheme.Bad or LoaderTheme.Muted
+    StatusText.TextTransparency = 0
+    StatusText.TextXAlignment = Enum.TextXAlignment.Left
+    StatusText.Parent = Content
+
+    local VerifyBtn = Instance.new("TextButton")
+    VerifyBtn.Size = UDim2.new(1, -44, 0, 42)
+    VerifyBtn.Position = UDim2.new(0, 22, 0, 219)
+    VerifyBtn.BackgroundColor3 = LoaderTheme.Button
+    VerifyBtn.BorderSizePixel = 0
+    VerifyBtn.Text = 'กดส่ง Key (<font color="#FFD700">ยืนยันว่าเปย์แล้วจริง!</font>)'
+    VerifyBtn.RichText = true
+    VerifyBtn.Font = Enum.Font.GothamBold
+    VerifyBtn.TextSize = 13
+    VerifyBtn.TextColor3 = LoaderTheme.Text
+    VerifyBtn.Parent = Content
+
+    local VerifyCorner = Instance.new("UICorner")
+    VerifyCorner.CornerRadius = UDim.new(0, 6)
+    VerifyCorner.Parent = VerifyBtn
+
+    local VerifyStroke = Instance.new("UIStroke")
+    VerifyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    VerifyStroke.Color = LoaderTheme.Accent
+    VerifyStroke.Transparency = 0.16
+    VerifyStroke.Thickness = 1
+    VerifyStroke.Parent = VerifyBtn
+
+    local GetKeyBtn = Instance.new("TextButton")
+    GetKeyBtn.Size = UDim2.new(0.5, -27, 0, 34)
+    GetKeyBtn.Position = UDim2.new(0, 22, 0, 273)
+    GetKeyBtn.BackgroundColor3 = LoaderTheme.ButtonDark
+    GetKeyBtn.BorderSizePixel = 0
+    GetKeyBtn.Text = "💳 ไปซื้อคีย์ที่พยอมบอยด่วน!"
+    GetKeyBtn.Font = Enum.Font.GothamBold
+    GetKeyBtn.TextSize = 10
+    GetKeyBtn.TextColor3 = LoaderTheme.Text
+    GetKeyBtn.Parent = Content
+
+    local GetKeyCorner = Instance.new("UICorner")
+    GetKeyCorner.CornerRadius = UDim.new(0, 6)
+    GetKeyCorner.Parent = GetKeyBtn
+
+    local GetKeyStroke = Instance.new("UIStroke")
+    GetKeyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    GetKeyStroke.Color = LoaderTheme.GlowSoft
+    GetKeyStroke.Transparency = 0.35
+    GetKeyStroke.Thickness = 1
+    GetKeyStroke.Parent = GetKeyBtn
+
+    local DiscordBtn = Instance.new("TextButton")
+    DiscordBtn.Size = UDim2.new(0.5, -27, 0, 34)
+    DiscordBtn.Position = UDim2.new(0.5, 5, 0, 273)
+    DiscordBtn.BackgroundColor3 = LoaderTheme.ButtonDark
+    DiscordBtn.BorderSizePixel = 0
+    DiscordBtn.Text = "💬 ดิสคอร์ดพยอมบอย"
+    DiscordBtn.Font = Enum.Font.GothamBold
+    DiscordBtn.TextSize = 10
+    DiscordBtn.TextColor3 = LoaderTheme.Text
+    DiscordBtn.Parent = Content
+
+    local DiscordCorner = Instance.new("UICorner")
+    DiscordCorner.CornerRadius = UDim.new(0, 6)
+    DiscordCorner.Parent = DiscordBtn
+
+    local DiscordStroke = Instance.new("UIStroke")
+    DiscordStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    DiscordStroke.Color = LoaderTheme.GlowSoft
+    DiscordStroke.Transparency = 0.35
+    DiscordStroke.Thickness = 1
+    DiscordStroke.Parent = DiscordBtn
+
+    VerifyBtn.MouseButton1Click:Connect(function()
+        local userKey = KeyTextBox.Text:gsub("%s+", "")
+        if userKey == "" then
+            StatusText.Text = "⚠️ อย่าเนียน! กรอก Key ก่อนสิเว้ยยย"
+            StatusText.TextColor3 = LoaderTheme.Bad
+            InputStroke.Color = LoaderTheme.Bad
             return
         end
-
-        local mutations = {}
-
-        for _, mutation in ipairs(MutationValues) do
-            if selectedMutations[mutation] then
-                table.insert(mutations, mutation)
-            end
-        end
-
-        if #mutations == 0 then
-            mutations = { "Normal" }
-        end
-
-        for _, value in ipairs(selectedList) do
-            for _, mutation in ipairs(mutations) do
-                addTarget(mode, value, mutation)
-            end
-        end
-    end
-
-    addSelectedTargets("Rarity", SelectedRarities, SelectedMutations)
-    addSelectedTargets("Rarity", SelectedRarities2, SelectedMutations2)
-    addSelectedTargets("Name", SelectedNames3, SelectedMutations3)
-    addSelectedTargets("Name", SelectedNames4, SelectedMutations4)
-
-    return config
-end
-
-local function rebuildTargetLookup()
-    targetConfig = buildTargetConfig()
-end
-local Section = MainTab:AddSection("เลือกระดับยูนิตที่ต้องการ (Rarity)")
-local RarityDropdown1 = MainTab:AddDropdown("Rarities1", {
-    Title = "ระดับ 1 (Rarity 1)",
-    Description = "เลือกระดับที่ต้องการ 1",
-    Values = RarityValues,
-    Multi = true,
-    Default = selectedToList(SelectedRarities, RarityValues),
-})
-
-local MutationDropdown1 = MainTab:AddDropdown("Mutations1", {
-    Title = "บัพ 1 (Mutation 1)",
-    Description = "เลือกบัพที่ต้องการ 1",
-    Values = MutationValues,
-    Multi = true,
-    Default = selectedToList(SelectedMutations, MutationValues),
-})
-
-local RarityDropdown2 = MainTab:AddDropdown("Rarities2", {
-    Title = "ระดับ 2 (Rarity 2)",
-    Description = "เลือกระดับที่ต้องการ 2",
-    Values = RarityValues,
-    Multi = true,
-    Default = selectedToList(SelectedRarities2, RarityValues),
-})
-
-local MutationDropdown2 = MainTab:AddDropdown("Mutations2", {
-    Title = "บัพ 2 (Mutation 2)",
-    Description = "เลือกบัพที่ต้องการ 2",
-    Values = MutationValues,
-    Multi = true,
-    Default = selectedToList(SelectedMutations2, MutationValues),
-})
-local Section = MainTab:AddSection("เลือกชื่อยูนิตที่ต้องการ (Name)")
-local NameDropdown3 = MainTab:AddDropdown("Names3", {
-    Title = "ชื่อ 1 (Name 1)",
-    Description = "เลือกชื่อที่ต้องการ 1",
-    Values = CharacterValues,
-    Multi = true,
-    Default = selectedToList(SelectedNames3, CharacterValues),
-})
-
-local MutationDropdown3 = MainTab:AddDropdown("Mutations3", {
-    Title = "บัพ 1 (Mutation 1)",
-    Description = "เลือกบัพที่ต้องการ 1",
-    Values = MutationValues,
-    Multi = true,
-    Default = selectedToList(SelectedMutations3, MutationValues),
-})
-
-local NameDropdown4 = MainTab:AddDropdown("Names4", {
-    Title = "ชื่อ 2 (Name 2)",
-    Description = "เลือกชื่อที่ต้องการ 2",
-    Values = CharacterValues,
-    Multi = true,
-    Default = selectedToList(SelectedNames4, CharacterValues),
-})
-
-local MutationDropdown4 = MainTab:AddDropdown("Mutations4", {
-    Title = "บัพ 2 (Mutation 2)",
-    Description = "เลือกบัพที่ต้องการ 2",
-    Values = MutationValues,
-    Multi = true,
-    Default = selectedToList(SelectedMutations4, MutationValues),
-})
-
-local AutoBuyPlotToggle = MainTab:AddToggle("AutoBuyPlot", {
-    Title = "ออโต้สุ่ม/ซื้อ (Auto Roll/Buy)",
-    Description = "เปิดเพื่อเริ่มออโต้โรลและซื้อยูนิต",
-    Default = AutoBuyPlotEnabled,
-})
-local Section = MainTab:AddSection("ฟังชั่นอื่นๆ (Misc)")
-local AutoSpinWheelToggle = MainTab:AddToggle("AutoSpinWheel", {
-    Title = "ออโต้วงล้อ (Auto Spin Wheel)",
-    Description = "สปินวงล้ออัตโนมัติเมื่อมีสิทธิ์",
-    Default = AutoSpinWheelEnabled,
-})
-
-local AutoClaimBattlepassToggle = MainTab:AddToggle("AutoClaimBattlepass", {
-    Title = "ออโต้รับแบทเทิลพาส (ฟรี)",
-    Description = "รับของรางวัลแบทเทิลพาส (ฟรี) อัตโนมัติ",
-    Default = AutoClaimBattlepassEnabled,
-})
-
-local AutoClaimPremiumBattlepassToggle = MainTab:AddToggle("AutoClaimPremiumBattlepass", {
-    Title = "ออโต้รับแบทเทิลพาส (พรีเมียม)",
-    Description = "รับของรางวัลแบทเทิลพาส (พรีเมียม) อัตโนมัติ",
-    Default = AutoClaimPremiumBattlepassEnabled,
-})
-
-RarityDropdown1:OnChanged(function(value)
-    SelectedRarities = normalizeMultiValue(value, RarityValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-MutationDropdown1:OnChanged(function(value)
-    SelectedMutations = normalizeMultiValue(value, MutationValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-RarityDropdown2:OnChanged(function(value)
-    SelectedRarities2 = normalizeMultiValue(value, RarityValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-MutationDropdown2:OnChanged(function(value)
-    SelectedMutations2 = normalizeMultiValue(value, MutationValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-NameDropdown3:OnChanged(function(value)
-    SelectedNames3 = normalizeMultiValue(value, CharacterValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-MutationDropdown3:OnChanged(function(value)
-    SelectedMutations3 = normalizeMultiValue(value, MutationValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-NameDropdown4:OnChanged(function(value)
-    SelectedNames4 = normalizeMultiValue(value, CharacterValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-MutationDropdown4:OnChanged(function(value)
-    SelectedMutations4 = normalizeMultiValue(value, MutationValues)
-    rebuildTargetLookup()
-    saveConfig()
-end)
-
-AutoBuyPlotToggle:OnChanged(function(value)
-    AutoBuyPlotEnabled = value == true
-    saveConfig()
-end)
-
-AutoSpinWheelToggle:OnChanged(function(value)
-    AutoSpinWheelEnabled = value == true
-    saveConfig()
-end)
-
-AutoClaimBattlepassToggle:OnChanged(function(value)
-    AutoClaimBattlepassEnabled = value == true
-    saveConfig()
-end)
-
-AutoClaimPremiumBattlepassToggle:OnChanged(function(value)
-    AutoClaimPremiumBattlepassEnabled = value == true
-    saveConfig()
-end)
-
-RarityDropdown1:SetValue(selectedToList(SelectedRarities, RarityValues))
-MutationDropdown1:SetValue(selectedToList(SelectedMutations, MutationValues))
-RarityDropdown2:SetValue(selectedToList(SelectedRarities2, RarityValues))
-MutationDropdown2:SetValue(selectedToList(SelectedMutations2, MutationValues))
-NameDropdown3:SetValue(selectedToList(SelectedNames3, CharacterValues))
-MutationDropdown3:SetValue(selectedToList(SelectedMutations3, MutationValues))
-NameDropdown4:SetValue(selectedToList(SelectedNames4, CharacterValues))
-MutationDropdown4:SetValue(selectedToList(SelectedMutations4, MutationValues))
-AutoBuyPlotToggle:SetValue(AutoBuyPlotEnabled)
-AutoSpinWheelToggle:SetValue(AutoSpinWheelEnabled)
-AutoClaimBattlepassToggle:SetValue(AutoClaimBattlepassEnabled)
-AutoClaimPremiumBattlepassToggle:SetValue(AutoClaimPremiumBattlepassEnabled)
-rebuildTargetLookup()
-
-local function valuesSignature(values)
-    return table.concat(values, "\31")
-end
-
-local raritySignature = valuesSignature(RarityValues)
-local mutationSignature = valuesSignature(MutationValues)
-
-local function refreshDynamicValues()
-    local latestRarities = getRarityValues()
-    local latestMutations = getMutationValues()
-    local latestRaritySignature = valuesSignature(latestRarities)
-    local latestMutationSignature = valuesSignature(latestMutations)
-
-    if latestRaritySignature ~= raritySignature then
-        raritySignature = latestRaritySignature
-        RarityValues = latestRarities
-        RarityDropdown1:SetValues(RarityValues)
-        RarityDropdown2:SetValues(RarityValues)
-        SelectedRarities = normalizeMultiValue(SelectedRarities, RarityValues)
-        SelectedRarities2 = normalizeMultiValue(SelectedRarities2, RarityValues)
-        RarityDropdown1:SetValue(selectedToList(SelectedRarities, RarityValues))
-        RarityDropdown2:SetValue(selectedToList(SelectedRarities2, RarityValues))
-        rebuildTargetLookup()
-    end
-
-    if latestMutationSignature ~= mutationSignature then
-        mutationSignature = latestMutationSignature
-        MutationValues = latestMutations
-        MutationDropdown1:SetValues(MutationValues)
-        MutationDropdown2:SetValues(MutationValues)
-        MutationDropdown3:SetValues(MutationValues)
-        MutationDropdown4:SetValues(MutationValues)
-        SelectedMutations = normalizeMultiValue(SelectedMutations, MutationValues)
-        SelectedMutations2 = normalizeMultiValue(SelectedMutations2, MutationValues)
-        SelectedMutations3 = normalizeMultiValue(SelectedMutations3, MutationValues)
-        SelectedMutations4 = normalizeMultiValue(SelectedMutations4, MutationValues)
-        MutationDropdown1:SetValue(selectedToList(SelectedMutations, MutationValues))
-        MutationDropdown2:SetValue(selectedToList(SelectedMutations2, MutationValues))
-        MutationDropdown3:SetValue(selectedToList(SelectedMutations3, MutationValues))
-        MutationDropdown4:SetValue(selectedToList(SelectedMutations4, MutationValues))
-        rebuildTargetLookup()
-    end
-end
-
-task.spawn(function()
-    while task.wait(30) do
-        refreshDynamicValues()
-    end
-end)
-
-task.spawn(function()
-    local label = playerGui
-        :WaitForChild("MainUI")
-        :WaitForChild("Frames")
-        :WaitForChild("SpinWheel")
-        :WaitForChild("Content")
-        :WaitForChild("Buttons")
-        :WaitForChild("Spin")
-        :WaitForChild("Label")
-    local remote = ReplicatedStorage
-        :WaitForChild("Remotes")
-        :WaitForChild("SpinWheel")
-        :WaitForChild("Spin")
-
-    local running = false
-
-    local function getSpinCount()
-        local text = label.Text
-        local num = tonumber(text:match("%((%d+)%)"))
-        return num or 0
-    end
-
-    while task.wait(0.2) do
-        if not AutoSpinWheelEnabled then
-            running = false
-            continue
-        end
-
-        local count = getSpinCount()
-
-        if count > 0 then
-            if not running then
-                running = true
-            end
-
-            remote:FireServer("Spin")
-        else
-            running = false
-        end
-    end
-end)
-
-task.spawn(function()
-    local rewards = playerGui
-        :WaitForChild("MainUI")
-        :WaitForChild("Frames")
-        :WaitForChild("Battlepass")
-        :WaitForChild("Frame")
-        :WaitForChild("Main")
-        :WaitForChild("Battlepass")
-        :WaitForChild("ScrollingFrame")
-        :WaitForChild("Content")
-        :WaitForChild("Rewards")
-
-    local remote = ReplicatedStorage
-        :WaitForChild("Modules")
-        :WaitForChild("Battlepass")
-        :WaitForChild("Claim")
-
-    while task.wait(1) do
-        if not AutoClaimBattlepassEnabled then
-            continue
-        end
-
-        local index = 0
-
-        for _, reward in pairs(rewards:GetChildren()) do
-            if reward.Name == "BattlepassReward" then
-                index += 1
-
-                local free = reward:FindFirstChild("Free")
-
-                if free then
-                    local locked = free:FindFirstChild("Locked")
-                    local checked = free:FindFirstChild("Checked")
-
-                    if locked and checked and locked:IsA("GuiObject") and checked:IsA("GuiObject") then
-                        if locked.Visible == false and checked.Visible == false then
-                            remote:FireServer(index, "Free")
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    local rewards = playerGui
-        :WaitForChild("MainUI")
-        :WaitForChild("Frames")
-        :WaitForChild("Battlepass")
-        :WaitForChild("Frame")
-        :WaitForChild("Main")
-        :WaitForChild("Battlepass")
-        :WaitForChild("ScrollingFrame")
-        :WaitForChild("Content")
-        :WaitForChild("Rewards")
-
-    local remote = ReplicatedStorage
-        :WaitForChild("Modules")
-        :WaitForChild("Battlepass")
-        :WaitForChild("Claim")
-
-    while task.wait(1) do
-        if not AutoClaimPremiumBattlepassEnabled then
-            continue
-        end
-
-        local index = 0
-
-        for _, reward in pairs(rewards:GetChildren()) do
-            if reward.Name == "BattlepassReward" then
-                index += 1
-
-                local premium = reward:FindFirstChild("Premium")
-
-                if premium then
-                    local locked = premium:FindFirstChild("Locked")
-                    local checked = premium:FindFirstChild("Checked")
-
-                    if locked and checked and locked:IsA("GuiObject") and checked:IsA("GuiObject") then
-                        if locked.Visible == false and checked.Visible == false then
-                            remote:FireServer(index, "Premium")
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-local plotsFolder = workspace:WaitForChild("Plots")
-
-local cashLabel = playerGui
-    :WaitForChild("MainUI")
-    :WaitForChild("UILeft")
-    :WaitForChild("TopButtons")
-    :WaitForChild("Cash")
-    :WaitForChild("CashLabel")
-
-local state = {
-    buying = false,
-}
-
-local function normalizeKey(value)
-    local key = tostring(value or ""):lower():gsub("%s+", "")
-    return key
-end
-
-local function getAttributes(model)
-    local ok, attributes = pcall(function()
-        return model:GetAttributes()
+        StatusText.Text = "⏳ บันทึก Key แล้ว! กำลังตรวจเช็คความเปย์กับ Luarmor..."
+        StatusText.TextColor3 = LoaderTheme.Text
+        task.wait(0.3)
+        LoaderGui:Destroy()
+        PassToKeyChecker(userKey)
     end)
 
-    if ok and type(attributes) == "table" then
-        return attributes
-    end
-
-    return {}
-end
-
-local function getModelMutation(model)
-    local attributes = getAttributes(model)
-    local mutation = attributes.Mutation
-    if mutation == nil or tostring(mutation) == "" then
-        return "Normal"
-    end
-
-    return mutation
-end
-
-local function getRarityLabel(model)
-    local head = model:FindFirstChild("Head")
-    local buyUI = head and head:FindFirstChild("BuyUI")
-    local frame = buyUI and buyUI:FindFirstChild("Frame")
-    local chance = frame and frame:FindFirstChild("Chance")
-    local label = chance and chance:FindFirstChild("TextLabel")
-
-    if label and label:IsA("TextLabel") then
-        return label
-    end
-
-    local fallbackBuyUI = model:FindFirstChild("BuyUI", true)
-    if fallbackBuyUI then
-        local fallbackChance = fallbackBuyUI:FindFirstChild("Chance", true)
-        if fallbackChance then
-            label = fallbackChance:FindFirstChildWhichIsA("TextLabel", true)
-            if label then
-                return label
-            end
-        end
-    end
-
-    return nil
-end
-
-local function getModelRarity(model)
-    local label = getRarityLabel(model)
-    local rarity = label and tostring(label.Text or ""):gsub("<.->", ""):match("^%s*(.-)%s*$") or ""
-
-    if rarity == "" then
-        return nil
-    end
-
-    rarity = rarity:match("^(%S+)") or rarity
-    return rarity
-end
-
-local function getCharacterNameLabel(model)
-    local head = model:FindFirstChild("Head")
-    local buyUI = head and head:FindFirstChild("BuyUI")
-    local frame = buyUI and buyUI:FindFirstChild("Frame")
-    local nameFrame = frame and frame:FindFirstChild("Name")
-    local label = nameFrame and nameFrame:FindFirstChild("TextLabel")
-
-    if label and label:IsA("TextLabel") then
-        return label
-    end
-
-    local fallbackBuyUI = model:FindFirstChild("BuyUI", true)
-    if fallbackBuyUI then
-        local fallbackName = fallbackBuyUI:FindFirstChild("Name", true)
-        if fallbackName then
-            label = fallbackName:FindFirstChildWhichIsA("TextLabel", true)
-            if label then
-                return label
-            end
-        end
-    end
-
-    return nil
-end
-
-local function getModelCharacterName(model)
-    local label = getCharacterNameLabel(model)
-    local characterName = label and tostring(label.Text or ""):gsub("<.->", ""):match("^%s*(.-)%s*$") or tostring(model.Name or "")
-
-    if characterName == "" then
-        return nil
-    end
-
-    return characterName
-end
-
-local function getModelCharacterNameAliases(model)
-    local aliases = {}
-    local added = {}
-
-    local function addAlias(name)
-        if name ~= nil then
-            name = tostring(name):gsub("<.->", ""):match("^%s*(.-)%s*$")
-            if name and name ~= "" then
-                local key = normalizeKey(name)
-                if not added[key] then
-                    added[key] = true
-                    table.insert(aliases, name)
-                end
-            end
-        end
-    end
-
-    addAlias(getModelCharacterName(model))
-    addAlias(model.Name)
-
-    return aliases
-end
-
-local function hasAttackAttribute(model)
-    local attributes = getAttributes(model)
-    return attributes.Attack ~= nil
-end
-
-local function isBoughtCharacterModel(model, scanRoot)
-    local current = model
-
-    while current and current ~= scanRoot do
-        if current:IsA("Model") and hasAttackAttribute(current) then
-            return true
-        end
-
-        current = current.Parent
-    end
-
-    return false
-end
-
-local function getTargetIndex(model)
-    local nameAliases = getModelCharacterNameAliases(model)
-    local rarity = getModelRarity(model)
-
-    local mutation = getModelMutation(model)
-    if not mutation then
-        return nil
-    end
-
-    local normalizedMutation = normalizeKey(mutation)
-    local normalizedRarity = rarity and normalizeKey(rarity) or nil
-    local normalizedNames = {}
-
-    for _, alias in ipairs(nameAliases) do
-        normalizedNames[normalizeKey(alias)] = alias
-    end
-
-    for index, config in ipairs(targetConfig) do
-        if normalizeKey(config.Mutation) == normalizedMutation then
-            if config.Mode == "Rarity" and normalizedRarity and normalizeKey(config.Value) == normalizedRarity then
-                return index, rarity, mutation, "Rarity"
-            end
-
-            local matchedName = normalizedNames[normalizeKey(config.Value)]
-            if config.Mode == "Name" and matchedName then
-                return index, matchedName, mutation, "Name"
-            end
-        end
-    end
-
-    return nil
-end
-
-local function getPlotOwner(plot)
-    return plot:GetAttribute("OwnerUserId")
-        or plot:GetAttribute("OwnerId")
-        or plot:GetAttribute("Owner")
-        or plot:GetAttribute("OwnerName")
-        or plot:GetAttribute("Player")
-        or plot:GetAttribute("UserId")
-end
-
-local function parseMoney(text)
-    text = tostring(text or ""):lower()
-    if text:find("free", 1, true) then
-        return 0
-    end
-
-    local numberText, suffix = text:match("([%d,%.]+)%s*([kmbtq]?)")
-
-    if not numberText then
-        return nil
-    end
-
-    local value = tonumber((numberText:gsub(",", "")))
-    if not value then
-        return nil
-    end
-
-    local scale = {
-        k = 1e3,
-        m = 1e6,
-        b = 1e9,
-        t = 1e12,
-        q = 1e15,
-    }
-
-    return value * (scale[suffix] or 1)
-end
-
-local function readCash()
-    return parseMoney(cashLabel.Text)
-end
-
-local function getPriceLabel(model)
-    local head = model:FindFirstChild("Head")
-    local buyUI = head and head:FindFirstChild("BuyUI")
-
-    if buyUI then
-        local frame = buyUI:FindFirstChild("Frame")
-        local price = frame and frame:FindFirstChild("Price")
-        local label = price and price:FindFirstChild("TextLabel")
-
-        if label and label:IsA("TextLabel") then
-            return label
-        end
-    end
-
-    local fallbackBuyUI = model:FindFirstChild("BuyUI", true)
-    if fallbackBuyUI then
-        local price = fallbackBuyUI:FindFirstChild("Price", true)
-        if price then
-            local label = price:FindFirstChildWhichIsA("TextLabel", true)
-            if label then
-                return label
-            end
-        end
-    end
-
-    return nil
-end
-
-local function findPrompt(root)
-    if not root then
-        return nil
-    end
-
-    local buyUI = root:FindFirstChild("BuyUI", true)
-    if buyUI then
-        local prompt = buyUI:FindFirstChildWhichIsA("ProximityPrompt", true)
-        if prompt then
-            return prompt
-        end
-    end
-
-    local preferredPromptNames = {
-        "BuyPrompt",
-        "PlacementPrompt",
-        "RollPrompt",
-        "GiftPrompt",
-        "ProximityPrompt",
-        "Prox",
-        "Prompt",
-    }
-
-    for _, name in ipairs(preferredPromptNames) do
-        local inst = root:FindFirstChild(name, true)
-        if inst and inst:IsA("ProximityPrompt") then
-            return inst
-        end
-    end
-
-    return root:FindFirstChildWhichIsA("ProximityPrompt", true)
-end
-
-local function getFullName(inst)
-    local ok, name = pcall(function()
-        return inst:GetFullName()
-    end)
-
-    return ok and name or tostring(inst)
-end
-
-local function firePrompt(prompt)
-    if not prompt then
-        return false
-    end
-
-    return pcall(function()
-        fireproximityprompt(prompt)
-    end)
-end
-
-local function getRollPrompt(plot)
-    local roll = plot:FindFirstChild("Roll")
-    local button = roll and roll:FindFirstChild("RollButton")
-    local buttonPart = button and button:FindFirstChild("Button")
-    local prompt = buttonPart and buttonPart:FindFirstChild("RollPrompt")
-
-    if prompt and prompt:IsA("ProximityPrompt") then
-        return prompt
-    end
-
-    return plot:FindFirstChild("RollPrompt", true)
-end
-
-local function getBestPlot()
-    local bestPlot = nil
-    local bestDist = math.huge
-
-    for _, plot in ipairs(plotsFolder:GetChildren()) do
-        local owner = getPlotOwner(plot)
-        if owner == player.UserId or owner == player.Name then
-            return plot
-        end
-
-        local ok, pivot = pcall(function()
-            return plot:GetPivot()
+    GetKeyBtn.MouseButton1Click:Connect(function()
+        pcall(function()
+            if setclipboard then setclipboard(LuarmorConfig.GetKeyURL) end
         end)
-
-        local dist = ok and (hrp.Position - pivot.Position).Magnitude or math.huge
-        if dist < bestDist then
-            bestDist = dist
-            bestPlot = plot
-        end
-    end
-
-    return bestPlot
-end
-
-local function getBuyCandidates(plot)
-    local candidates = {}
-    local scanRoot = plot:FindFirstChild("Characters") or plot
-
-    local models = scanRoot == plot and scanRoot:GetDescendants() or scanRoot:GetChildren()
-    for _, inst in ipairs(models) do
-        if inst:IsA("Model") then
-            if isBoughtCharacterModel(inst, scanRoot) then
-                continue
-            end
-
-            local priceLabel = getPriceLabel(inst)
-            local prompt = findPrompt(inst)
-            local targetIndex, characterName, mutation = getTargetIndex(inst)
-
-            if priceLabel and prompt and targetIndex then
-                local price = parseMoney(priceLabel.Text)
-                if price then
-                    local entry = {
-                        model = inst,
-                        characterName = characterName,
-                        mutation = mutation,
-                        targetIndex = targetIndex,
-                        price = price,
-                        priceLabel = priceLabel,
-                        prompt = prompt,
-                    }
-
-                    table.insert(candidates, entry)
-                end
-            end
-        end
-    end
-
-    table.sort(candidates, function(a, b)
-        if a.targetIndex ~= b.targetIndex then
-            return a.targetIndex < b.targetIndex
-        end
-
-        return a.price < b.price
+        StatusText.Text = "📋 ก๊อปปี้ลิงก์ซื้อคีย์แล้ว! รีบไปอุดหนุนพยอมบอยเร็ว!"
+        StatusText.TextColor3 = LoaderTheme.Text
     end)
 
-    return candidates
+    DiscordBtn.MouseButton1Click:Connect(function()
+        pcall(function()
+            if setclipboard then setclipboard(LuarmorConfig.DiscordURL) end
+        end)
+        StatusText.Text = "💬 ก๊อปปี้ลิงก์ Discord พยอมบอยเรียบร้อย!"
+        StatusText.TextColor3 = LoaderTheme.Text
+    end)
 end
 
-local myPlot = getBestPlot()
+-- ==============================================================================
+-- 🚀 SMART AUTO-LOGIN (ระบบล้อเลียนเวลาเข้าเกม)
+-- ==============================================================================
+if getgenv and getgenv().PayomboyZ_ShowUI then
+    CreateLoaderUI(getgenv().PayomboyZ_ErrorMsg or "❌ คีย์ปลอม/หมดอายุ! ไปซื้อใหม่ที่พยอมบอยด่วนน", "")
+    getgenv().PayomboyZ_ShowUI = false
+    return
+end
 
-if myPlot then
+local savedKey = LoadSavedKey()
+
+if savedKey and savedKey ~= "" then
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local EscapeGui = Instance.new("ScreenGui")
+    EscapeGui.Name = "PayomboyZ_Escape"
+    EscapeGui.ResetOnSpawn = false
+    EscapeGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    pcall(function() EscapeGui.Parent = CoreGui end)
+    if not EscapeGui.Parent then EscapeGui.Parent = PlayerGui end
+
+    local EscBtn = Instance.new("TextButton")
+    EscBtn.Size = UDim2.new(0, 180, 0, 32)
+    EscBtn.Position = UDim2.new(0.5, -90, 0, -40)
+    EscBtn.BackgroundColor3 = Color3.fromRGB(255, 68, 93)
+    EscBtn.Text = "🗑️ ลบคีย์เดิม (จะซื้อคีย์ใหม่)"
+    EscBtn.Font = Enum.Font.GothamBold
+    EscBtn.TextSize = 11
+    EscBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    EscBtn.BorderSizePixel = 0
+    EscBtn.Parent = EscapeGui
+
+    local EscCorner = Instance.new("UICorner")
+    EscCorner.CornerRadius = UDim.new(0, 6)
+    EscCorner.Parent = EscBtn
+
+    local EscStroke = Instance.new("UIStroke")
+    EscStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    EscStroke.Color = Color3.fromRGB(255, 255, 255)
+    EscStroke.Transparency = 0.2
+    EscStroke.Thickness = 1
+    EscStroke.Parent = EscBtn
+
     task.spawn(function()
-        while task.wait(0.35) do
-            if not AutoBuyPlotEnabled then
-                continue
-            end
+        local ts = game:GetService("TweenService")
+        ts:Create(EscBtn, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -90, 0, 20)}):Play()
+    end)
 
-            local boughtOrBlocked = false
+    EscBtn.MouseButton1Click:Connect(function()
+        if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
+            delfile(LuarmorConfig.SavedKeyFile)
+        end
+        EscBtn.Text = "✅ ลบแล้ว! กำลังรีเกมไปซื้อคีย์..."
+        EscBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        task.wait(1.5)
+        LocalPlayer:Kick("ลบคีย์เก่าเรียบร้อย! เข้าเกมใหม่แล้วไปรับคีย์แท้ที่พยอมบอยน้าาา 🚀")
+    end)
 
-            if not state.buying then
-                local candidates = getBuyCandidates(myPlot)
-                local cash = readCash() or 0
-
-                for _, candidate in ipairs(candidates) do
-                    if cash < candidate.price then
-                        boughtOrBlocked = true
-                        continue
-                    end
-
-                    state.buying = true
-
-                    firePrompt(candidate.prompt)
-
-                    task.wait(0.75)
-                    state.buying = false
-                    boughtOrBlocked = true
-                    break
-                end
-            end
-
-            if not state.buying and not boughtOrBlocked then
-                local rollPrompt = getRollPrompt(myPlot)
-                if rollPrompt then
-                    firePrompt(rollPrompt)
-                end
-            end
+    task.delay(12, function()
+        if EscapeGui then
+            local ts = game:GetService("TweenService")
+            local tw = ts:Create(EscBtn, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -90, 0, -50)})
+            tw:Play()
+            tw.Completed:Connect(function() EscapeGui:Destroy() end)
         end
     end)
+
+    ShowToast("🔑 พยอมบอยสายเปย์", "พบ Key เดิม! อย่าให้รู้ว่าก๊อปของใครมานะ...", false)
+    PassToKeyChecker(savedKey)
+else
+    CreateLoaderUI()
 end
-
-local SettingSection = Setting:AddSection("ระบบแสดงผลบนหน้าจอ (Stats HUD)")
-
-local statsGui = Instance.new("ScreenGui")
-statsGui.Name = "PayomboyZStats"
-statsGui.ResetOnSpawn = false
-statsGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-statsGui.Parent = CoreGui
-
-local statsFrame = Instance.new("Frame")
-statsFrame.Name = "MainFrame"
-statsFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-statsFrame.BackgroundTransparency = 0.3
-statsFrame.BorderSizePixel = 0
-statsFrame.Position = UDim2.new(0.5, -100, 0, 10)
-statsFrame.Size = UDim2.new(0, 200, 0, 75)
-statsFrame.Active = true
-statsFrame.Draggable = true
-statsFrame.Parent = statsGui
-
-local startClickPos = nil
-statsFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        startClickPos = input.Position
-    end
-end)
-
-statsFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if startClickPos then
-            local dist = (input.Position - startClickPos).Magnitude
-            if dist < 5 then
-                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.K, false, game)
-                task.wait()
-                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.K, false, game)
-            end
-        end
-    end
-end)
-
-local uicorner = Instance.new("UICorner")
-uicorner.CornerRadius = UDim.new(0, 8)
-uicorner.Parent = statsFrame
-
-local uistroke = Instance.new("UIStroke")
-uistroke.Color = Color3.fromRGB(255, 0, 127)
-uistroke.Thickness = 1.5
-uistroke.Parent = statsFrame
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.FillDirection = Enum.FillDirection.Horizontal
-listLayout.Padding = UDim.new(0, 15)
-listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-listLayout.Parent = statsFrame
-
-local padding = Instance.new("UIPadding")
-padding.PaddingLeft = UDim.new(0, 15)
-padding.PaddingRight = UDim.new(0, 15)
-padding.PaddingTop = UDim.new(0, 10)
-padding.PaddingBottom = UDim.new(0, 10)
-padding.Parent = statsFrame
-
-local avatarImg = Instance.new("ImageLabel")
-avatarImg.Name = "Avatar"
-avatarImg.Size = UDim2.new(0, 50, 0, 50)
-avatarImg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-avatarImg.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=420&height=420&format=png"
-avatarImg.Parent = statsFrame
-
-local avatarCorner = Instance.new("UICorner")
-avatarCorner.CornerRadius = UDim.new(1, 0)
-avatarCorner.Parent = avatarImg
-
-local textContainer = Instance.new("Frame")
-textContainer.Name = "TextContainer"
-textContainer.BackgroundTransparency = 1
-textContainer.Size = UDim2.new(1, -65, 1, 0)
-textContainer.Parent = statsFrame
-
-local textLayout = Instance.new("UIListLayout")
-textLayout.SortOrder = Enum.SortOrder.LayoutOrder
-textLayout.Padding = UDim.new(0, 5)
-textLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-textLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-textLayout.Parent = textContainer
-
-local function createLabel(name, text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Name = name
-    lbl.BackgroundTransparency = 1
-    lbl.Size = UDim2.new(1, 0, 0, 15)
-    lbl.Font = Enum.Font.GothamBold
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-    lbl.TextSize = 13
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = textContainer
-    return lbl
-end
-
-local fpsLbl = createLabel("FPS", "FPS: 0")
-local pingLbl = createLabel("Ping", "Ping: 0 ms")
-local idLbl = createLabel("ID", "ID: " .. tostring(player.UserId))
-
-local ShowFPS = true
-local ShowPing = true
-local ShowID = true
-
-local function updateStatsUI()
-    fpsLbl.Visible = ShowFPS
-    pingLbl.Visible = ShowPing
-    idLbl.Visible = ShowID
-    
-    local visibleCount = 0
-    if ShowFPS then visibleCount += 1 end
-    if ShowPing then visibleCount += 1 end
-    if ShowID then visibleCount += 1 end
-    
-    if visibleCount == 0 then
-        statsFrame.Visible = false
-    else
-        statsFrame.Visible = true
-        local textHeight = (visibleCount * 15) + ((visibleCount - 1) * 5)
-        local frameHeight = math.max(50, textHeight) + 20
-        statsFrame.Size = UDim2.new(0, 220, 0, frameHeight)
-    end
-end
-
-updateStatsUI()
-
-task.spawn(function()
-    while task.wait(0.5) do
-        if ShowFPS then
-            fpsLbl.Text = "FPS: " .. math.floor(workspace:GetRealPhysicsFPS())
-        end
-        if ShowPing then
-            local ping = 0
-            pcall(function() ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-            pingLbl.Text = "Ping: " .. ping .. " ms"
-        end
-    end
-end)
-
-local FPSToggleUI = Setting:AddToggle("ShowFPS_UI", {
-    Title = "แสดง FPS",
-    Description = "แสดงค่าเฟรมเรตบนหน้าจอ",
-    Default = ShowFPS
-})
-FPSToggleUI:OnChanged(function(v)
-    ShowFPS = v
-    updateStatsUI()
-end)
-
-local PingToggleUI = Setting:AddToggle("ShowPing_UI", {
-    Title = "แสดง Ping",
-    Description = "แสดงค่าปิงบนหน้าจอ",
-    Default = ShowPing
-})
-PingToggleUI:OnChanged(function(v)
-    ShowPing = v
-    updateStatsUI()
-end)
-
-local IDToggleUI = Setting:AddToggle("ShowID_UI", {
-    Title = "แสดง Check ID",
-    Description = "แสดง User ID บนหน้าจอ",
-    Default = ShowID
-})
-IDToggleUI:OnChanged(function(v)
-    ShowID = v
-    updateStatsUI()
-end)
-
-Setting:AddSection("จัดการระบบส่วนหลัง (System Config)")
-
-SaveManager:LoadAutoloadConfig()
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({})
-InterfaceManager:SetFolder("FluentScriptHub")
-SaveManager:SetFolder("FluentScriptHub/specific-game")
-InterfaceManager:BuildInterfaceSection(Setting)
-SaveManager:BuildConfigSection(Setting)
-
-if Fluent.Options and Fluent.Options.MenuKeybind then
-    Fluent.Options.MenuKeybind:SetValue("K")
-end
-
-task.spawn(function()
-    local translations = {
-        ["Config name"] = "ชื่อคอนฟิก",
-        ["Config list"] = "รายการคอนฟิก",
-        ["Create config"] = "สร้างคอนฟิก",
-        ["Load config"] = "โหลดคอนฟิก",
-        ["Overwrite config"] = "บันทึกทับคอนฟิก",
-        ["Refresh list"] = "รีเฟรชรายการ",
-        ["Set as autoload"] = "ตั้งเป็นออโต้โหลด",
-        ["Menu bind"] = "ปุ่มซ่อน/แสดงเมนู",
-        ["Interface theme"] = "ธีมหน้าต่าง (Theme)",
-        ["Acrylic toggle"] = "พื้นหลังโปร่งใส (Acrylic)",
-        ["Transparent toggle"] = "ไม่มีพื้นหลัง (Transparent)",
-        ["Settings"] = "ตั้งค่า",
-        ["Interface"] = "การปรับแต่ง UI",
-        ["Configuration"] = "จัดการคอนฟิก",
-    }
-    for i = 1, 30 do
-        task.wait(1)
-        for _, v in ipairs(CoreGui:GetDescendants()) do
-            if v:IsA("TextLabel") or v:IsA("TextButton") then
-                if translations[v.Text] then
-                    v.Text = translations[v.Text]
-                end
-                if v.Text:match("^Current autoload config:") then
-                    local configName = v.Text:gsub("Current autoload config: ", "")
-                    if configName == "none" then configName = "ไม่มี" end
-                    v.Text = "คอนฟิกออโต้โหลดปัจจุบัน: " .. configName
-                end
-            end
-        end
-    end
-end)
-Window:SelectTab(1)
-
-Fluent:Notify({
-    Title = "PayomboyZ HUB",
-    Content = "โหลดสคริปต์สำเร็จ! ขอให้สนุกนะ ❤️",
-    SubContent = "เปิดใช้งานโหมดธีม Rose (Red Theme) 🌹",
-    Duration = 8
-})
-
-return myPlot
