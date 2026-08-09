@@ -46,55 +46,66 @@ task.spawn(function()
                 pcall(function()
                     local descendants = container:GetDescendants()
                     for _, descendant in ipairs(descendants) do
-                        local textStr = ""
-                        local nameStr = ""
+                        pcall(function()
+                            local textStr = ""
+                            local nameStr = ""
 
-                        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
-                            textStr = (descendant.Text or ""):lower()
-                        end
-                        nameStr = (descendant.Name or ""):lower()
-
-                        local function isError(s)
-                            return s:find("auth error") 
-                                or s:find("whitelist error") 
-                                or s:find("no key found") 
-                                or s:find("invalid key") 
-                                or s:find("need a script_key")
-                                or s:find("incorrect key")
-                                or s:find("key is invalid")
-                        end
-
-                        if isError(textStr) or isError(nameStr) then
-                            ErrorWatcherActive = false
-                            KeyPassed = false -- พบว่าคีย์ผิด ห้ามเซฟเด็ดขาด!
-
-                            -- ทำลาย Error Popup ทิ้ง
-                            local topGui = descendant
-                            while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
-                                topGui = topGui.Parent
+                            if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+                                textStr = (descendant.Text or ""):lower()
                             end
-                            if topGui and topGui:IsA("ScreenGui") then
-                                topGui.Enabled = false
-                                topGui:Destroy()
-                            else
-                                pcall(function() descendant.Parent:Destroy() end)
+                            nameStr = (descendant.Name or ""):lower()
+
+                            local function isError(s)
+                                return s:find("auth error") 
+                                    or s:find("whitelist error") 
+                                    or s:find("no key found") 
+                                    or s:find("invalid key") 
+                                    or s:find("need a script_key")
+                                    or s:find("incorrect key")
+                                    or s:find("key is invalid")
                             end
 
-                            -- ลบคีย์ที่หมดอายุทิ้ง เพื่อกันการโหลดซ้ำซาก
-                            if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
-                                delfile(LuarmorConfig.SavedKeyFile)
+                            -- ดักจับกรณี Luarmor เตะออกจากเกม (Kick) ผ่านระบบ Roblox Prompt
+                            local isKickPrompt = false
+                            if descendant:IsA("TextLabel") and (descendant.Name == "ErrorMessage" or descendant.Name == "ErrorTitle") then
+                                if textStr:find("kick") or textStr:find("auth") or textStr:find("whitelist") or textStr:find("unexpected") then
+                                    isKickPrompt = true
+                                end
                             end
 
-                            -- สั่งให้เปิดหน้า Start.txt ขึ้นมาใหม่ทันที
-                            if getgenv then 
-                                getgenv().PayomboyZ_ShowUI = true 
-                                getgenv().PayomboyZ_ErrorMsg = "❌ คีย์หมดอายุหรือไม่ถูกต้อง! กรุณาใส่คีย์ใหม่"
-                            end
+                            if isError(textStr) or isError(nameStr) or isKickPrompt then
+                                ErrorWatcherActive = false
+                                KeyPassed = false -- พบว่าคีย์ผิด ห้ามเซฟเด็ดขาด!
 
-                            -- แปะเลข tick() ป้องกันการดึงแคชไฟล์เก่าจาก executor
-                            loadstring(game:HttpGet(LuarmorConfig.StartURL .. "?t=" .. tostring(tick())))()
-                            return
-                        end
+                                -- ลบคีย์ที่หมดอายุทิ้งทันที เพื่อกันการโหลดซ้ำซาก
+                                if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
+                                    delfile(LuarmorConfig.SavedKeyFile)
+                                end
+
+                                -- ทำลาย Error Popup ทิ้ง (ถ้าเป็น GUI ปกติ)
+                                if not isKickPrompt then
+                                    local topGui = descendant
+                                    while topGui and not topGui:IsA("ScreenGui") and topGui.Parent do
+                                        topGui = topGui.Parent
+                                    end
+                                    if topGui and topGui:IsA("ScreenGui") then
+                                        topGui.Enabled = false
+                                        topGui:Destroy()
+                                    else
+                                        pcall(function() descendant.Parent:Destroy() end)
+                                    end
+
+                                    -- สั่งให้เปิดหน้า Start.txt ขึ้นมาใหม่ทันที
+                                    if getgenv then 
+                                        getgenv().PayomboyZ_ShowUI = true 
+                                        getgenv().PayomboyZ_ErrorMsg = "❌ คีย์หมดอายุหรือไม่ถูกต้อง! กรุณาใส่คีย์ใหม่"
+                                    end
+
+                                    -- แปะเลข tick() ป้องกันการดึงแคชไฟล์เก่าจาก executor
+                                    loadstring(game:HttpGet(LuarmorConfig.StartURL .. "?t=" .. tostring(tick())))()
+                                end
+                            end
+                        end)
                     end
                 end)
             end
