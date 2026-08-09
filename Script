@@ -986,10 +986,10 @@ local function GetInventoryCardsForReroll()
         for _, item in ipairs(folder:GetChildren()) do
             if item:IsA("Tool") and (item:GetAttribute("CardName") or item:GetAttribute("TemplateName") or string.find(item.Name, "Card")) then
                 local cardName = item:GetAttribute("CardName") or item:GetAttribute("TemplateName") or item.Name
-                local mutation = item:GetAttribute("CardMutation") or item:GetAttribute("Mutation") or "Normal"
-                local trait = item:GetAttribute("Trait") or item:GetAttribute("CardTrait") or "None"
+                local mutation = getCardMutation(item)
+                local trait = getCardTrait(item)
                 local uid = item.Name
-                local rank = item:GetAttribute("Rank") or item:GetAttribute("CardRank") or "None"
+                local rank = getCardRank(item)
                 local display = string.format("[%s] %s | Rnk: %s | Trt: %s", mutation, cardName, rank, trait)
                 local key = display .. " (" .. string.sub(uid, 1, 4) .. ")"
                 inventory[key] = item
@@ -1065,7 +1065,7 @@ AutoRerollToggle:OnChanged(function(state)
                 local cardTool = getgenv().RerollInventoryMap and getgenv().RerollInventoryMap[cardKey]
                 
                 if cardTool and cardTool.Parent then
-                    local currentTrait = cardTool:GetAttribute("Trait") or cardTool:GetAttribute("CardTrait") or "None"
+                    local currentTrait = getCardTrait(cardTool)
                     
                     local hasSelected = false
                     for trait, _ in pairs(getgenv().SelectedTraits) do
@@ -1241,7 +1241,7 @@ AutoRankRerollToggle:OnChanged(function(state)
                 local cardTool = getgenv().RerollInventoryMap and getgenv().RerollInventoryMap[cardKey]
                 
                 if cardTool and cardTool.Parent then
-                    local currentRank = cardTool:GetAttribute("Rank") or cardTool:GetAttribute("CardRank") or "None"
+                    local currentRank = getCardRank(cardTool)
                     
                     local hasSelected = false
                     for rank, _ in pairs(getgenv().SelectedRanks) do
