@@ -6,8 +6,8 @@
 local LuarmorConfig = {
     ScriptId = "PayomboyZ_Hub",
     SavedKeyFile = "PayomboyZ_LuarmorKey.txt",
-    GetKeyURL = "https://luarmor.net",
-    DiscordURL = "https://discord.gg/payomboyz",
+    GetKeyURL = "https://discordapp.com/channels/1533260775458607256/1533265542394155158",
+    DiscordURL = "https://discord.gg/5DEAQBj2y",
     LogoPath = "543199739_2812856088914181_3062917809445648175_n.jpg",
     StringURL = "https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/string.txt"
 }
