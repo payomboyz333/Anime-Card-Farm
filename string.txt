@@ -1,7 +1,7 @@
--- ==============================================================================
+-- =============================================================================
 -- PayomboyZ Hub - Stage 2: Luarmor Key Checker (String.txt)
 -- URL: https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/string.txt
--- ==============================================================================
+-- =============================================================================
 
 local LuarmorConfig = {
     SavedKeyFile = "PayomboyZ_LuarmorKey.txt",
