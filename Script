@@ -765,11 +765,6 @@ local function instantBuyLoop()
         -- Filter out Robux prompts
         local promptTxt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name):lower()
         if promptTxt:find("robux") or promptTxt:find("r%$") or prompt:GetAttribute("IsRobux") or model:GetAttribute("IsRobux") then
-            if getgenv().InsufficientFundsAction == "หยุดสายพาน" then
-                getgenv().AutoSpawnPack = false
-                if Options and Options.AutoSpawnPack then Options.AutoSpawnPack:SetValue(false) end
-                Fluent:Notify({ Title = "แจ้งเตือน", Content = "เจอการ์ดติด Robux/เงินไม่พอ ระบบได้หยุดสายพานสุ่มแพ็กแล้ว", Duration = 5 })
-            end
             model:SetAttribute("Rejected", true)
             continue
         end
@@ -782,6 +777,11 @@ local function instantBuyLoop()
 
         local buyAttempts = tonumber(model:GetAttribute("BuyAttempts")) or 0
         if buyAttempts >= 25 or (tick() - firstSeen > 20) then
+            if getgenv().InsufficientFundsAction == "หยุดสายพาน" then
+                getgenv().AutoSpawnPack = false
+                if Options and Options.AutoSpawnPack then Options.AutoSpawnPack:SetValue(false) end
+                Fluent:Notify({ Title = "แจ้งเตือน", Content = "ซื้อการ์ดไม่สำเร็จ (เงินอาจไม่พอ) หยุดสายพานแล้ว", Duration = 5 })
+            end
             model:SetAttribute("Rejected", true)
             continue
         end
@@ -1003,7 +1003,7 @@ local function GetInventoryCardsForReroll()
     local function scanFolder(folder)
         if not folder then return end
         for _, item in ipairs(folder:GetChildren()) do
-            if item:IsA("Tool") and (item:GetAttribute("CardName") or item:GetAttribute("TemplateName") or string.find(item.Name, "Card")) then
+            if item:IsA("Tool") and not isPackCard(item) and (item:GetAttribute("CardName") or item:GetAttribute("TemplateName") or string.find(item.Name, "Card")) then
                 local cardName = item:GetAttribute("CardName") or item:GetAttribute("TemplateName") or item.Name
                 local mutation = getCardMutation(item)
                 local trait = getCardTrait(item)
@@ -1081,6 +1081,12 @@ AutoRerollToggle:OnChanged(function(state)
             getgenv().NotifiedRerollStart = nil
             while getgenv().AutoReroll do
                 if getgenv().PauseReroll then
+                    pcall(function()
+                        local char = LocalPlayer.Character
+                        if char and char:FindFirstChild("Humanoid") then
+                            char.Humanoid:UnequipTools()
+                        end
+                    end)
                     task.wait(1)
                     continue
                 end
@@ -1261,6 +1267,12 @@ AutoRankRerollToggle:OnChanged(function(state)
             getgenv().NotifiedRankRerollStart = nil
             while getgenv().AutoRankReroll do
                 if getgenv().PauseReroll then
+                    pcall(function()
+                        local char = LocalPlayer.Character
+                        if char and char:FindFirstChild("Humanoid") then
+                            char.Humanoid:UnequipTools()
+                        end
+                    end)
                     task.wait(1)
                     continue
                 end
@@ -1510,9 +1522,10 @@ local function parseSuffixValue(txt)
     if numStr then
         local num = tonumber(numStr) or 0
         local mult = 1
-        if suffix == "DC" then mult = 1e33
-        elseif suffix == "NO" then mult = 1e30
-        elseif suffix == "OC" then mult = 1e27
+        if suffix == "UD" then mult = 1e36
+        elseif suffix == "DC" then mult = 1e33
+        elseif suffix == "NO" or suffix == "N" then mult = 1e30
+        elseif suffix == "OC" or suffix == "O" then mult = 1e27
         elseif suffix == "SP" then mult = 1e24
         elseif suffix == "SX" then mult = 1e21
         elseif suffix == "QI" then mult = 1e18
@@ -1601,41 +1614,43 @@ local function collect4BestBaseCards()
         scanInv(LocalPlayer:FindFirstChild("Backpack"))
         scanInv(character)
 
-        local plotFolder = findPlayerPlot()
-        if plotFolder then
-            for _, desc in ipairs(plotFolder:GetDescendants()) do
-                if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
-                    local pText = desc:IsA("ProximityPrompt") and string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or "")) or ""
-                    
-                    local isIgnoredPrompt = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
-                        or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
-                        or string.find(pText, "OPEN") or string.find(pText, "เปิด")
-                        or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
-                        or string.find(pText, "UPGRADE") or string.find(pText, "อัปเกรด")
-                        or string.find(pText, "CLAIM") or string.find(pText, "รับ")
-                        or string.find(pText, "SELL") or string.find(pText, "ขาย")
-                        or string.find(pText, "REBIRTH") or string.find(pText, "จุติ")
-                        or string.find(pText, "JOIN") or string.find(pText, "ENTER")
-                    
-                    if not isIgnoredPrompt then
-                        local model = desc:FindFirstAncestorOfClass("Model")
-                        if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") then
-                            local isPack = isPackCard(model)
-                            if not isPack then
-                                for _, txtObj in ipairs(model:GetDescendants()) do
-                                    if (txtObj:IsA("TextLabel") or txtObj:IsA("TextButton")) and txtObj.Text then
-                                        local txtUpper = string.upper(txtObj.Text or "")
-                                        if string.find(txtUpper, "PACK") or string.find(txtUpper, "แพ็ค") or string.find(txtUpper, "BOX") or string.find(txtUpper, "กล่อง") then
-                                            isPack = true
-                                            break
+        if getgenv().TowerCardSource ~= "จากในกระเป๋า (Inventory)" then
+            local plotFolder = findPlayerPlot()
+            if plotFolder then
+                for _, desc in ipairs(plotFolder:GetDescendants()) do
+                    if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
+                        local pText = desc:IsA("ProximityPrompt") and string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or "")) or ""
+                        
+                        local isIgnoredPrompt = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
+                            or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
+                            or string.find(pText, "OPEN") or string.find(pText, "เปิด")
+                            or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
+                            or string.find(pText, "UPGRADE") or string.find(pText, "อัปเกรด")
+                            or string.find(pText, "CLAIM") or string.find(pText, "รับ")
+                            or string.find(pText, "SELL") or string.find(pText, "ขาย")
+                            or string.find(pText, "REBIRTH") or string.find(pText, "จุติ")
+                            or string.find(pText, "JOIN") or string.find(pText, "ENTER")
+                        
+                        if not isIgnoredPrompt then
+                            local model = desc:FindFirstAncestorOfClass("Model")
+                            if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") then
+                                local isPack = isPackCard(model)
+                                if not isPack then
+                                    for _, txtObj in ipairs(model:GetDescendants()) do
+                                        if (txtObj:IsA("TextLabel") or txtObj:IsA("TextButton")) and txtObj.Text then
+                                            local txtUpper = string.upper(txtObj.Text or "")
+                                            if string.find(txtUpper, "PACK") or string.find(txtUpper, "แพ็ค") or string.find(txtUpper, "BOX") or string.find(txtUpper, "กล่อง") then
+                                                isPack = true
+                                                break
+                                            end
                                         end
                                     end
                                 end
-                            end
-                            if not isPack then
-                                local score = getUnifiedCardScore(model)
-                                if score > 0 and not string.find(string.upper(model.Name or ""), "PLOT") then
-                                    table.insert(allCards, { item = model, score = score, source = "Plot", interact = desc })
+                                if not isPack then
+                                    local score = getUnifiedCardScore(model)
+                                    if score > 0 and not string.find(string.upper(model.Name or ""), "PLOT") then
+                                        table.insert(allCards, { item = model, score = score, source = "Plot", interact = desc })
+                                    end
                                 end
                             end
                         end
@@ -1798,6 +1813,17 @@ end
 
 
 -- UI Component Setup
+
+getgenv().TowerCardSource = getgenv().TowerCardSource or "จากบนฐาน (Plot)"
+local TowerSourceDropdown = Tabs.Raid:AddDropdown("TowerCardSource", {
+    Title = "แหล่งที่มาของการ์ดหอคอย",
+    Values = {"จากบนฐาน (Plot)", "จากในกระเป๋า (Inventory)"},
+    Multi = false,
+    Default = getgenv().TowerCardSource
+})
+TowerSourceDropdown:OnChanged(function(Value)
+    getgenv().TowerCardSource = Value
+end)
 
 local AutoTowerToggle = Tabs.Raid:AddToggle("AutoTower", { Title = "🏰 ลงหอคอยอัตโนมัติ (Auto Tower)", Default = false })
 AutoTowerToggle:OnChanged(function(state)
@@ -3072,9 +3098,21 @@ end)
 
 -- Profile Box removed as requested because Toggle now acts as the profile.
 
+-- Load InterfaceManager for Theme Customization
+local InterfaceManager = nil
+pcall(function()
+    InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+end)
+
+if InterfaceManager then
+    InterfaceManager:SetLibrary(Fluent)
+    InterfaceManager:SetFolder("PayomboyZ_Config")
+    InterfaceManager:BuildInterfaceSection(Tabs.Dashboard)
+end
+
 Fluent:Notify({
     Title = "PayomboyZ",
-    Content = "ปรับแต่งหน้าจอสำหรับมือถือสมบูรณ์! ✅\nปรับ UIScale = " .. tostring(initialScale),
+    Content = "ระบบธีมและสี UI พร้อมใช้งานแล้ว! ✅",
     Duration = 6
 })
 
