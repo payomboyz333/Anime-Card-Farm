@@ -34,6 +34,7 @@ local Tabs = {
     Potion = Window:AddTab({ Title = "น้ำยา", Icon = "flask-conical" }),
     Raid = Window:AddTab({ Title = "เรด & ทาวเวอร์", Icon = "swords" }),
     Trade = Window:AddTab({ Title = "แลกเปลี่ยน", Icon = "arrow-left-right" }),
+    FPS = Window:AddTab({ Title = "ลด FPS", Icon = "monitor-off" }),
     Dashboard = Window:AddTab({ Title = "แดชบอร์ด & ตั้งค่า", Icon = "sliders" })
 }
 
@@ -2561,6 +2562,9 @@ local function SaveConfig(name)
         SelectedTraits = getgenv().SelectedTraits or {},
         SelectedRanks = getgenv().SelectedRanks or {},
         InsufficientFundsAction = getgenv().InsufficientFundsAction or "ข้าม",
+        FPSCap = getgenv().FPSCap or "ไม่จำกัด (Max)",
+        AFKMode = getgenv().AFKMode or false,
+        DisableVisualEffects = getgenv().DisableVisualEffects or false,
     }
     if writefile then
         pcall(function()
@@ -2600,6 +2604,9 @@ local function LoadConfig(name)
             getgenv().SelectedTraits = data.SelectedTraits or {}
             getgenv().SelectedRanks = data.SelectedRanks or {}
             getgenv().InsufficientFundsAction = data.InsufficientFundsAction or "ข้าม"
+            getgenv().FPSCap = data.FPSCap or "ไม่จำกัด (Max)"
+            getgenv().AFKMode = data.AFKMode or false
+            getgenv().DisableVisualEffects = data.DisableVisualEffects or false
 
             -- Sync Rarities Multi-Dropdown UI
             local dictR = {}
@@ -2645,12 +2652,15 @@ local function LoadConfig(name)
             safeSetToggle("AutoUseProduction", data.AutoUseProduction)
             safeSetToggle("AutoTower", data.AutoTower)
             safeSetToggle("AutoBossRaid", data.AutoBossRaid)
+            safeSetToggle("AFKModeWhiteScreen", data.AFKMode)
+            safeSetToggle("DisableVisualEffects", data.DisableVisualEffects)
 
             if Options.AutoCarryDelay and data.AutoCarryDelay then pcall(function() Options.AutoCarryDelay:SetValue(tonumber(data.AutoCarryDelay)) end) end
             if Options.RerollSpeed and data.RerollSpeed then pcall(function() Options.RerollSpeed:SetValue(tonumber(data.RerollSpeed)) end) end
             if Options.BossRaidDifficulty and data.BossRaidDifficulty then pcall(function() Options.BossRaidDifficulty:SetValue(tostring(data.BossRaidDifficulty)) end) end
             if Options.DiscordWebhook and data.Webhook then pcall(function() Options.DiscordWebhook:SetValue(tostring(data.Webhook)) end) end
             if Options.InsufficientFundsAction and data.InsufficientFundsAction then pcall(function() Options.InsufficientFundsAction:SetValue(tostring(data.InsufficientFundsAction)) end) end
+            if Options.FPSCapLimit and data.FPSCap then pcall(function() Options.FPSCapLimit:SetValue(tostring(data.FPSCap)) end) end
 
             Fluent:Notify({ Title = "การตั้งค่า", Content = "โหลดการตั้งค่าสำเร็จ: " .. name, Duration = 3 })
         else
@@ -2747,6 +2757,141 @@ if ConfigData.Autoload ~= "" and ConfigData.Autoload ~= "ไม่มีกา�
         LoadConfig(ConfigData.Autoload)
     end)
 end
+
+---------------------------------------------------------
+-- FPS OPTIMIZATION & PERFORMANCE
+---------------------------------------------------------
+Tabs.FPS:AddSection("⚡ การตั้งค่าประสิทธิภาพ (Performance)")
+
+getgenv().FPSCap = getgenv().FPSCap or "ไม่จำกัด (Max)"
+local FPSDropdown = Tabs.FPS:AddDropdown("FPSCapLimit", {
+    Title = "⏱️ จำกัดเฟรมเรต (FPS Cap)",
+    Description = "เลือกระดับ FPS เพื่อลดการทำงานของการ์ดจอ/ซีพียู",
+    Values = {"ไม่จำกัด (Max)", "60 FPS", "30 FPS", "15 FPS", "5 FPS"},
+    Multi = false,
+    Default = getgenv().FPSCap
+})
+
+FPSDropdown:OnChanged(function(Value)
+    getgenv().FPSCap = Value
+    if setfpscap then
+        if Value == "60 FPS" then setfpscap(60)
+        elseif Value == "30 FPS" then setfpscap(30)
+        elseif Value == "15 FPS" then setfpscap(15)
+        elseif Value == "5 FPS" then setfpscap(5)
+        else setfpscap(999) end
+    end
+end)
+
+local AFKToggle = Tabs.FPS:AddToggle("AFKModeWhiteScreen", {
+    Title = "📺 โหมดจอขาว (AFK Mode)",
+    Description = "ปิดการเรนเดอร์ภาพ 3D และแสดงจอดำ (ประหยัด GPU 99%)",
+    Default = (ConfigData.AFKMode == true) or false
+})
+
+local afkScreenGui = nil
+AFKToggle:OnChanged(function(state)
+    getgenv().AFKMode = state
+    pcall(function()
+        if state then
+            if not afkScreenGui then
+                afkScreenGui = Instance.new("ScreenGui")
+                afkScreenGui.Name = "PayomboyZ_AFK"
+                afkScreenGui.IgnoreGuiInset = true
+                afkScreenGui.ResetOnSpawn = false
+                afkScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+                
+                local button = Instance.new("TextButton")
+                button.Size = UDim2.new(1, 0, 1, 0)
+                button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                button.Text = "🌙 AFK Mode กำลังทำงาน...\n(ประหยัดพลังงาน GPU)\n\nคลิกที่นี่เพื่อปิดโหมดนี้"
+                button.TextColor3 = Color3.fromRGB(200, 200, 200)
+                button.Font = Enum.Font.GothamBold
+                button.TextSize = 24
+                button.Parent = afkScreenGui
+
+                button.MouseButton1Click:Connect(function()
+                    if Options.AFKModeWhiteScreen then
+                        Options.AFKModeWhiteScreen:SetValue(false)
+                    end
+                end)
+            end
+            afkScreenGui.Parent = CoreGui
+            RunService:Set3dRenderingEnabled(false)
+        else
+            if afkScreenGui then afkScreenGui.Parent = nil end
+            RunService:Set3dRenderingEnabled(true)
+        end
+    end)
+end)
+
+local originalStates = {}
+local PotatoToggle = Tabs.FPS:AddToggle("PotatoGraphics", {
+    Title = "🥔 โหมดภาพกาก (Potato Graphics)",
+    Description = "ลบพื้นผิวและเงาในเกม (เปิด/ปิด ได้)",
+    Default = false
+})
+
+PotatoToggle:OnChanged(function(state)
+    getgenv().PotatoGraphics = state
+    pcall(function()
+        local Lighting = game:GetService("Lighting")
+        if state then
+            Lighting.GlobalShadows = false
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and not v:IsA("MeshPart") then
+                    if originalStates[v] == nil then
+                        originalStates[v] = { Material = v.Material, Reflectance = v.Reflectance }
+                    end
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    if originalStates[v] == nil then
+                        originalStates[v] = { Transparency = v.Transparency }
+                    end
+                    v.Transparency = 1
+                end
+            end
+            Fluent:Notify({ Title = "ลด FPS", Content = "เปิดโหมดภาพกากเรียบร้อยแล้ว!", Duration = 3 })
+        else
+            Lighting.GlobalShadows = true
+            for obj, data in pairs(originalStates) do
+                if obj and obj.Parent then
+                    if data.Material then obj.Material = data.Material end
+                    if data.Reflectance then obj.Reflectance = data.Reflectance end
+                    if data.Transparency then obj.Transparency = data.Transparency end
+                end
+            end
+            originalStates = {} -- Clear memory
+            Fluent:Notify({ Title = "ลด FPS", Content = "ปิดโหมดภาพกาก (คืนค่าเดิม)", Duration = 3 })
+        end
+    end)
+end)
+
+local DisableEffectsToggle = Tabs.FPS:AddToggle("DisableVisualEffects", {
+    Title = "✨ ปิดเอฟเฟกต์ทั้งหมด (Disable Effects)",
+    Description = "ปิดการแสดงผล Particle, Beam, Trail ถาวรขณะเปิด",
+    Default = false
+})
+
+DisableEffectsToggle:OnChanged(function(state)
+    getgenv().DisableVisualEffects = state
+end)
+
+task.spawn(function()
+    while task.wait(5) do
+        if getgenv().DisableVisualEffects then
+            pcall(function()
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    end
+                end
+            end)
+        end
+    end
+end)
+
 
 ---------------------------------------------------------
 -- UI SCALE & MOBILE POPUP DRAGGABLE BUTTON
