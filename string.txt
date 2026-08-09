@@ -31,24 +31,31 @@ task.spawn(function()
                 game:GetService("RobloxGui")
             }
             if gethui then
-                table.insert(containers, gethui())
+                pcall(function() table.insert(containers, gethui()) end)
             end
 
             for _, container in ipairs(containers) do
-                for _, descendant in ipairs(container:GetDescendants()) do
-                    local text = ""
-                    if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                        text = descendant.Text:lower()
-                    elseif descendant.Name then
-                        text = descendant.Name:lower()
+                local descendants = container:GetDescendants()
+                for _, descendant in ipairs(descendants) do
+                    local textStr = ""
+                    local nameStr = ""
+
+                    if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+                        textStr = (descendant.Text or ""):lower()
+                    end
+                    nameStr = (descendant.Name or ""):lower()
+
+                    local function isError(s)
+                        return s:find("auth error") 
+                            or s:find("whitelist error") 
+                            or s:find("no key found") 
+                            or s:find("invalid key") 
+                            or s:find("need a script_key")
+                            or s:find("incorrect key")
+                            or s:find("key is invalid")
                     end
 
-                    if text:find("auth error") 
-                        or text:find("whitelist error") 
-                        or text:find("no key found") 
-                        or text:find("invalid key") 
-                        or text:find("need a script_key") 
-                    then
+                    if isError(textStr) or isError(nameStr) then
                         ErrorWatcherActive = false
 
                         -- ทำลาย Error Popup ทิ้ง
@@ -57,7 +64,11 @@ task.spawn(function()
                             topGui = topGui.Parent
                         end
                         if topGui and topGui:IsA("ScreenGui") then
+                            topGui.Enabled = false
                             topGui:Destroy()
+                        else
+                            -- กรณีที่ไม่ได้อยู่ใน ScreenGui ก็พยายามลบตัวมันเองหรือตัวแม่
+                            pcall(function() descendant.Parent:Destroy() end)
                         end
 
                         -- ลบคีย์ที่หมดอายุทิ้ง เพื่อกันการโหลดซ้ำซาก
@@ -94,6 +105,7 @@ pcall(function()
     loadstring(game:HttpGet(LuarmorConfig.LuarmorLoaderURL))()
 end)
 
-task.delay(4, function()
+-- ขยายเวลาเป็น 60 วินาที เพื่อให้ครอบคลุมเวลาที่ Luarmor ใช้ในการโหลดและเช็คคีย์
+task.delay(60, function()
     ErrorWatcherActive = false
 end)
