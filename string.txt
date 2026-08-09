@@ -105,6 +105,18 @@ pcall(function()
     loadstring(game:HttpGet(LuarmorConfig.LuarmorLoaderURL))()
 end)
 
+-- 🧠 ระบบจำคีย์แบบฉลาด: เซฟเฉพาะคีย์ที่ "ถูก" เท่านั้น
+task.spawn(function()
+    -- รอ 12 วินาทีเพื่อให้แน่ใจว่า Luarmor โหลดเสร็จและไม่เด้ง Error หรือเตะผู้เล่น
+    task.wait(12)
+    -- ถ้าตัวจับ Error ยังทำงานอยู่ (แปลว่าไม่เจอ Error เลยตลอด 12 วินาที) ค่อยเซฟคีย์
+    if ErrorWatcherActive then
+        pcall(function()
+            if writefile then writefile(LuarmorConfig.SavedKeyFile, userKey) end
+        end)
+    end
+end)
+
 -- ขยายเวลาเป็น 60 วินาที เพื่อให้ครอบคลุมเวลาที่ Luarmor ใช้ในการโหลดและเช็คคีย์
 task.delay(60, function()
     ErrorWatcherActive = false
