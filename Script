@@ -764,6 +764,11 @@ local function instantBuyLoop()
         -- Filter out Robux prompts
         local promptTxt = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Name):lower()
         if promptTxt:find("robux") or promptTxt:find("r%$") or prompt:GetAttribute("IsRobux") or model:GetAttribute("IsRobux") then
+            if getgenv().InsufficientFundsAction == "หยุดสายพาน" then
+                getgenv().AutoSpawnPack = false
+                if Options and Options.AutoSpawnPack then Options.AutoSpawnPack:SetValue(false) end
+                Fluent:Notify({ Title = "แจ้งเตือน", Content = "เจอการ์ดติด Robux/เงินไม่พอ ระบบได้หยุดสายพานสุ่มแพ็กแล้ว", Duration = 5 })
+            end
             model:SetAttribute("Rejected", true)
             continue
         end
@@ -822,6 +827,17 @@ getgenv().BruteForceLoop = RunService.Heartbeat:Connect(instantBuyLoop)
 local AutoBuyToggle = Tabs.Main:AddToggle("AutoBuyCards", { Title = "⚡ ซื้อการ์ดที่เลือกทันที (Auto Buy)", Default = false })
 AutoBuyToggle:OnChanged(function(state)
     getgenv().AutoBuyCards = state
+end)
+
+getgenv().InsufficientFundsAction = getgenv().InsufficientFundsAction or "ข้าม"
+local FundsActionDropdown = Tabs.Main:AddDropdown("InsufficientFundsAction", {
+    Title = "💰 เมื่อเจอการ์ดซื้อเงินไม่พอซื้อ",
+    Values = {"ข้าม", "หยุดสายพาน"},
+    Multi = false,
+    Default = getgenv().InsufficientFundsAction
+})
+FundsActionDropdown:OnChanged(function(Value)
+    getgenv().InsufficientFundsAction = Value
 end)
 
 local AutoCarryToggle = Tabs.Main:AddToggle("AutoCarry", { Title = "💰 เก็บเงินอัตโนมัติ (Carry)", Default = false })
@@ -924,6 +940,7 @@ AutoSellBoxToggle:OnChanged(function(state)
                 end
                 
                 if isEquipped and hrp then
+                    getgenv().PauseReroll = true
                     local plotFolder = findPlayerPlot()
                     if plotFolder and plotFolder:FindFirstChild("Plot_N0") and plotFolder.Plot_N0:FindFirstChild("SellPart") then
                         local sellPart = plotFolder.Plot_N0.SellPart
@@ -946,6 +963,7 @@ AutoSellBoxToggle:OnChanged(function(state)
                             end)
                         end
                     end
+                    getgenv().PauseReroll = false
                 end
                 task.wait(1)
             end
@@ -1061,6 +1079,10 @@ AutoRerollToggle:OnChanged(function(state)
         task.spawn(function()
             getgenv().NotifiedRerollStart = nil
             while getgenv().AutoReroll do
+                if getgenv().PauseReroll then
+                    task.wait(1)
+                    continue
+                end
                 local cardKey = getgenv().SelectedRerollCardKey
                 local cardTool = getgenv().RerollInventoryMap and getgenv().RerollInventoryMap[cardKey]
                 
@@ -1237,6 +1259,10 @@ AutoRankRerollToggle:OnChanged(function(state)
         task.spawn(function()
             getgenv().NotifiedRankRerollStart = nil
             while getgenv().AutoRankReroll do
+                if getgenv().PauseReroll then
+                    task.wait(1)
+                    continue
+                end
                 local cardKey = getgenv().SelectedRankCardKey
                 local cardTool = getgenv().RerollInventoryMap and getgenv().RerollInventoryMap[cardKey]
                 
@@ -1509,124 +1535,150 @@ local function getRarityScore(rarityText)
     return 0
 end
 
+local function getUnifiedCardScore(item)
+    if not item then return 0 end
+    local cashScore, rarityScore, mutationScore = 0, 0, 0
+    
+    local function parseScoreFromText(txt)
+        local val = parseSuffixValue(txt)
+        if val > cashScore then cashScore = val end
+        local s = getRarityScore(txt)
+        if s > rarityScore then rarityScore = s end
+        local cleanMut = string.lower(string.gsub(txt, "<[^>]+>", ""))
+        cleanMut = string.match(cleanMut, "^%s*(.-)%s*$") or ""
+        local MutationScores = {
+            ["unknow"] = 130, ["admin"] = 120, ["starfallen"] = 110, ["glitch"] = 100,
+            ["radioactive"] = 90, ["blessed"] = 80, ["candy"] = 70, ["sakura"] = 60,
+            ["rainbow"] = 50, ["venomous"] = 40, ["diamond"] = 30, ["golden"] = 20,
+        }
+        for mName, mScore in pairs(MutationScores) do
+            if string.find(cleanMut, mName) and mScore > mutationScore then
+                mutationScore = mScore
+            end
+        end
+    end
+
+    for _, txtObj in ipairs(item:GetDescendants()) do
+        if (txtObj:IsA("TextLabel") or txtObj:IsA("TextButton")) and txtObj.Text then
+            parseScoreFromText(txtObj.Text)
+        end
+    end
+    
+    if cashScore == 0 and rarityScore == 0 then
+        local lvl = item:GetAttribute("Level") or item:GetAttribute("CardLevel") or 0
+        if tonumber(lvl) then cashScore = tonumber(lvl) end
+        if cashScore == 0 then
+            local val = item:GetAttribute("CashMultiplier") or item:GetAttribute("Multiplier")
+            if tonumber(val) then cashScore = tonumber(val) end
+        end
+        if cashScore == 0 and rarityScore == 0 and getCardRank then
+            local rName = getCardRank(item)
+            rarityScore = getRarityScore(rName)
+        end
+    end
+    
+    return cashScore + (rarityScore * 1000) + (mutationScore * 100)
+end
+
 local function collect4BestBaseCards()
     pcall(function()
         local character = LocalPlayer.Character
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
+        local allCards = {}
+        
+        local function scanInv(container)
+            if not container then return end
+            for _, t in ipairs(container:GetChildren()) do
+                if t:IsA("Tool") and not isPackCard(t) then
+                    local score = getUnifiedCardScore(t)
+                    table.insert(allCards, { item = t, score = score, source = "Inv", uuid = t.Name })
+                end
+            end
+        end
+        scanInv(LocalPlayer:FindFirstChild("Backpack"))
+        scanInv(character)
+
         local plotFolder = findPlayerPlot()
-        if not plotFolder then return end
-
-        local cardList = {}
-        for _, desc in ipairs(plotFolder:GetDescendants()) do
-            if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
-                local pText = desc:IsA("ProximityPrompt") and string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or "")) or ""
-                
-                local isIgnoredPrompt = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
-                    or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
-                    or string.find(pText, "OPEN") or string.find(pText, "เปิด")
-                    or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
-                    or string.find(pText, "UPGRADE") or string.find(pText, "อัปเกรด")
-                    or string.find(pText, "CLAIM") or string.find(pText, "รับ")
-                    or string.find(pText, "SELL") or string.find(pText, "ขาย")
-                    or string.find(pText, "REBIRTH") or string.find(pText, "จุติ")
-                    or string.find(pText, "JOIN") or string.find(pText, "ENTER")
-                
-                if not isIgnoredPrompt then
-                    local model = desc:FindFirstAncestorOfClass("Model")
-                    if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") then
-                        local isPack = isPackCard(model)
-                        if not isPack then
-                            for _, txtObj in ipairs(model:GetDescendants()) do
-                                if (txtObj:IsA("TextLabel") or txtObj:IsA("TextButton")) and txtObj.Text then
-                                    local txtUpper = string.upper(txtObj.Text or "")
-                                    if string.find(txtUpper, "PACK") or string.find(txtUpper, "แพ็ค") or string.find(txtUpper, "BOX") or string.find(txtUpper, "กล่อง") then
-                                        isPack = true
-                                        break
+        if plotFolder then
+            for _, desc in ipairs(plotFolder:GetDescendants()) do
+                if desc:IsA("ProximityPrompt") or desc:IsA("ClickDetector") then
+                    local pText = desc:IsA("ProximityPrompt") and string.upper((desc.ActionText or "") .. " " .. (desc.ObjectText or "")) or ""
+                    
+                    local isIgnoredPrompt = string.find(pText, "BUY") or string.find(pText, "ซื้อ")
+                        or string.find(pText, "SPAWN") or string.find(pText, "สุ่ม")
+                        or string.find(pText, "OPEN") or string.find(pText, "เปิด")
+                        or string.find(pText, "TOWER") or string.find(pText, "ทาวเวอร์")
+                        or string.find(pText, "UPGRADE") or string.find(pText, "อัปเกรด")
+                        or string.find(pText, "CLAIM") or string.find(pText, "รับ")
+                        or string.find(pText, "SELL") or string.find(pText, "ขาย")
+                        or string.find(pText, "REBIRTH") or string.find(pText, "จุติ")
+                        or string.find(pText, "JOIN") or string.find(pText, "ENTER")
+                    
+                    if not isIgnoredPrompt then
+                        local model = desc:FindFirstAncestorOfClass("Model")
+                        if model and model.Name ~= "SellPart" and not model:FindFirstChildOfClass("Humanoid") then
+                            local isPack = isPackCard(model)
+                            if not isPack then
+                                for _, txtObj in ipairs(model:GetDescendants()) do
+                                    if (txtObj:IsA("TextLabel") or txtObj:IsA("TextButton")) and txtObj.Text then
+                                        local txtUpper = string.upper(txtObj.Text or "")
+                                        if string.find(txtUpper, "PACK") or string.find(txtUpper, "แพ็ค") or string.find(txtUpper, "BOX") or string.find(txtUpper, "กล่อง") then
+                                            isPack = true
+                                            break
+                                        end
                                     end
                                 end
                             end
-                        end
-                        if isPack then continue end
-                        
-                        local cashScore, rarityScore, mutationScore = 0, 0, 0
-                        for _, txtObj in ipairs(model:GetDescendants()) do
-                            if txtObj:IsA("TextLabel") or txtObj:IsA("TextButton") then
-                                local val = parseSuffixValue(txtObj.Text)
-                                if val > cashScore then cashScore = val end
-                                local s = getRarityScore(txtObj.Text)
-                                if s > rarityScore then rarityScore = s end
-                                
-                                local cleanMut = string.lower(string.gsub(txtObj.Text or "", "<[^>]+>", ""))
-                                cleanMut = string.match(cleanMut, "^%s*(.-)%s*$") or ""
-                                local MutationScores = {
-                                    ["unknow"] = 130, ["admin"] = 120, ["starfallen"] = 110, ["glitch"] = 100,
-                                    ["radioactive"] = 90, ["blessed"] = 80, ["candy"] = 70, ["sakura"] = 60,
-                                    ["rainbow"] = 50, ["venomous"] = 40, ["diamond"] = 30, ["golden"] = 20,
-                                }
-                                for mName, mScore in pairs(MutationScores) do
-                                    if string.find(cleanMut, mName) and mScore > mutationScore then
-                                        mutationScore = mScore
-                                    end
+                            if not isPack then
+                                local score = getUnifiedCardScore(model)
+                                if score > 0 and not string.find(string.upper(model.Name or ""), "PLOT") then
+                                    table.insert(allCards, { item = model, score = score, source = "Plot", interact = desc })
                                 end
                             end
-                        end
-                        
-                        if cashScore == 0 and rarityScore == 0 then
-                            local lvl = model:GetAttribute("Level") or model:GetAttribute("CardLevel") or 0
-                            if tonumber(lvl) then cashScore = tonumber(lvl) end
-                            if cashScore == 0 then
-                                local val = model:GetAttribute("CashMultiplier") or model:GetAttribute("Multiplier")
-                                if tonumber(val) then cashScore = tonumber(val) end
-                            end
-                        end
-
-                        local totalScore = cashScore + (rarityScore * 1000) + (mutationScore * 100)
-                        if totalScore > 0 and not string.find(string.upper(model.Name or ""), "PLOT") then
-                            table.insert(cardList, { interact = desc, score = totalScore, model = model })
                         end
                     end
                 end
             end
         end
 
-        if #cardList == 0 then return end
-        table.sort(cardList, function(a, b) return a.score > b.score end)
+        if #allCards == 0 then return end
+        table.sort(allCards, function(a, b) return a.score > b.score end)
 
         local originalCFrame = hrp.CFrame
         getgenv().CollectedCardPositions = {}
 
-        for i = 1, math.min(4, #cardList) do
-            local item = cardList[i]
-            if item and item.interact and item.interact.Parent then
+        for i = 1, math.min(4, #allCards) do
+            local card = allCards[i]
+            if card.source == "Plot" and card.interact and card.interact.Parent then
                 pcall(function()
                     local targetPos
-                    if item.interact.Parent:IsA("BasePart") then
-                        targetPos = item.interact.Parent.Position
-                    elseif item.interact.Parent:IsA("Attachment") then
-                        targetPos = item.interact.Parent.WorldPosition
-                    elseif item.model and item.model.PrimaryPart then
-                        targetPos = item.model.PrimaryPart.Position
+                    if card.interact.Parent:IsA("BasePart") then
+                        targetPos = card.interact.Parent.Position
+                    elseif card.interact.Parent:IsA("Attachment") then
+                        targetPos = card.interact.Parent.WorldPosition
+                    elseif card.item and card.item.PrimaryPart then
+                        targetPos = card.item.PrimaryPart.Position
                     end
                     
                     if targetPos and hrp then
-                        table.insert(getgenv().CollectedCardPositions, targetPos)
+                        table.insert(getgenv().CollectedCardPositions, { pos = targetPos, score = card.score, assumedName = card.item.Name })
                         hrp.CFrame = CFrame.new(targetPos) + Vector3.new(0, 2, 0)
                         task.wait(0.8)
                         
-                        if item.interact:IsA("ProximityPrompt") then
-                            item.interact.RequiresLineOfSight = false
-                            item.interact.MaxActivationDistance = 99999
-                            item.interact.HoldDuration = 0
+                        if card.interact:IsA("ProximityPrompt") then
+                            card.interact.RequiresLineOfSight = false
+                            card.interact.MaxActivationDistance = 99999
+                            card.interact.HoldDuration = 0
                             for _ = 1, 5 do
-                                if not item.interact or not item.interact.Parent then break end
-                                fireproximityprompt(item.interact)
+                                if not card.interact or not card.interact.Parent then break end
+                                fireproximityprompt(card.interact)
                                 task.wait(0.3)
                             end
-                        elseif item.interact:IsA("ClickDetector") then
+                        elseif card.interact:IsA("ClickDetector") then
                             for _ = 1, 5 do
-                                fireclickdetector(item.interact)
+                                fireclickdetector(card.interact)
                                 task.wait(0.3)
                             end
                         end
@@ -1645,12 +1697,12 @@ end
 
 local function placeCollectedCardsBack()
     pcall(function()
-        local positions = getgenv().CollectedCardPositions
-        if not positions or #positions == 0 then return end
+        local collected = getgenv().CollectedCardPositions
+        if not collected or #collected == 0 then return end
 
         local startCF = LocalPlayer.Character and LocalPlayer.Character:GetPivot()
 
-        for _, pos in ipairs(positions) do
+        for _, record in ipairs(collected) do
             pcall(function()
                 local character = LocalPlayer.Character
                 local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -1658,15 +1710,33 @@ local function placeCollectedCardsBack()
                 if not hrp or not humanoid then return end
 
                 local tool
-                local backpack = LocalPlayer:FindFirstChild("Backpack")
-                if backpack then
-                    for _, t in ipairs(backpack:GetChildren()) do
-                        if t:IsA("Tool") and not isPackCard(t) then tool = t break end
+                local bestScoreMatch = -1
+                
+                local function checkContainer(container)
+                    if not container then return end
+                    for _, t in ipairs(container:GetChildren()) do
+                        if t:IsA("Tool") and not isPackCard(t) then
+                            local s = getUnifiedCardScore(t)
+                            if s == record.score or t.Name == record.assumedName then
+                                tool = t
+                                bestScoreMatch = s
+                                if s == record.score then return true end
+                            end
+                        end
                     end
+                    return false
                 end
-                if not tool and character then
-                    for _, t in ipairs(character:GetChildren()) do
-                        if t:IsA("Tool") and not isPackCard(t) then tool = t break end
+                
+                if not checkContainer(LocalPlayer:FindFirstChild("Backpack")) then
+                    checkContainer(character)
+                end
+                
+                if not tool then
+                    local backpack = LocalPlayer:FindFirstChild("Backpack")
+                    if backpack then
+                        for _, t in ipairs(backpack:GetChildren()) do
+                            if t:IsA("Tool") and not isPackCard(t) then tool = t break end
+                        end
                     end
                 end
 
@@ -1677,7 +1747,7 @@ local function placeCollectedCardsBack()
                     return
                 end
 
-                hrp.CFrame = CFrame.new(pos) + Vector3.new(0, 2, 0)
+                hrp.CFrame = CFrame.new(record.pos) + Vector3.new(0, 2, 0)
                 task.wait(0.8)
 
                 local plotFolder = findPlayerPlot()
@@ -1688,7 +1758,7 @@ local function placeCollectedCardsBack()
                             if desc.Parent:IsA("BasePart") then descPos = desc.Parent.Position
                             elseif desc.Parent:IsA("Attachment") then descPos = desc.Parent.WorldPosition end
                             
-                            if descPos and (descPos - pos).Magnitude < 5 then
+                            if descPos and (descPos - record.pos).Magnitude < 5 then
                                 if desc:IsA("ProximityPrompt") then
                                     desc.RequiresLineOfSight = false
                                     desc.MaxActivationDistance = 99999
@@ -1714,8 +1784,14 @@ local function placeCollectedCardsBack()
     end)
 end
 
+local function getMinutesToNextBoss()
+    local min = tonumber(os.date("!%M"))
+    if min >= 58 or min <= 5 then return 0 end
+    return 60 - min
+end
+
 local function isBossTimeWindow()
-    local min = tonumber(os.date("%M"))
+    local min = tonumber(os.date("!%M"))
     return min <= 5 or min >= 58
 end
 
@@ -1964,11 +2040,11 @@ AutoBossToggle:OnChanged(function(state)
                         local bossPrompt, portalPrompt
                         for _, p in ipairs(workspace:GetDescendants()) do
                             if p:IsA("ProximityPrompt") then
-                                local pText = string.upper(p.ActionText .. " " .. p.ObjectText .. " " .. (p.Parent and p.Parent.Name or ""))
-                                if string.find(pText, "BOSS RAID") and string.find(pText, "TELEPORT") then
+                                local pText = string.upper(p.ActionText .. " " .. p.ObjectText .. " " .. (p.Parent and p.Parent.Name or "") .. " " .. p.Name)
+                                if (string.find(pText, "BOSS RAID") or string.find(pText, "BOSS")) and string.find(pText, "TELEPORT") then
                                     portalPrompt = p
-                                elseif not string.find(pText, "SHOP") and not string.find(pText, "RETURN") and not string.find(pText, "BACK") and not string.find(pText, "TELEPORT") then
-                                    if string.find(pText, "TITAN") or string.find(pText, "BOSS") or string.find(pText, "RAID") or string.find(pText, "FIGHT") then
+                                elseif not string.find(pText, "SHOP") and not string.find(pText, "RETURN") and not string.find(pText, "BACK") then
+                                    if string.find(pText, "TITAN") or string.find(pText, "BOSS") or string.find(pText, "RAID") or string.find(pText, "FIGHT") or string.find(pText, "ENTER") then
                                         bossPrompt = p
                                     end
                                 end
@@ -2484,6 +2560,7 @@ local function SaveConfig(name)
         RerollSpeed = getgenv().RerollSpeed or 0.05,
         SelectedTraits = getgenv().SelectedTraits or {},
         SelectedRanks = getgenv().SelectedRanks or {},
+        InsufficientFundsAction = getgenv().InsufficientFundsAction or "ข้าม",
     }
     if writefile then
         pcall(function()
@@ -2522,6 +2599,7 @@ local function LoadConfig(name)
             getgenv().BossRaidDifficulty = data.BossRaidDifficulty or "NIGHTMARE"
             getgenv().SelectedTraits = data.SelectedTraits or {}
             getgenv().SelectedRanks = data.SelectedRanks or {}
+            getgenv().InsufficientFundsAction = data.InsufficientFundsAction or "ข้าม"
 
             -- Sync Rarities Multi-Dropdown UI
             local dictR = {}
@@ -2572,6 +2650,7 @@ local function LoadConfig(name)
             if Options.RerollSpeed and data.RerollSpeed then pcall(function() Options.RerollSpeed:SetValue(tonumber(data.RerollSpeed)) end) end
             if Options.BossRaidDifficulty and data.BossRaidDifficulty then pcall(function() Options.BossRaidDifficulty:SetValue(tostring(data.BossRaidDifficulty)) end) end
             if Options.DiscordWebhook and data.Webhook then pcall(function() Options.DiscordWebhook:SetValue(tostring(data.Webhook)) end) end
+            if Options.InsufficientFundsAction and data.InsufficientFundsAction then pcall(function() Options.InsufficientFundsAction:SetValue(tostring(data.InsufficientFundsAction)) end) end
 
             Fluent:Notify({ Title = "การตั้งค่า", Content = "โหลดการตั้งค่าสำเร็จ: " .. name, Duration = 3 })
         else
