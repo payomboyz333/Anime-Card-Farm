@@ -85,9 +85,7 @@ local function PassToKeyChecker(userKey)
     if not userKey or userKey == "" then return end
     userKey = userKey:gsub("%s+", "")
     
-    pcall(function()
-        if writefile then writefile(LuarmorConfig.SavedKeyFile, userKey) end
-    end)
+    -- ลบระบบจดจำคีย์ตรงนี้ทิ้ง! เราจะไม่เซฟคีย์มั่วซั่วจนกว่าจะยืนยันได้ว่าถูกจริงๆ
     
     if getgenv then getgenv().PayomboyZ_InputKey = userKey end
     loadstring(game:HttpGet(LuarmorConfig.StringURL))()
@@ -581,15 +579,23 @@ if savedKey and savedKey ~= "" then
     end)
 
     EscBtn.MouseButton1Click:Connect(function()
-        -- ถ้าลูกค้ากดปุ่มนี้ แปลว่ามันค้างหน้า Auth Error
+        -- ถ้าลูกค้ากดปุ่มนี้ แปลว่ามันค้างหรือต้องการเปลี่ยนคีย์
         if isfile and isfile(LuarmorConfig.SavedKeyFile) and delfile then
             delfile(LuarmorConfig.SavedKeyFile)
         end
-        EscBtn.Text = "✅ ลบคีย์แล้ว! ระบบกำลังรีสตาร์ท..."
+        EscBtn.Text = "✅ ลบคีย์แล้ว! กำลังเปิดหน้าต่างใหม่..."
         EscBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
         task.wait(1.5)
-        -- เตะออกเพื่อให้เข้าเกมใหม่ (เป็นวิธีรีเซ็ตที่ชัวร์ที่สุด)
-        LocalPlayer:Kick("รีเซ็ตคีย์สำเร็จ! กรุณาเข้าเกมใหม่อีกครั้งเพื่อกรอกคีย์ใหม่ครับ 🚀")
+        
+        -- ทำลายปุ่มทิ้ง
+        if EscapeGui then EscapeGui:Destroy() end
+        
+        -- เรียกหน้า Start.txt ขึ้นมาใหม่แบบนุ่มนวล โดยไม่ต้องเตะผู้เล่นออกจากเกม
+        if getgenv then 
+            getgenv().PayomboyZ_ShowUI = true 
+            getgenv().PayomboyZ_ErrorMsg = "✅ ลบคีย์เดิมสำเร็จ! กรุณาใส่คีย์ใหม่"
+        end
+        loadstring(game:HttpGet(LuarmorConfig.StartURL))()
     end)
 
     -- ทำลายปุ่มทิ้งอัตโนมัติเมื่อผ่านไป 12 วินาที (แปลว่าเข้าเกมสำเร็จแล้ว)
@@ -598,7 +604,7 @@ if savedKey and savedKey ~= "" then
             local ts = game:GetService("TweenService")
             local tw = ts:Create(EscBtn, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -80, 0, -50)})
             tw:Play()
-            tw.Completed:Connect(function() EscapeGui:Destroy() end)
+            tw.Completed:Connect(function() pcall(function() EscapeGui:Destroy() end) end)
         end
     end)
 
