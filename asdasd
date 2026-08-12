@@ -32,7 +32,12 @@ local urls = {
 
 for _, url in ipairs(urls) do
     local success, result = pcall(function()
-        return loadstring(game:HttpGet(url))()
+        local body = game:HttpGet(url)
+        local func, syntaxErr = loadstring(body)
+        if not func then
+            return nil, "Syntax Error: " .. tostring(syntaxErr) .. " | Body: " .. string.sub(tostring(body), 1, 80)
+        end
+        return func()
     end)
     if success and type(result) == "table" then
         Fluent = result
@@ -4388,7 +4393,12 @@ local imUrls = {
     "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"
 }
 for _, url in ipairs(imUrls) do
-    local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
+    local s, r = pcall(function()
+        local body = game:HttpGet(url)
+        local func = loadstring(body)
+        if func then return func() end
+        return nil
+    end)
     if s and type(r) == "table" then InterfaceManager = r; break end
 end
 
@@ -4398,7 +4408,12 @@ local smUrls = {
     "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"
 }
 for _, url in ipairs(smUrls) do
-    local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
+    local s, r = pcall(function()
+        local body = game:HttpGet(url)
+        local func = loadstring(body)
+        if func then return func() end
+        return nil
+    end)
     if s and type(r) == "table" then SaveManager = r; break end
 end
 
