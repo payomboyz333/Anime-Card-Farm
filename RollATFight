@@ -1,4 +1,4 @@
-local CoreGui = game:GetService("CoreGui")
+local CoreGui = gethui and gethui() or game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,16 +36,19 @@ task.spawn(function()
                 break
             end
         end
-        local searchRoot = fluentGui or CoreGui
-        for _, v in ipairs(searchRoot:GetDescendants()) do
-            if v:IsA("TextLabel") then
-                if not titleLabel and v.Text:find("Roll Anime to Fight!") then
-                    titleLabel = v
-                elseif not subLabel and v.Text:find("Made by PayomboyZ HUB") then
-                    subLabel = v
+        
+        if fluentGui then
+            for _, v in ipairs(fluentGui:GetDescendants()) do
+                if v:IsA("TextLabel") then
+                    if not titleLabel and v.Text:find("Roll Anime to Fight!") then
+                        titleLabel = v
+                    elseif not subLabel and v.Text:find("Made by PayomboyZ HUB") then
+                        subLabel = v
+                    end
                 end
             end
         end
+        
         if not (titleLabel and subLabel) then
             task.wait(1)
         end
@@ -1737,27 +1740,30 @@ task.spawn(function()
         ["Interface"] = "การปรับแต่ง UI",
         ["Configuration"] = "จัดการคอนฟิก",
     }
-    for i = 1, 15 do
-        task.wait(1)
-        local targetGui = nil
-        for _, gui in ipairs(CoreGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and (gui.Name:find("Fluent") or gui.Name:find("ScreenGui")) then
-                targetGui = gui
-                break
-            end
+    task.wait(2)
+    local targetGui = nil
+    for _, gui in ipairs(CoreGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and (gui.Name:find("Fluent") or gui.Name:find("ScreenGui")) then
+            targetGui = gui
+            break
         end
-        local scanRoot = targetGui or CoreGui
-        for _, v in ipairs(scanRoot:GetDescendants()) do
-            if v:IsA("TextLabel") or v:IsA("TextButton") then
-                if translations[v.Text] then
-                    v.Text = translations[v.Text]
-                end
-                if v.Text:match("^Current autoload config:") then
-                    local configName = v.Text:gsub("Current autoload config: ", "")
-                    if configName == "none" then configName = "ไม่มี" end
-                    v.Text = "คอนฟิกออโต้โหลดปัจจุบัน: " .. configName
+    end
+    
+    if targetGui then
+        for i = 1, 5 do
+            for _, v in ipairs(targetGui:GetDescendants()) do
+                if v:IsA("TextLabel") or v:IsA("TextButton") then
+                    if translations[v.Text] then
+                        v.Text = translations[v.Text]
+                    end
+                    if v.Text:match("^Current autoload config:") then
+                        local configName = v.Text:gsub("Current autoload config: ", "")
+                        if configName == "none" then configName = "ไม่มี" end
+                        v.Text = "คอนฟิกออโต้โหลดปัจจุบัน: " .. configName
+                    end
                 end
             end
+            task.wait(1)
         end
     end
 end)
