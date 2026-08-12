@@ -23,10 +23,10 @@ end
 
 local Fluent = nil
 local urls = {
+    "http://raw.githack.com/1dontgiveaf/Fluent/main/main.lua",
+    "http://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
+    "http://corsproxy.io/?https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
     "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
-    "https://raw.githack.com/1dontgiveaf/Fluent/main/main.lua",
-    "https://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
-    "https://corsproxy.io/?https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
     "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua"
 }
 
@@ -4383,9 +4383,9 @@ local InterfaceManager = nil
 local SaveManager = nil
 
 local imUrls = {
-    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua",
-    "https://raw.githack.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua",
-    "https://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"
+    "http://raw.githack.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua",
+    "http://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua",
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"
 }
 for _, url in ipairs(imUrls) do
     local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
@@ -4393,9 +4393,9 @@ for _, url in ipairs(imUrls) do
 end
 
 local smUrls = {
-    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua",
-    "https://raw.githack.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua",
-    "https://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"
+    "http://raw.githack.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua",
+    "http://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua",
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"
 }
 for _, url in ipairs(smUrls) do
     local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
