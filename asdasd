@@ -23,17 +23,22 @@ end
 
 local Fluent = nil
 local urls = {
-    "https://cdn.jsdelivr.net/gh/1dontgiveaf/Fluent@main/main.lua",
-    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua"
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
+    "https://raw.githack.com/1dontgiveaf/Fluent/main/main.lua",
+    "https://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
+    "https://corsproxy.io/?https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua",
+    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/main.lua"
 }
 
 for _, url in ipairs(urls) do
     local success, result = pcall(function()
         return loadstring(game:HttpGet(url))()
     end)
-    if success and result then
+    if success and type(result) == "table" then
         Fluent = result
         break
+    else
+        warn("Failed to load from: " .. url .. " | Error: " .. tostring(result))
     end
 end
 
@@ -4378,21 +4383,23 @@ local InterfaceManager = nil
 local SaveManager = nil
 
 local imUrls = {
-    "https://cdn.jsdelivr.net/gh/1dontgiveaf/Fluent@main/Addons/InterfaceManager.lua",
-    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua",
+    "https://raw.githack.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua",
+    "https://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"
 }
 for _, url in ipairs(imUrls) do
     local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
-    if s and r then InterfaceManager = r; break end
+    if s and type(r) == "table" then InterfaceManager = r; break end
 end
 
 local smUrls = {
-    "https://cdn.jsdelivr.net/gh/1dontgiveaf/Fluent@main/Addons/SaveManager.lua",
-    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua",
+    "https://raw.githack.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua",
+    "https://api.allorigins.win/raw?url=https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"
 }
 for _, url in ipairs(smUrls) do
     local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
-    if s and r then SaveManager = r; break end
+    if s and type(r) == "table" then SaveManager = r; break end
 end
 
 if SaveManager then
