@@ -202,7 +202,6 @@ local function PassToKeyChecker(userKey)
     -- ==============================================================================
     -- 🧠 ระบบจำคีย์แบบอัตโนมัติ (AutoSave) - ถูกลบชั่วคราวตามที่ผู้ใช้สั่ง
     -- ==============================================================================
-    --[[
     task.spawn(function()
         task.wait(10)
         -- ผ่านไป 10 วินาที ถ้าไม่มี Error ตรวจจับเข้ามา ให้เซฟคีย์ลงเครื่อง
@@ -210,7 +209,6 @@ local function PassToKeyChecker(userKey)
             if writefile then writefile(LuarmorConfig.SavedKeyFile, userKey) end
         end)
     end)
-    --]]
 
     -- ==============================================================================
     -- 🔑 ส่ง Key เข้าสู่ Luarmor Engine
