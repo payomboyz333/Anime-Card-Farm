@@ -55,18 +55,13 @@ task.spawn(function()
         while titleLabel.Parent and subLabel.Parent do
             local fps = math.floor(workspace:GetRealPhysicsFPS())
             local ping = 0
-            local statsOk, statsVal = pcall(function()
-                local stats = game:GetService("Stats")
-                local net = stats:FindFirstChild("Network")
-                local item = net and net:FindFirstChild("ServerStatsItem")
-                local dataPing = item and item:FindFirstChild("Data Ping")
-                return dataPing and math.floor(dataPing:GetValue()) or 0
+            pcall(function()
+                ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
             end)
-            if statsOk and statsVal then ping = statsVal end
 
             titleLabel.Text = string.format("Roll Anime to Fight! ⚔️ | FPS: %d | Ping: %d", fps, ping)
             
-            task.wait(1)
+            task.wait(0.5)
         end
     end
 end)
@@ -956,25 +951,18 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    local ok, label = pcall(function()
-        return playerGui
-            :WaitForChild("MainUI", 30)
-            :WaitForChild("Frames", 10)
-            :WaitForChild("SpinWheel", 10)
-            :WaitForChild("Content", 10)
-            :WaitForChild("Buttons", 10)
-            :WaitForChild("Spin", 10)
-            :WaitForChild("Label", 10)
-    end)
-    if not ok or not label then return end
-
-    local ok2, remote = pcall(function()
-        return ReplicatedStorage
-            :WaitForChild("Remotes", 15)
-            :WaitForChild("SpinWheel", 10)
-            :WaitForChild("Spin", 10)
-    end)
-    if not ok2 or not remote then return end
+    local label = playerGui
+        :WaitForChild("MainUI")
+        :WaitForChild("Frames")
+        :WaitForChild("SpinWheel")
+        :WaitForChild("Content")
+        :WaitForChild("Buttons")
+        :WaitForChild("Spin")
+        :WaitForChild("Label")
+    local remote = ReplicatedStorage
+        :WaitForChild("Remotes")
+        :WaitForChild("SpinWheel")
+        :WaitForChild("Spin")
 
     local running = false
 
@@ -984,7 +972,7 @@ task.spawn(function()
         return num or 0
     end
 
-    while task.wait(0.5) do
+    while task.wait(0.2) do
         if not AutoSpinWheelEnabled then
             running = false
             continue
@@ -998,7 +986,6 @@ task.spawn(function()
             end
 
             remote:FireServer("Spin")
-            task.wait(1.5)
         else
             running = false
         end
@@ -1006,27 +993,21 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    local ok1, rewards = pcall(function()
-        return playerGui
-            :WaitForChild("MainUI", 30)
-            :WaitForChild("Frames", 10)
-            :WaitForChild("Battlepass", 10)
-            :WaitForChild("Frame", 10)
-            :WaitForChild("Main", 10)
-            :WaitForChild("Battlepass", 10)
-            :WaitForChild("ScrollingFrame", 10)
-            :WaitForChild("Content", 10)
-            :WaitForChild("Rewards", 10)
-    end)
-    if not ok1 or not rewards then return end
+    local rewards = playerGui
+        :WaitForChild("MainUI")
+        :WaitForChild("Frames")
+        :WaitForChild("Battlepass")
+        :WaitForChild("Frame")
+        :WaitForChild("Main")
+        :WaitForChild("Battlepass")
+        :WaitForChild("ScrollingFrame")
+        :WaitForChild("Content")
+        :WaitForChild("Rewards")
 
-    local ok2, remote = pcall(function()
-        return ReplicatedStorage
-            :WaitForChild("Modules", 15)
-            :WaitForChild("Battlepass", 10)
-            :WaitForChild("Claim", 10)
-    end)
-    if not ok2 or not remote then return end
+    local remote = ReplicatedStorage
+        :WaitForChild("Modules")
+        :WaitForChild("Battlepass")
+        :WaitForChild("Claim")
 
     while task.wait(1) do
         if not AutoClaimBattlepassEnabled then
@@ -1057,27 +1038,21 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    local ok1, rewards = pcall(function()
-        return playerGui
-            :WaitForChild("MainUI", 30)
-            :WaitForChild("Frames", 10)
-            :WaitForChild("Battlepass", 10)
-            :WaitForChild("Frame", 10)
-            :WaitForChild("Main", 10)
-            :WaitForChild("Battlepass", 10)
-            :WaitForChild("ScrollingFrame", 10)
-            :WaitForChild("Content", 10)
-            :WaitForChild("Rewards", 10)
-    end)
-    if not ok1 or not rewards then return end
+    local rewards = playerGui
+        :WaitForChild("MainUI")
+        :WaitForChild("Frames")
+        :WaitForChild("Battlepass")
+        :WaitForChild("Frame")
+        :WaitForChild("Main")
+        :WaitForChild("Battlepass")
+        :WaitForChild("ScrollingFrame")
+        :WaitForChild("Content")
+        :WaitForChild("Rewards")
 
-    local ok2, remote = pcall(function()
-        return ReplicatedStorage
-            :WaitForChild("Modules", 15)
-            :WaitForChild("Battlepass", 10)
-            :WaitForChild("Claim", 10)
-    end)
-    if not ok2 or not remote then return end
+    local remote = ReplicatedStorage
+        :WaitForChild("Modules")
+        :WaitForChild("Battlepass")
+        :WaitForChild("Claim")
 
     while task.wait(1) do
         if not AutoClaimPremiumBattlepassEnabled then
@@ -1106,74 +1081,21 @@ task.spawn(function()
         end
     end
 end)
-local cashLabel = nil
-local state = { buying = false }
 
-task.spawn(function()
-    local character = player.Character or player.CharacterAdded:Wait()
-    local hrp = character:WaitForChild("HumanoidRootPart", 15)
-    local plotsFolder = workspace:WaitForChild("Plots", 30)
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local plotsFolder = workspace:WaitForChild("Plots")
 
-    if not hrp or not plotsFolder then return end
+local cashLabel = playerGui
+    :WaitForChild("MainUI")
+    :WaitForChild("UILeft")
+    :WaitForChild("TopButtons")
+    :WaitForChild("Cash")
+    :WaitForChild("CashLabel")
 
-    local cashOk, cashResult = pcall(function()
-        return playerGui
-            :WaitForChild("MainUI", 30)
-            :WaitForChild("UILeft", 10)
-            :WaitForChild("TopButtons", 10)
-            :WaitForChild("Cash", 10)
-            :WaitForChild("CashLabel", 10)
-    end)
-    if cashOk and cashResult then
-        cashLabel = cashResult
-    end
-
-    local myPlot = getBestPlot(hrp, plotsFolder)
-
-    if myPlot then
-        while true do
-            if not AutoBuyPlotEnabled then
-                task.wait(0.5)
-                continue
-            end
-
-            local boughtOrBlocked = false
-
-            if not state.buying then
-                local candidates = getBuyCandidates(myPlot)
-                local cash = readCash()
-
-                for _, candidate in ipairs(candidates) do
-                    if cash < candidate.price then
-                        boughtOrBlocked = true
-                        continue
-                    end
-
-                    state.buying = true
-
-                    firePrompt(candidate.prompt)
-
-                    task.wait(0.75)
-                    state.buying = false
-                    boughtOrBlocked = true
-                    break
-                end
-            end
-
-            if not state.buying and not boughtOrBlocked then
-                local rollPrompt = getRollPrompt(myPlot)
-                if rollPrompt then
-                    firePrompt(rollPrompt)
-                    task.wait(RollDelay)
-                else
-                    task.wait(0.5)
-                end
-            else
-                task.wait(0.4)
-            end
-        end
-    end
-end)
+local state = {
+    buying = false,
+}
 
 local function normalizeKey(value)
     local key = tostring(value or ""):lower():gsub("%s+", "")
@@ -1496,7 +1418,7 @@ local function getRollPrompt(plot)
     return plot:FindFirstChild("RollPrompt", true)
 end
 
-local function getBestPlot(hrp, plotsFolder)
+local function getBestPlot()
     local bestPlot = nil
     local bestDist = math.huge
 
@@ -1569,9 +1491,8 @@ local myPlot = getBestPlot()
 
 if myPlot then
     task.spawn(function()
-        while true do
+        while task.wait(0.35) do
             if not AutoBuyPlotEnabled then
-                task.wait(0.5)
                 continue
             end
 
@@ -1603,11 +1524,7 @@ if myPlot then
                 if rollPrompt then
                     firePrompt(rollPrompt)
                     task.wait(RollDelay)
-                else
-                    task.wait(0.5)
                 end
-            else
-                task.wait(0.4)
             end
         end
     end)
@@ -1745,20 +1662,13 @@ end
 updateStatsUI()
 
 task.spawn(function()
-    while task.wait(1.0) do
+    while task.wait(0.5) do
         if ShowFPS then
             fpsLbl.Text = "FPS: " .. math.floor(workspace:GetRealPhysicsFPS())
         end
         if ShowPing then
             local ping = 0
-            local statsOk, statsVal = pcall(function()
-                local stats = game:GetService("Stats")
-                local net = stats:FindFirstChild("Network")
-                local item = net and net:FindFirstChild("ServerStatsItem")
-                local dataPing = item and item:FindFirstChild("Data Ping")
-                return dataPing and math.floor(dataPing:GetValue()) or 0
-            end)
-            if statsOk and statsVal then ping = statsVal end
+            pcall(function() ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) end)
             pingLbl.Text = "Ping: " .. ping .. " ms"
         end
     end
