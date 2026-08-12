@@ -22,14 +22,23 @@ getgenv().PayomboyZ_Unload = function()
 end
 
 local Fluent = nil
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua"))()
-end)
+local urls = {
+    "https://cdn.jsdelivr.net/gh/1dontgiveaf/Fluent@main/main.lua",
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/main.lua"
+}
 
-if success and result then
-    Fluent = result
-else
-    warn("Failed to load Fluent UI from raw.githubusercontent.com!")
+for _, url in ipairs(urls) do
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(url))()
+    end)
+    if success and result then
+        Fluent = result
+        break
+    end
+end
+
+if not Fluent then
+    warn("Failed to load Fluent UI from all sources! (SSL/Network Error)")
     return
 end
 
@@ -4368,12 +4377,23 @@ end)
 local InterfaceManager = nil
 local SaveManager = nil
 
-pcall(function()
-    InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"))()
-end)
-pcall(function()
-    SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"))()
-end)
+local imUrls = {
+    "https://cdn.jsdelivr.net/gh/1dontgiveaf/Fluent@main/Addons/InterfaceManager.lua",
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/InterfaceManager.lua"
+}
+for _, url in ipairs(imUrls) do
+    local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
+    if s and r then InterfaceManager = r; break end
+end
+
+local smUrls = {
+    "https://cdn.jsdelivr.net/gh/1dontgiveaf/Fluent@main/Addons/SaveManager.lua",
+    "https://raw.githubusercontent.com/1dontgiveaf/Fluent/main/Addons/SaveManager.lua"
+}
+for _, url in ipairs(smUrls) do
+    local s, r = pcall(function() return loadstring(game:HttpGet(url))() end)
+    if s and r then SaveManager = r; break end
+end
 
 if SaveManager then
     pcall(function()
