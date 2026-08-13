@@ -1,16 +1,28 @@
---[[
-    พยอมบอยฮับ (PayomboyZ Hub) | Steel an Egg Premium Automation Script
-    UI Framework: WindUI
-    Localization: Thai / English
-]]
+-- Ensure Game is Loaded First
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
 
--- Reliable WindUI Loader with Fallback
+-- Ultra-Reliable WindUI Loader with Multi-CDN Fallbacks
 local WindUI
-local success, err = pcall(function()
-    WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-end)
-if not success or not WindUI then
-    WindUI = loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+local cdnUrls = {
+    "https://cdn.jsdelivr.net/gh/Footagesus/WindUI@main/dist/main.lua",
+    "https://tree-hub.vercel.app/api/UI/WindUI",
+    "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+}
+
+for _, url in ipairs(cdnUrls) do
+    local ok, res = pcall(function()
+        return loadstring(game:HttpGet(url))()
+    end)
+    if ok and type(res) == "table" then
+        WindUI = res
+        break
+    end
+end
+
+if not WindUI then
+    WindUI = loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/Footagesus/WindUI@main/dist/main.lua"))()
 end
 
 -- Services
@@ -701,19 +713,21 @@ task.spawn(function()
     while true do
         task.wait(1.5)
         if Config.AutoEquipBest then
-            pcall(function()
-                if Network then
-                    if Network:FindFirstChild("Backpack") and Network.Backpack:FindFirstChild("GetEquipBestStatus") then
-                        Network.Backpack.GetEquipBestStatus:InvokeServer()
-                    end
-                    if Network:FindFirstChild("Pets") then
-                        if Network.Pets:FindFirstChild("EquipBest") then
-                            Network.Pets.EquipBest:InvokeServer()
-                        elseif Network.Pets:FindFirstChild("RequestEquipBest") then
-                            Network.Pets.RequestEquipBest:InvokeServer()
+            task.spawn(function()
+                pcall(function()
+                    if Network then
+                        if Network:FindFirstChild("Backpack") and Network.Backpack:FindFirstChild("GetEquipBestStatus") then
+                            Network.Backpack.GetEquipBestStatus:InvokeServer()
+                        end
+                        if Network:FindFirstChild("Pets") then
+                            if Network.Pets:FindFirstChild("EquipBest") then
+                                Network.Pets.EquipBest:InvokeServer()
+                            elseif Network.Pets:FindFirstChild("RequestEquipBest") then
+                                Network.Pets.RequestEquipBest:InvokeServer()
+                            end
                         end
                     end
-                end
+                end)
             end)
         end
 
