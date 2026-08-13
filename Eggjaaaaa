@@ -407,14 +407,10 @@ task.spawn(function()
                     end
                 end
             end)
-        end
-    end
-end)
-
--- Auto Place Egg Loop (Smart Return Home & Place with Rarity Filter)
+        -- Auto Place Egg Loop (Async Non-Blocking & Pen Upgrade Fallback)
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(1.0)
         if Config.AutoPlaceEgg then
             pcall(function()
                 local carriedEgg = getCarriedEggInfo()
@@ -429,10 +425,15 @@ task.spawn(function()
                     smartTPToPlot()
                 end
 
-                -- Invoke Remote Event for Egg Placement
-                if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestPlaceEgg") then
-                    Network.Eggs.RequestPlaceEgg:InvokeServer()
-                end
+                -- Async Remote Invocation (Prevents Ping Spikes & Network Blocking)
+                task.spawn(function()
+                    if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestPlaceEgg") then
+                        pcall(function()
+                            Network.Eggs.RequestPlaceEgg:InvokeServer({})
+                            Network.Eggs.RequestPlaceEgg:InvokeServer()
+                        end)
+                    end
+                end)
 
                 -- Scan Plot Nests / ProximityPrompts & move character close for 100% prompt execution
                 local myPlot = getMyPlot()
@@ -440,25 +441,38 @@ task.spawn(function()
                 if myPlot then
                     for _, prompt in pairs(myPlot:GetDescendants()) do
                         if prompt:IsA("ProximityPrompt") then
-                            local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                            local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
                             if text:find("place") or text:find("put") or text:find("deposit") or text:find("nest") or text:find("egg") or text:find("pen") then
                                 if root and prompt.Parent and prompt.Parent:IsA("BasePart") then
                                     root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 3, 0)
                                 end
                                 fireproximityprompt(prompt, 0)
                             end
+                            -- Auto upgrade pen if "upgrade" or "full" prompt appears
+                            if text:find("upgrade") or text:find("pen") or text:find("expand") then
+                                fireproximityprompt(prompt, 0)
+                            end
                         end
                     end
+                end
+
+                -- Trigger Plot Base Upgrade Remote if Pen is Full
+                if Network and Network:FindFirstChild("Plots") and Network.Plots:FindFirstChild("RequestBaseUpgrade") then
+                    task.spawn(function()
+                        pcall(function()
+                            Network.Plots.RequestBaseUpgrade:FireServer()
+                        end)
+                    end)
                 end
             end)
         end
     end
 end)
 
--- Auto Place Pet / Asset Loop
+-- Auto Place Pet / Asset Loop (Async Non-Blocking & Pen Upgrade)
 task.spawn(function()
     while true do
-        task.wait(0.8)
+        task.wait(1.2)
         if Config.AutoPlacePet then
             pcall(function()
                 if Config.AutoTPHomeToPlace then
@@ -472,38 +486,55 @@ task.spawn(function()
                 if myPlot then
                     for _, prompt in pairs(myPlot:GetDescendants()) do
                         if prompt:IsA("ProximityPrompt") then
-                            local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                            if text:find("pet") or text:find("animal") or text:find("asset") or text:find("pen") then
+                            local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
+                            if text:find("pet") or text:find("animal") or text:find("asset") or text:find("pen") or text:find("equip") then
                                 if root and prompt.Parent and prompt.Parent:IsA("BasePart") then
                                     root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 3, 0)
                                 end
+                                fireproximityprompt(prompt, 0)
+                            end
+                            if text:find("upgrade") or text:find("pen") then
                                 fireproximityprompt(prompt, 0)
                             end
                         end
                     end
                 end
 
-                -- 2. Call Remote Event for Pet/Asset Placement if equipped or in inventory
+                -- 2. Call Remote Event for Pet/Asset Placement asynchronously (No Ping Spike)
                 if Network and Network:FindFirstChild("ActiveAssets") and Network.ActiveAssets:FindFirstChild("RequestEquip") then
                     local clientAssets = Workspace:FindFirstChild("ClientRenderedAssets")
                     if clientAssets then
                         for _, asset in pairs(clientAssets:GetChildren()) do
                             local parts = asset.Name:split("_")
                             if parts[1] == tostring(LocalPlayer.UserId) and parts[2] then
-                                Network.ActiveAssets.RequestEquip:InvokeServer(parts[2])
+                                local assetUUID = parts[2]
+                                task.spawn(function()
+                                    pcall(function()
+                                        Network.ActiveAssets.RequestEquip:InvokeServer(assetUUID)
+                                    end)
+                                end)
                             end
                         end
                     end
+                end
+
+                -- Auto Upgrade Plot Base if full
+                if Network and Network:FindFirstChild("Plots") and Network.Plots:FindFirstChild("RequestBaseUpgrade") then
+                    task.spawn(function()
+                        pcall(function()
+                            Network.Plots.RequestBaseUpgrade:FireServer()
+                        end)
+                    end)
                 end
             end)
         end
     end
 end)
 
--- Auto Hatch Egg Loop (Smart Hatch via PlacedEggRenders & Plot Nests with Rarity Filter)
+-- Auto Hatch Egg Loop (Smart Hatch via PlacedEggRenders & Async Non-Blocking Remotes)
 task.spawn(function()
     while true do
-        task.wait(Config.HatchDelay)
+        task.wait(Config.HatchDelay or 1.0)
         if Config.AutoHatchEgg then
             pcall(function()
                 local myPlot = getMyPlot()
@@ -514,7 +545,7 @@ task.spawn(function()
                     smartTPToPlot()
                 end
 
-                -- 1. Direct Hatching via Workspace.PlacedEggRenders using Egg UUID (100% Reliable Remote)
+                -- 1. Direct Hatching via Workspace.PlacedEggRenders using Egg UUID (Async Remotes)
                 local placedEggFolder = Workspace:FindFirstChild("PlacedEggRenders")
                 local userIdStr = tostring(LocalPlayer.UserId)
 
@@ -528,12 +559,17 @@ task.spawn(function()
                             
                             if MeetsHatchFilter(rarity) then
                                 if Network and Network:FindFirstChild("Eggs") then
-                                    if Network.Eggs:FindFirstChild("RequestHatchEgg") then
-                                        Network.Eggs.RequestHatchEgg:InvokeServer(eggId)
-                                    end
-                                    if Network.Eggs:FindFirstChild("RequestCompleteHatchEgg") then
-                                        Network.Eggs.RequestCompleteHatchEgg:InvokeServer(eggId)
-                                    end
+                                    local eggRemoteFolder = Network.Eggs
+                                    task.spawn(function()
+                                        pcall(function()
+                                            if eggRemoteFolder:FindFirstChild("RequestHatchEgg") then
+                                                eggRemoteFolder.RequestHatchEgg:InvokeServer(eggId)
+                                            end
+                                            if eggRemoteFolder:FindFirstChild("RequestCompleteHatchEgg") then
+                                                eggRemoteFolder.RequestCompleteHatchEgg:InvokeServer(eggId)
+                                            end
+                                        end)
+                                    end)
                                 end
 
                                 -- Fire ProximityPrompts inside egg model
@@ -585,7 +621,11 @@ task.spawn(function()
                         Network.AssetInventory.SellAllAssets:FireServer()
                     end
                     if Network:FindFirstChild("ActiveAssets") and Network.ActiveAssets:FindFirstChild("RequestSell") then
-                        Network.ActiveAssets.RequestSell:InvokeServer()
+                        task.spawn(function()
+                            pcall(function()
+                                Network.ActiveAssets.RequestSell:InvokeServer()
+                            end)
+                        end)
                     end
                 end
 
