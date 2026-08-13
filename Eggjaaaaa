@@ -1,5 +1,5 @@
 --[[
-    Steel an Egg | Premium Automation Script
+    พยอมบอยฮับ (PayomboyZ Hub) | Steel an Egg Premium Automation Script
     UI Framework: WindUI
     Localization: Thai / English
 ]]
@@ -711,10 +711,10 @@ end)
 ---------------------------------------------------------
 
 local Window = WindUI:CreateWindow({
-    Title = "Steel an Egg | Automation Hub",
+    Title = "พยอมบอยฮับ | Steel an Egg Automation",
     Icon = "egg",
-    Author = "ValenHub",
-    Folder = "SteelAnEgg_Config",
+    Author = "พยอมบอยฮับ",
+    Folder = "PayomboyZHub_Config",
     Size = UDim2.fromOffset(630, 470),
     Transparent = true,
     Theme = "Dark",
@@ -1192,7 +1192,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 WindUI:Notify({
-    Title = "Steel an Egg Hub",
-    Content = "อัพเดทระบบขโมยไข่ในแมพ, ออโต้วางไข่, ฟักไข่ และกรองระดับไข่เรียบร้อย!",
-    Duration = 5,
+    Title = "🔥 พยอมบอยฮับ (PayomboyZ Hub) 🔥",
+    Content = "ยินดีต้อนรับสู่ พยอมบอยฮับ! ระบบขโมยไข่ในแมพ, ออโต้วางไข่, ฟักไข่ และวางสัตว์เลี้ยงพร้อมใช้งานแล้ว!",
+    Duration = 6,
 })
