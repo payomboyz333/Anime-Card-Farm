@@ -410,23 +410,23 @@ local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", I
 ---------------------------------------------------------
 -- TAB 1: AUTO PLAY
 ---------------------------------------------------------
-local AutoPlaySec = AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" })
+AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" })
 
-AutoPlaySec:Toggle({
+AutoPlayTab:Toggle({
     Title = "ออโต้ขโมยไข่ในแมพ (Auto Steal Map Eggs)",
     Desc = "วิ่งขโมยและเก็บไข่รอบๆ แมพให้อัตโนมัติ",
     Value = Config.AutoStealMapEggs,
     Callback = function(v) Config.AutoStealMapEggs = v end
 })
 
-AutoPlaySec:Toggle({
+AutoPlayTab:Toggle({
     Title = "วาปไปหาไข่ในแมพ (Auto TP to Map Eggs)",
     Desc = "วาร์ปไปเก็บไข่ในจุดเกิดไข่ทันที",
     Value = Config.AutoTPToMapEggs,
     Callback = function(v) Config.AutoTPToMapEggs = v end
 })
 
-AutoPlaySec:Slider({
+AutoPlayTab:Slider({
     Title = "ดีเลย์ขโมยไข่ (Steal Delay)",
     Desc = "ความเร็วในการส่งคำสั่งขโมย (วินาที)",
     Min = 0.05,
@@ -439,21 +439,21 @@ AutoPlaySec:Slider({
     end
 })
 
-AutoPlaySec:Toggle({
+AutoPlayTab:Toggle({
     Title = "ออโต้ขายไข่ (Auto Sell Egg)",
     Desc = "นำไข่ไปขายที่จุดรับซื้ออัตโนมัติ",
     Value = Config.AutoSell,
     Callback = function(v) Config.AutoSell = v end
 })
 
-AutoPlaySec:Toggle({
+AutoPlayTab:Toggle({
     Title = "ออโต้ลู่วิ่ง (Auto Treadmill Farm)",
     Desc = "วิ่งและปั๊มสปีดบนลู่วิ่งอัตโนมัติ",
     Value = Config.AutoTreadmill,
     Callback = function(v) Config.AutoTreadmill = v end
 })
 
-AutoPlaySec:Toggle({
+AutoPlayTab:Toggle({
     Title = "ออโต้ใส่สัตว์เลี้ยงที่ดีที่สุด (Auto Equip Best)",
     Desc = "สวมใส่สัตว์เลี้ยงที่เก่งที่สุดให้อัตโนมัติ",
     Value = Config.AutoEquipBest,
@@ -463,23 +463,23 @@ AutoPlaySec:Toggle({
 ---------------------------------------------------------
 -- TAB 2: AUTO EGG (วางไข่ / ฟักไข่ / กรองไข่)
 ---------------------------------------------------------
-local EggSec = EggTab:Section({ Title = "ระบบวางไข่ ฟักไข่ และคัดเลือกระดับ (Egg Hatch & Filter)" })
+EggTab:Section({ Title = "ระบบวางไข่ ฟักไข่ และคัดเลือกระดับ (Egg Hatch & Filter)" })
 
-EggSec:Toggle({
+EggTab:Toggle({
     Title = "ออโต้วางไข่ (Auto Place Egg)",
     Desc = "นำไข่ที่ขโมยมาวางลงในรัง/พล็อตให้อัตโนมัติ",
     Value = Config.AutoPlaceEgg,
     Callback = function(v) Config.AutoPlaceEgg = v end
 })
 
-EggSec:Toggle({
+EggTab:Toggle({
     Title = "ออโต้ฟักไข่ (Auto Hatch Egg)",
     Desc = "กดฟักไข่ที่วางในพล็อตให้อัตโนมัติ",
     Value = Config.AutoHatchEgg,
     Callback = function(v) Config.AutoHatchEgg = v end
 })
 
-EggSec:Slider({
+EggTab:Slider({
     Title = "ดีเลย์ฟักไข่ (Hatch Delay)",
     Desc = "ความเร็วในการส่งคำสั่งฟักไข่ (วินาที)",
     Min = 0.1,
@@ -492,7 +492,7 @@ EggSec:Slider({
     end
 })
 
-EggSec:Dropdown({
+EggTab:Dropdown({
     Title = "ระดับไข่ขั้นต่ำที่จะเก็บ/ฟัก (Min Rarity Filter)",
     Desc = "เลือกกรองเก็บเฉพาะไข่ระดับที่ต้องการขึ้นไป",
     Values = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
@@ -504,30 +504,30 @@ EggSec:Dropdown({
 ---------------------------------------------------------
 -- TAB 3: AUTO UPGRADE
 ---------------------------------------------------------
-local UpgradeSec = UpgradeTab:Section({ Title = "ระบบอัพเกรดอัตโนมัติ (Auto Upgrades)" })
+UpgradeTab:Section({ Title = "ระบบอัพเกรดอัตโนมัติ (Auto Upgrades)" })
 
-UpgradeSec:Toggle({
+UpgradeTab:Toggle({
     Title = "ออโต้อัพเกรดความเร็ว (Auto Upgrade Speed)",
     Desc = "ซื้อและอัพเกรดความเร็วอัตโนมัติ",
     Value = Config.AutoUpgradeSpeed,
     Callback = function(v) Config.AutoUpgradeSpeed = v end
 })
 
-UpgradeSec:Toggle({
+UpgradeTab:Toggle({
     Title = "ออโต้อัพเกรดพื้นที่/พล็อต (Auto Upgrade Plot)",
     Desc = "อัพเกรดพื้นที่พล็อตเลี้ยงไข่อัตโนมัติ",
     Value = Config.AutoUpgradePlot,
     Callback = function(v) Config.AutoUpgradePlot = v end
 })
 
-UpgradeSec:Toggle({
+UpgradeTab:Toggle({
     Title = "ออโต้ซื้อเทรล (Auto Buy Trail)",
     Desc = "ซื้อเทรล/เอฟเฟกต์อัตโนมัติ",
     Value = Config.AutoBuyTrails,
     Callback = function(v) Config.AutoBuyTrails = v end
 })
 
-UpgradeSec:Dropdown({
+UpgradeTab:Dropdown({
     Title = "เลือกเทรลที่จะซื้อ (Select Trail)",
     Values = { "GreyTrail", "GreenTrail", "BlueTrail" },
     Value = Config.SelectedTrail,
@@ -538,9 +538,9 @@ UpgradeSec:Dropdown({
 ---------------------------------------------------------
 -- TAB 4: MOVEMENT
 ---------------------------------------------------------
-local MoveSec = MoveTab:Section({ Title = "ปรับแต่งตัวละคร (Player Stats)" })
+MoveTab:Section({ Title = "ปรับแต่งตัวละคร (Player Stats)" })
 
-MoveSec:Toggle({
+MoveTab:Toggle({
     Title = "เปิดใช้งานความเร็วเดิน (WalkSpeed Toggle)",
     Value = Config.WalkSpeedToggle,
     Callback = function(v)
@@ -552,7 +552,7 @@ MoveSec:Toggle({
     end
 })
 
-MoveSec:Slider({
+MoveTab:Slider({
     Title = "ความเร็วการเดิน (WalkSpeed)",
     Min = 16,
     Max = 350,
@@ -569,7 +569,7 @@ MoveSec:Slider({
     end
 })
 
-MoveSec:Toggle({
+MoveTab:Toggle({
     Title = "เปิดใช้งานแรงกระโดด (JumpPower Toggle)",
     Value = Config.JumpPowerToggle,
     Callback = function(v)
@@ -582,7 +582,7 @@ MoveSec:Toggle({
     end
 })
 
-MoveSec:Slider({
+MoveTab:Slider({
     Title = "แรงกระโดด (JumpPower)",
     Min = 50,
     Max = 400,
@@ -602,21 +602,21 @@ MoveSec:Slider({
     end
 })
 
-MoveSec:Toggle({
+MoveTab:Toggle({
     Title = "กระโดดไม่จำกัด (Infinite Jump)",
     Value = Config.InfiniteJump,
     Callback = function(v) Config.InfiniteJump = v end
 })
 
-MoveSec:Toggle({
+MoveTab:Toggle({
     Title = "เดินทะลุกำแพง (Noclip)",
     Value = Config.Noclip,
     Callback = function(v) Config.Noclip = v end
 })
 
-local FlySec = MoveTab:Section({ Title = "ระบบการบิน (Flight System)" })
+MoveTab:Section({ Title = "ระบบการบิน (Flight System)" })
 
-FlySec:Toggle({
+MoveTab:Toggle({
     Title = "เปิดโหมดบิน (Fly Toggle)",
     Value = Config.FlyToggle,
     Callback = function(v)
@@ -625,7 +625,7 @@ FlySec:Toggle({
     end
 })
 
-FlySec:Slider({
+MoveTab:Slider({
     Title = "ความเร็วในการบิน (Fly Speed)",
     Min = 10,
     Max = 250,
@@ -640,22 +640,22 @@ FlySec:Slider({
 ---------------------------------------------------------
 -- TAB 5: UTILITY
 ---------------------------------------------------------
-local UtilSec = UtilityTab:Section({ Title = "ระบบช่วยเหลือ (Utility)" })
+UtilityTab:Section({ Title = "ระบบช่วยเหลือ (Utility)" })
 
-UtilSec:Toggle({
+UtilityTab:Toggle({
     Title = "ป้องกันโดนเตะ AFK (Anti-AFK)",
     Value = Config.AntiAFK,
     Callback = function(v) Config.AntiAFK = v end
 })
 
-UtilSec:Button({
+UtilityTab:Button({
     Title = "รีจอยน์เซิร์ฟเวอร์เดิม (Rejoin Server)",
     Callback = function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
     end
 })
 
-UtilSec:Button({
+UtilityTab:Button({
     Title = "ย้ายเซิร์ฟเวอร์ใหม่ (Server Hop)",
     Callback = function()
         local raw = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")
