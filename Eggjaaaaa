@@ -1,0 +1,595 @@
+--[[
+    Steel an Egg | Premium Automation Script
+    UI Framework: WindUI
+    Localization: Thai / English
+]]
+
+-- Reliable WindUI Loader with Fallback
+local WindUI
+local success, err = pcall(function()
+    WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if not success or not WindUI then
+    WindUI = loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+end
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local StatsService = game:GetService("Stats")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Non-blocking Character Getters
+local function getCharacter()
+    return LocalPlayer.Character
+end
+
+local function getHumanoid()
+    local char = getCharacter()
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local function getRootPart()
+    local char = getCharacter()
+    return char and (char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart)
+end
+
+-- Remotes Reference
+local Network = ReplicatedStorage:FindFirstChild("Network")
+
+-- Configuration State
+local Config = {
+    -- Auto Play & Farm
+    AutoSteal = false,
+    StealDelay = 0.1,
+    AutoSell = false,
+    SellDelay = 0.5,
+    AutoEquipBest = false,
+
+    -- Auto Upgrade
+    AutoUpgradeSpeed = false,
+    AutoUpgradePlot = false,
+    AutoBuyTrails = false,
+    SelectedTrail = "GreyTrail",
+
+    -- Movement & Physics
+    WalkSpeedToggle = false,
+    WalkSpeedValue = 16,
+    JumpPowerToggle = false,
+    JumpPowerValue = 50,
+    InfiniteJump = false,
+    Noclip = false,
+    FlyToggle = false,
+    FlySpeed = 50,
+
+    -- Misc & Protection
+    AntiAFK = true,
+}
+
+-- Anti-AFK Handler
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        pcall(function()
+            VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        end)
+    end
+end)
+
+-- Fly Controller Variables
+local flyBodyVelocity, flyBodyGyro
+
+local function ToggleFly(state)
+    local root = getRootPart()
+    if state then
+        if not root then return end
+        pcall(function()
+            if flyBodyVelocity then flyBodyVelocity:Destroy() end
+            if flyBodyGyro then flyBodyGyro:Destroy() end
+        end)
+
+        flyBodyVelocity = Instance.new("BodyVelocity")
+        flyBodyGyro = Instance.new("BodyGyro")
+
+        flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        flyBodyVelocity.Velocity = Vector3.zero
+        flyBodyVelocity.Parent = root
+
+        flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+        flyBodyGyro.CFrame = root.CFrame
+        flyBodyGyro.Parent = root
+
+        task.spawn(function()
+            while Config.FlyToggle do
+                local currentRoot = getRootPart()
+                local hum = getHumanoid()
+                if not currentRoot or not hum then break end
+
+                local Camera = Workspace.CurrentCamera
+                local moveDir = Vector3.zero
+
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+                flyBodyVelocity.Velocity = moveDir * Config.FlySpeed
+                flyBodyGyro.CFrame = Camera.CFrame
+                task.wait()
+            end
+            pcall(function()
+                if flyBodyVelocity then flyBodyVelocity:Destroy() end
+                if flyBodyGyro then flyBodyGyro:Destroy() end
+            end)
+        end)
+    else
+        pcall(function()
+            if flyBodyVelocity then flyBodyVelocity:Destroy() end
+            if flyBodyGyro then flyBodyGyro:Destroy() end
+        end)
+    end
+end
+
+-- Render Stepped Loop (Noclip & Speed Override)
+RunService.Stepped:Connect(function()
+    local char = getCharacter()
+    local hum = getHumanoid()
+
+    if Config.Noclip and char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+
+    if Config.WalkSpeedToggle and hum then
+        hum.WalkSpeed = Config.WalkSpeedValue
+    end
+
+    if Config.JumpPowerToggle and hum then
+        hum.UseJumpPower = true
+        hum.JumpPower = Config.JumpPowerValue
+    end
+end)
+
+-- Infinite Jump Listener
+UserInputService.JumpRequest:Connect(function()
+    if Config.InfiniteJump then
+        local hum = getHumanoid()
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- AUTOMATION LOOPS
+---------------------------------------------------------
+
+-- Auto Steal Egg Loop
+task.spawn(function()
+    while true do
+        task.wait(Config.StealDelay)
+        if Config.AutoSteal then
+            pcall(function()
+                for _, prompt in pairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and (prompt.ActionText:find("Steal") or prompt.ActionText:find("Carry") or prompt.ObjectText:find("Egg")) then
+                        fireproximityprompt(prompt)
+                    end
+                end
+                if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestAreaEggCarry") then
+                    Network.Eggs.RequestAreaEggCarry:InvokeServer()
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Sell Loop
+task.spawn(function()
+    while true do
+        task.wait(Config.SellDelay)
+        if Config.AutoSell then
+            pcall(function()
+                local root = getRootPart()
+                local sellPart = Workspace:FindFirstChild("Sell") or Workspace:FindFirstChild("SellZone") or Workspace:FindFirstChild("Deposit")
+                if sellPart and root then
+                    local targetPart = sellPart:IsA("BasePart") and sellPart or sellPart:FindFirstChildWhichIsA("BasePart")
+                    if targetPart then
+                        firetouchinterest(root, targetPart, 0)
+                        firetouchinterest(root, targetPart, 1)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Equip Best & Upgrade Loop
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if Config.AutoEquipBest then
+            pcall(function()
+                if Network and Network:FindFirstChild("Backpack") and Network.Backpack:FindFirstChild("GetEquipBestStatus") then
+                    Network.Backpack.GetEquipBestStatus:InvokeServer()
+                end
+            end)
+        end
+
+        if Config.AutoBuyTrails then
+            pcall(function()
+                if Network and Network:FindFirstChild("Trails") and Network.Trails:FindFirstChild("RequestPurchase") then
+                    Network.Trails.RequestPurchase:InvokeServer(Config.SelectedTrail)
+                end
+            end)
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- WIND UI CREATION (WINDOW)
+---------------------------------------------------------
+
+local Window = WindUI:CreateWindow({
+    Title = "Steel an Egg | Automation Hub",
+    Icon = "egg",
+    Author = "ValenHub",
+    Folder = "SteelAnEgg_Config",
+    Size = UDim2.fromOffset(600, 440),
+    Transparent = true,
+    Theme = "Dark",
+})
+
+---------------------------------------------------------
+-- FLOATING AVATAR DASHBOARD & UI TOGGLE CARD
+---------------------------------------------------------
+
+local DashboardGui = Instance.new("ScreenGui")
+DashboardGui.Name = "SteelAnEgg_AvatarDashboard"
+DashboardGui.ResetOnSpawn = false
+
+if gethui then
+    DashboardGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(DashboardGui)
+    DashboardGui.Parent = CoreGui
+else
+    DashboardGui.Parent = CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local Frame = Instance.new("Frame")
+Frame.Name = "DashboardFrame"
+Frame.Size = UDim2.fromOffset(210, 58)
+Frame.Position = UDim2.new(0.015, 0, 0.35, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = DashboardGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = Frame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(255, 65, 65)
+UIStroke.Thickness = 1.8
+UIStroke.Parent = Frame
+
+local Avatar = Instance.new("ImageLabel")
+Avatar.Name = "Avatar"
+Avatar.Size = UDim2.fromOffset(44, 44)
+Avatar.Position = UDim2.fromOffset(7, 7)
+Avatar.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+Avatar.BackgroundTransparency = 0
+Avatar.Parent = Frame
+
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(0, 10)
+AvatarCorner.Parent = Avatar
+
+-- Fetch User Avatar Thumbnail
+task.spawn(function()
+    pcall(function()
+        local content, isReady = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+        if isReady and content then
+            Avatar.Image = content
+        end
+    end)
+end)
+
+local NameLabel = Instance.new("TextLabel")
+NameLabel.Name = "NameLabel"
+NameLabel.Size = UDim2.new(1, -62, 0, 22)
+NameLabel.Position = UDim2.fromOffset(58, 7)
+NameLabel.BackgroundTransparency = 1
+NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+NameLabel.TextSize = 14
+NameLabel.Font = Enum.Font.SourceSansBold
+NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+NameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+NameLabel.Text = LocalPlayer.DisplayName or LocalPlayer.Name
+NameLabel.Parent = Frame
+
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Name = "StatsLabel"
+StatsLabel.Size = UDim2.new(1, -62, 0, 20)
+StatsLabel.Position = UDim2.fromOffset(58, 29)
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.TextColor3 = Color3.fromRGB(170, 170, 190)
+StatsLabel.TextSize = 12
+StatsLabel.Font = Enum.Font.SourceSans
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatsLabel.Text = "FPS: -- | Ping: --ms"
+StatsLabel.Parent = Frame
+
+-- Live FPS & Ping Calculator Loop
+local lastTime = tick()
+local frameCount = 0
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = tick()
+    if now - lastTime >= 1 then
+        local fps = math.floor(frameCount / (now - lastTime))
+        frameCount = 0
+        lastTime = now
+
+        local ping = 0
+        pcall(function()
+            ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        StatsLabel.Text = string.format("FPS: %d | Ping: %dms", fps, ping)
+    end
+end)
+
+-- Click Button overlay to Toggle UI
+local ClickButton = Instance.new("TextButton")
+ClickButton.Name = "ToggleClickArea"
+ClickButton.Size = UDim2.fromScale(1, 1)
+ClickButton.BackgroundTransparency = 1
+ClickButton.Text = ""
+ClickButton.Parent = Frame
+
+local isWindowOpen = true
+ClickButton.MouseButton1Click:Connect(function()
+    isWindowOpen = not isWindowOpen
+    pcall(function()
+        if Window.Toggle then
+            Window:Toggle()
+        elseif Window.Minimize then
+            Window:Minimize()
+        end
+    end)
+end)
+
+-- TABS
+local AutoPlayTab = Window:Tab({ Title = "ออโต้เล่น (Auto Play)", Icon = "play" })
+local UpgradeTab  = Window:Tab({ Title = "ออโต้อัพเกรด (Auto Upgrade)", Icon = "zap" })
+local MoveTab     = Window:Tab({ Title = "การเคลื่อนที่ (Movement)", Icon = "move" })
+local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", Icon = "settings" })
+
+---------------------------------------------------------
+-- TAB 1: AUTO PLAY
+---------------------------------------------------------
+AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" })
+
+AutoPlayTab:Toggle({
+    Title = "ออโต้ขโมยไข่ (Auto Steal Egg)",
+    Desc = "ขโมยและเก็บไข่อัตโนมัติในบริเวณรอบๆ",
+    Value = Config.AutoSteal,
+    Callback = function(v) Config.AutoSteal = v end
+})
+
+AutoPlayTab:Slider({
+    Title = "ดีเลย์ขโมยไข่ (Steal Delay)",
+    Desc = "ความเร็วในการส่งคำสั่งขโมย (วินาที)",
+    Min = 0.05,
+    Max = 1,
+    Value = Config.StealDelay,
+    Default = Config.StealDelay,
+    Step = 0.05,
+    Callback = function(v)
+        Config.StealDelay = tonumber(v) or 0.1
+    end
+})
+
+AutoPlayTab:Toggle({
+    Title = "ออโต้ขายไข่ (Auto Sell Egg)",
+    Desc = "นำไข่ไปขายที่จุดรับซื้ออัตโนมัติ",
+    Value = Config.AutoSell,
+    Callback = function(v) Config.AutoSell = v end
+})
+
+AutoPlayTab:Toggle({
+    Title = "ออโต้ใส่สัตว์เลี้ยงที่ดีที่สุด (Auto Equip Best)",
+    Desc = "สวมใส่สัตว์เลี้ยงที่เก่งที่สุดให้อัตโนมัติ",
+    Value = Config.AutoEquipBest,
+    Callback = function(v) Config.AutoEquipBest = v end
+})
+
+---------------------------------------------------------
+-- TAB 2: AUTO UPGRADE
+---------------------------------------------------------
+UpgradeTab:Section({ Title = "ระบบอัพเกรดอัตโนมัติ (Auto Upgrades)" })
+
+UpgradeTab:Toggle({
+    Title = "ออโต้อัพเกรดความเร็ว (Auto Upgrade Speed)",
+    Desc = "ซื้อและอัพเกรดความเร็วอัตโนมัติ",
+    Value = Config.AutoUpgradeSpeed,
+    Callback = function(v) Config.AutoUpgradeSpeed = v end
+})
+
+UpgradeTab:Toggle({
+    Title = "ออโต้อัพเกรดพื้นที่/พล็อต (Auto Upgrade Plot)",
+    Desc = "อัพเกรดพื้นที่พล็อตเลี้ยงไข่อัตโนมัติ",
+    Value = Config.AutoUpgradePlot,
+    Callback = function(v) Config.AutoUpgradePlot = v end
+})
+
+UpgradeTab:Toggle({
+    Title = "ออโต้ซื้อเทรล (Auto Buy Trail)",
+    Desc = "ซื้อเทรล/เอฟเฟกต์อัตโนมัติ",
+    Value = Config.AutoBuyTrails,
+    Callback = function(v) Config.AutoBuyTrails = v end
+})
+
+UpgradeTab:Dropdown({
+    Title = "เลือกเทรลที่จะซื้อ (Select Trail)",
+    Values = { "GreyTrail", "GreenTrail", "BlueTrail" },
+    Value = Config.SelectedTrail,
+    Default = Config.SelectedTrail,
+    Callback = function(v) Config.SelectedTrail = v end
+})
+
+---------------------------------------------------------
+-- TAB 3: MOVEMENT
+---------------------------------------------------------
+MoveTab:Section({ Title = "ปรับแต่งตัวละคร (Player Stats)" })
+
+MoveTab:Toggle({
+    Title = "เปิดใช้งานความเร็วเดิน (WalkSpeed Toggle)",
+    Value = Config.WalkSpeedToggle,
+    Callback = function(v)
+        Config.WalkSpeedToggle = v
+        local hum = getHumanoid()
+        if hum then
+            hum.WalkSpeed = v and Config.WalkSpeedValue or 16
+        end
+    end
+})
+
+MoveTab:Slider({
+    Title = "ความเร็วการเดิน (WalkSpeed)",
+    Min = 16,
+    Max = 350,
+    Value = Config.WalkSpeedValue,
+    Default = Config.WalkSpeedValue,
+    Step = 1,
+    Callback = function(v)
+        local numVal = tonumber(v) or 16
+        Config.WalkSpeedValue = numVal
+        if Config.WalkSpeedToggle then
+            local hum = getHumanoid()
+            if hum then hum.WalkSpeed = numVal end
+        end
+    end
+})
+
+MoveTab:Toggle({
+    Title = "เปิดใช้งานแรงกระโดด (JumpPower Toggle)",
+    Value = Config.JumpPowerToggle,
+    Callback = function(v)
+        Config.JumpPowerToggle = v
+        local hum = getHumanoid()
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = v and Config.JumpPowerValue or 50
+        end
+    end
+})
+
+MoveTab:Slider({
+    Title = "แรงกระโดด (JumpPower)",
+    Min = 50,
+    Max = 400,
+    Value = Config.JumpPowerValue,
+    Default = Config.JumpPowerValue,
+    Step = 5,
+    Callback = function(v)
+        local numVal = tonumber(v) or 50
+        Config.JumpPowerValue = numVal
+        if Config.JumpPowerToggle then
+            local hum = getHumanoid()
+            if hum then
+                hum.UseJumpPower = true
+                hum.JumpPower = numVal
+            end
+        end
+    end
+})
+
+MoveTab:Toggle({
+    Title = "กระโดดไม่จำกัด (Infinite Jump)",
+    Value = Config.InfiniteJump,
+    Callback = function(v) Config.InfiniteJump = v end
+})
+
+MoveTab:Toggle({
+    Title = "เดินทะลุกำแพง (Noclip)",
+    Value = Config.Noclip,
+    Callback = function(v) Config.Noclip = v end
+})
+
+MoveTab:Section({ Title = "ระบบการบิน (Flight System)" })
+
+MoveTab:Toggle({
+    Title = "เปิดโหมดบิน (Fly Toggle)",
+    Value = Config.FlyToggle,
+    Callback = function(v)
+        Config.FlyToggle = v
+        ToggleFly(v)
+    end
+})
+
+MoveTab:Slider({
+    Title = "ความเร็วในการบิน (Fly Speed)",
+    Min = 10,
+    Max = 250,
+    Value = Config.FlySpeed,
+    Default = Config.FlySpeed,
+    Step = 5,
+    Callback = function(v)
+        Config.FlySpeed = tonumber(v) or 50
+    end
+})
+
+---------------------------------------------------------
+-- TAB 4: UTILITY
+---------------------------------------------------------
+UtilityTab:Section({ Title = "ระบบช่วยเหลือ (Utility)" })
+
+UtilityTab:Toggle({
+    Title = "ป้องกันโดนเตะ AFK (Anti-AFK)",
+    Value = Config.AntiAFK,
+    Callback = function(v) Config.AntiAFK = v end
+})
+
+UtilityTab:Button({
+    Title = "รีจอยน์เซิร์ฟเวอร์เดิม (Rejoin Server)",
+    Callback = function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end
+})
+
+UtilityTab:Button({
+    Title = "ย้ายเซิร์ฟเวอร์ใหม่ (Server Hop)",
+    Callback = function()
+        local raw = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")
+        local servers = HttpService:JSONDecode(raw).data
+        for _, s in pairs(servers) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+                break
+            end
+        end
+    end
+})
+
+WindUI:Notify({
+    Title = "Steel an Egg Hub",
+    Content = "โหลด Avatar Dashboard Toggle & FPS/Ping แสดงผลเรียบร้อย!",
+    Duration = 5,
+})
