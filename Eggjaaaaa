@@ -372,7 +372,7 @@ local function MeetsHatchFilter(eggRarityStr)
     return currentLevel >= minLevel
 end
 
--- Auto Steal Eggs from Map Loop
+-- Auto Steal Eggs from Map Loop (Smart Steal & Instant Guard Escape)
 task.spawn(function()
     while true do
         task.wait(Config.StealDelay)
@@ -389,7 +389,7 @@ task.spawn(function()
                                 root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 2, 0)
                                 task.wait(0.05)
                             end
-                            fireproximityprompt(prompt)
+                            fireproximityprompt(prompt, 0)
                         end
                     end
                 end
@@ -397,6 +397,14 @@ task.spawn(function()
                 -- 2. Call Remote Event for Map Area Egg Carry
                 if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestAreaEggCarry") then
                     Network.Eggs.RequestAreaEggCarry:InvokeServer()
+                end
+
+                -- 3. Instant Guard Escape: If carrying egg or RUN!! banner active, TP home immediately
+                local carriedEgg = getCarriedEggInfo()
+                if carriedEgg or (LocalPlayer.PlayerGui:FindFirstChild("MainGui") and LocalPlayer.PlayerGui.MainGui:FindFirstChild("RunBanner")) then
+                    if Config.AutoTPHomeToPlace then
+                        smartTPToPlot()
+                    end
                 end
             end)
         end
@@ -565,12 +573,23 @@ task.spawn(function()
     end
 end)
 
--- Auto Sell Loop
+-- Auto Sell Loop (Physical Touch + Remote Invocation)
 task.spawn(function()
     while true do
         task.wait(Config.SellDelay)
         if Config.AutoSell then
             pcall(function()
+                -- 1. Direct Remote Auto Sell (100% Remote Bypass)
+                if Network then
+                    if Network:FindFirstChild("AssetInventory") and Network.AssetInventory:FindFirstChild("SellAllAssets") then
+                        Network.AssetInventory.SellAllAssets:FireServer()
+                    end
+                    if Network:FindFirstChild("ActiveAssets") and Network.ActiveAssets:FindFirstChild("RequestSell") then
+                        Network.ActiveAssets.RequestSell:InvokeServer()
+                    end
+                end
+
+                -- 2. Physical Touch Stand Fallback
                 local root = getRootPart()
                 local sellPart = Workspace:FindFirstChild("Sell") or Workspace:FindFirstChild("SellZone") or Workspace:FindFirstChild("Deposit")
                 if sellPart and root then
@@ -582,6 +601,25 @@ task.spawn(function()
                 end
             end)
         end
+    end
+end)
+
+-- Auto Claim Index Rewards & Group Rewards Loop
+task.spawn(function()
+    while true do
+        task.wait(10)
+        pcall(function()
+            if Network then
+                -- Claim Pet/Egg Index Rewards
+                if Network:FindFirstChild("Index") and Network.Index:FindFirstChild("RequestClaim") then
+                    Network.Index.RequestClaim:InvokeServer()
+                end
+                -- Claim Group / Daily Rewards
+                if Network:FindFirstChild("GroupReward") and Network.GroupReward:FindFirstChild("ClaimReward") then
+                    Network.GroupReward.ClaimReward:InvokeServer()
+                end
+            end
+        end)
     end
 end)
 
