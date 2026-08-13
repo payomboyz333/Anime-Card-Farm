@@ -45,11 +45,31 @@ end
 -- Remotes Reference
 local Network = ReplicatedStorage:FindFirstChild("Network")
 
+-- Rarity Mapping Table
+local RarityLevels = {
+    ["Common"] = 1,
+    ["Uncommon"] = 2,
+    ["Rare"] = 3,
+    ["Epic"] = 4,
+    ["Legendary"] = 5,
+    ["Mythic"] = 6,
+    ["Divine"] = 7
+}
+
 -- Configuration State
 local Config = {
-    -- Auto Play & Farm
-    AutoSteal = false,
+    -- Auto Steal & Map Eggs
+    AutoStealMapEggs = false,
     StealDelay = 0.1,
+    AutoTPToMapEggs = false,
+    
+    -- Auto Place & Hatch
+    AutoPlaceEgg = false,
+    AutoHatchEgg = false,
+    HatchDelay = 0.2,
+    MinRarityFilter = "Common",
+
+    -- Auto Farm & Sell
     AutoSell = false,
     SellDelay = 0.5,
     AutoTreadmill = false,
@@ -177,22 +197,92 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 ---------------------------------------------------------
--- AUTOMATION LOOPS
+-- AUTOMATION LOOPS & MAP HELPERS
 ---------------------------------------------------------
 
--- Auto Steal Egg Loop
+-- Helper: Find Local Player's Plot in Workspace
+local function getMyPlot()
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return nil end
+    for _, plot in pairs(plots:GetChildren()) do
+        for _, desc in pairs(plot:GetDescendants()) do
+            if desc:IsA("TextLabel") and (desc.Text == LocalPlayer.Name or desc.Text == LocalPlayer.DisplayName) then
+                return plot
+            end
+        end
+    end
+    return nil
+end
+
+-- Helper: Check if Rarity meets minimum filter requirement
+local function MeetsRarityFilter(eggRarity)
+    if not eggRarity then return true end
+    local minLevel = RarityLevels[Config.MinRarityFilter] or 1
+    local currentLevel = RarityLevels[eggRarity] or 1
+    return currentLevel >= minLevel
+end
+
+-- Auto Steal Eggs from Map Loop
 task.spawn(function()
     while true do
         task.wait(Config.StealDelay)
-        if Config.AutoSteal then
+        if Config.AutoStealMapEggs then
             pcall(function()
+                local root = getRootPart()
+                
+                -- 1. Scan ProximityPrompts & Egg Nests in Map
                 for _, prompt in pairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") and (prompt.ActionText:find("Steal") or prompt.ActionText:find("Carry") or prompt.ObjectText:find("Egg")) then
-                        fireproximityprompt(prompt)
+                    if prompt:IsA("ProximityPrompt") then
+                        local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+                        if text:find("steal") or text:find("carry") or text:find("egg") or text:find("take") or text:find("grab") then
+                            if Config.AutoTPToMapEggs and root and prompt.Parent and prompt.Parent:IsA("BasePart") then
+                                root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 2, 0)
+                                task.wait(0.05)
+                            end
+                            fireproximityprompt(prompt)
+                        end
                     end
                 end
+                
+                -- 2. Call Remote Event for Map Area Egg Carry
                 if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestAreaEggCarry") then
                     Network.Eggs.RequestAreaEggCarry:InvokeServer()
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Place Egg Loop
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if Config.AutoPlaceEgg then
+            pcall(function()
+                if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestPlaceEgg") then
+                    Network.Eggs.RequestPlaceEgg:InvokeServer()
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Hatch Egg Loop
+task.spawn(function()
+    while true do
+        task.wait(Config.HatchDelay)
+        if Config.AutoHatchEgg then
+            pcall(function()
+                -- Scan Placed Eggs in Plot/Workspace or Trigger Remote
+                if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestHatchEgg") then
+                    Network.Eggs.RequestHatchEgg:InvokeServer()
+                end
+                
+                -- Also check proximity prompts on plot nests
+                for _, prompt in pairs(Workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") and prompt.ActionText:lower():find("hatch") then
+                        fireproximityprompt(prompt)
+                    end
                 end
             end)
         end
@@ -226,8 +316,16 @@ task.spawn(function()
         if Config.AutoTreadmill then
             pcall(function()
                 local root = getRootPart()
+                local myPlot = getMyPlot()
                 if root then
-                    -- Search for Treadmill pads or prompts in Plots / Workspace
+                    if myPlot then
+                        local treadmill = myPlot:FindFirstChild("TreadmillBottom", true) or myPlot:FindFirstChild("Treadmill", true)
+                        if treadmill and treadmill:IsA("BasePart") then
+                            firetouchinterest(root, treadmill, 0)
+                            firetouchinterest(root, treadmill, 1)
+                        end
+                    end
+                    -- Map fallback scan
                     for _, v in pairs(Workspace:GetDescendants()) do
                         if v.Name:lower():find("treadmill") or v.Name:lower():find("runpad") or v.Name:lower():find("speedpad") then
                             if v:IsA("BasePart") then
@@ -244,10 +342,10 @@ task.spawn(function()
     end
 end)
 
--- Auto Equip Best & Upgrade Loop
+-- Auto Equip Best, Trails & Plot Upgrades Loop
 task.spawn(function()
     while true do
-        task.wait(2)
+        task.wait(1.5)
         if Config.AutoEquipBest then
             pcall(function()
                 if Network and Network:FindFirstChild("Backpack") and Network.Backpack:FindFirstChild("GetEquipBestStatus") then
@@ -263,6 +361,25 @@ task.spawn(function()
                 end
             end)
         end
+
+        if Config.AutoUpgradePlot or Config.AutoUpgradeSpeed then
+            pcall(function()
+                local myPlot = getMyPlot()
+                local searchArea = myPlot or Workspace
+                for _, prompt in pairs(searchArea:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local parentName = prompt.Parent and prompt.Parent.Name:lower() or ""
+                        local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parentName):lower()
+                        if Config.AutoUpgradePlot and (text:find("plot") or text:find("pen") or text:find("upgrade")) then
+                            fireproximityprompt(prompt)
+                        end
+                        if Config.AutoUpgradeSpeed and (text:find("speed") or text:find("treadmill") or text:find("multiplier")) then
+                            fireproximityprompt(prompt)
+                        end
+                    end
+                end
+            end)
+        end
     end
 end)
 
@@ -275,7 +392,7 @@ local Window = WindUI:CreateWindow({
     Icon = "egg",
     Author = "ValenHub",
     Folder = "SteelAnEgg_Config",
-    Size = UDim2.fromOffset(620, 460),
+    Size = UDim2.fromOffset(630, 470),
     Transparent = true,
     Theme = "Dark",
 })
@@ -285,6 +402,7 @@ local Window = WindUI:CreateWindow({
 ---------------------------------------------------------
 
 local AutoPlayTab = Window:Tab({ Title = "ออโต้เล่น (Auto Play)", Icon = "play" })
+local EggTab      = Window:Tab({ Title = "ระบบไข่ (Auto Egg)", Icon = "egg" })
 local UpgradeTab  = Window:Tab({ Title = "ออโต้อัพเกรด (Auto Upgrade)", Icon = "zap" })
 local MoveTab     = Window:Tab({ Title = "การเคลื่อนที่ (Movement)", Icon = "move" })
 local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", Icon = "settings" })
@@ -295,10 +413,17 @@ local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", I
 local AutoPlaySec = AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" })
 
 AutoPlaySec:Toggle({
-    Title = "ออโต้ขโมยไข่ (Auto Steal Egg)",
-    Desc = "ขโมยและเก็บไข่อัตโนมัติในบริเวณรอบๆ",
-    Value = Config.AutoSteal,
-    Callback = function(v) Config.AutoSteal = v end
+    Title = "ออโต้ขโมยไข่ในแมพ (Auto Steal Map Eggs)",
+    Desc = "วิ่งขโมยและเก็บไข่รอบๆ แมพให้อัตโนมัติ",
+    Value = Config.AutoStealMapEggs,
+    Callback = function(v) Config.AutoStealMapEggs = v end
+})
+
+AutoPlaySec:Toggle({
+    Title = "วาปไปหาไข่ในแมพ (Auto TP to Map Eggs)",
+    Desc = "วาร์ปไปเก็บไข่ในจุดเกิดไข่ทันที",
+    Value = Config.AutoTPToMapEggs,
+    Callback = function(v) Config.AutoTPToMapEggs = v end
 })
 
 AutoPlaySec:Slider({
@@ -336,7 +461,48 @@ AutoPlaySec:Toggle({
 })
 
 ---------------------------------------------------------
--- TAB 2: AUTO UPGRADE
+-- TAB 2: AUTO EGG (วางไข่ / ฟักไข่ / กรองไข่)
+---------------------------------------------------------
+local EggSec = EggTab:Section({ Title = "ระบบวางไข่ ฟักไข่ และคัดเลือกระดับ (Egg Hatch & Filter)" })
+
+EggSec:Toggle({
+    Title = "ออโต้วางไข่ (Auto Place Egg)",
+    Desc = "นำไข่ที่ขโมยมาวางลงในรัง/พล็อตให้อัตโนมัติ",
+    Value = Config.AutoPlaceEgg,
+    Callback = function(v) Config.AutoPlaceEgg = v end
+})
+
+EggSec:Toggle({
+    Title = "ออโต้ฟักไข่ (Auto Hatch Egg)",
+    Desc = "กดฟักไข่ที่วางในพล็อตให้อัตโนมัติ",
+    Value = Config.AutoHatchEgg,
+    Callback = function(v) Config.AutoHatchEgg = v end
+})
+
+EggSec:Slider({
+    Title = "ดีเลย์ฟักไข่ (Hatch Delay)",
+    Desc = "ความเร็วในการส่งคำสั่งฟักไข่ (วินาที)",
+    Min = 0.1,
+    Max = 2,
+    Value = Config.HatchDelay,
+    Default = Config.HatchDelay,
+    Step = 0.1,
+    Callback = function(v)
+        Config.HatchDelay = tonumber(v) or 0.2
+    end
+})
+
+EggSec:Dropdown({
+    Title = "ระดับไข่ขั้นต่ำที่จะเก็บ/ฟัก (Min Rarity Filter)",
+    Desc = "เลือกกรองเก็บเฉพาะไข่ระดับที่ต้องการขึ้นไป",
+    Values = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
+    Value = Config.MinRarityFilter,
+    Default = Config.MinRarityFilter,
+    Callback = function(v) Config.MinRarityFilter = v end
+})
+
+---------------------------------------------------------
+-- TAB 3: AUTO UPGRADE
 ---------------------------------------------------------
 local UpgradeSec = UpgradeTab:Section({ Title = "ระบบอัพเกรดอัตโนมัติ (Auto Upgrades)" })
 
@@ -370,7 +536,7 @@ UpgradeSec:Dropdown({
 })
 
 ---------------------------------------------------------
--- TAB 3: MOVEMENT
+-- TAB 4: MOVEMENT
 ---------------------------------------------------------
 local MoveSec = MoveTab:Section({ Title = "ปรับแต่งตัวละคร (Player Stats)" })
 
@@ -472,7 +638,7 @@ FlySec:Slider({
 })
 
 ---------------------------------------------------------
--- TAB 4: UTILITY
+-- TAB 5: UTILITY
 ---------------------------------------------------------
 local UtilSec = UtilityTab:Section({ Title = "ระบบช่วยเหลือ (Utility)" })
 
@@ -657,6 +823,6 @@ end)
 
 WindUI:Notify({
     Title = "Steel an Egg Hub",
-    Content = "อัพเดทแท็บ UI, ระบบออโต้ลู่วิ่ง และการ์ดลากขยับเรียบร้อย!",
+    Content = "อัพเดทระบบขโมยไข่ในแมพ, ออโต้วางไข่, ฟักไข่ และกรองระดับไข่เรียบร้อย!",
     Duration = 5,
 })
