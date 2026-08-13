@@ -52,6 +52,8 @@ local Config = {
     StealDelay = 0.1,
     AutoSell = false,
     SellDelay = 0.5,
+    AutoTreadmill = false,
+    TreadmillSpeed = 0.1,
     AutoEquipBest = false,
 
     -- Auto Upgrade
@@ -217,6 +219,31 @@ task.spawn(function()
     end
 end)
 
+-- Auto Treadmill (ลู่วิ่ง) Loop
+task.spawn(function()
+    while true do
+        task.wait(Config.TreadmillSpeed)
+        if Config.AutoTreadmill then
+            pcall(function()
+                local root = getRootPart()
+                if root then
+                    -- Search for Treadmill pads or prompts in Plots / Workspace
+                    for _, v in pairs(Workspace:GetDescendants()) do
+                        if v.Name:lower():find("treadmill") or v.Name:lower():find("runpad") or v.Name:lower():find("speedpad") then
+                            if v:IsA("BasePart") then
+                                firetouchinterest(root, v, 0)
+                                firetouchinterest(root, v, 1)
+                            elseif v:IsA("ProximityPrompt") then
+                                fireproximityprompt(v)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
 -- Auto Equip Best & Upgrade Loop
 task.spawn(function()
     while true do
@@ -248,13 +275,236 @@ local Window = WindUI:CreateWindow({
     Icon = "egg",
     Author = "ValenHub",
     Folder = "SteelAnEgg_Config",
-    Size = UDim2.fromOffset(600, 440),
+    Size = UDim2.fromOffset(620, 460),
     Transparent = true,
     Theme = "Dark",
 })
 
 ---------------------------------------------------------
--- FLOATING AVATAR DASHBOARD & UI TOGGLE CARD
+-- TABS & SECTIONS CREATION
+---------------------------------------------------------
+
+local AutoPlayTab = Window:Tab({ Title = "ออโต้เล่น (Auto Play)", Icon = "play" })
+local UpgradeTab  = Window:Tab({ Title = "ออโต้อัพเกรด (Auto Upgrade)", Icon = "zap" })
+local MoveTab     = Window:Tab({ Title = "การเคลื่อนที่ (Movement)", Icon = "move" })
+local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", Icon = "settings" })
+
+---------------------------------------------------------
+-- TAB 1: AUTO PLAY
+---------------------------------------------------------
+local AutoPlaySec = AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" })
+
+AutoPlaySec:Toggle({
+    Title = "ออโต้ขโมยไข่ (Auto Steal Egg)",
+    Desc = "ขโมยและเก็บไข่อัตโนมัติในบริเวณรอบๆ",
+    Value = Config.AutoSteal,
+    Callback = function(v) Config.AutoSteal = v end
+})
+
+AutoPlaySec:Slider({
+    Title = "ดีเลย์ขโมยไข่ (Steal Delay)",
+    Desc = "ความเร็วในการส่งคำสั่งขโมย (วินาที)",
+    Min = 0.05,
+    Max = 1,
+    Value = Config.StealDelay,
+    Default = Config.StealDelay,
+    Step = 0.05,
+    Callback = function(v)
+        Config.StealDelay = tonumber(v) or 0.1
+    end
+})
+
+AutoPlaySec:Toggle({
+    Title = "ออโต้ขายไข่ (Auto Sell Egg)",
+    Desc = "นำไข่ไปขายที่จุดรับซื้ออัตโนมัติ",
+    Value = Config.AutoSell,
+    Callback = function(v) Config.AutoSell = v end
+})
+
+AutoPlaySec:Toggle({
+    Title = "ออโต้ลู่วิ่ง (Auto Treadmill Farm)",
+    Desc = "วิ่งและปั๊มสปีดบนลู่วิ่งอัตโนมัติ",
+    Value = Config.AutoTreadmill,
+    Callback = function(v) Config.AutoTreadmill = v end
+})
+
+AutoPlaySec:Toggle({
+    Title = "ออโต้ใส่สัตว์เลี้ยงที่ดีที่สุด (Auto Equip Best)",
+    Desc = "สวมใส่สัตว์เลี้ยงที่เก่งที่สุดให้อัตโนมัติ",
+    Value = Config.AutoEquipBest,
+    Callback = function(v) Config.AutoEquipBest = v end
+})
+
+---------------------------------------------------------
+-- TAB 2: AUTO UPGRADE
+---------------------------------------------------------
+local UpgradeSec = UpgradeTab:Section({ Title = "ระบบอัพเกรดอัตโนมัติ (Auto Upgrades)" })
+
+UpgradeSec:Toggle({
+    Title = "ออโต้อัพเกรดความเร็ว (Auto Upgrade Speed)",
+    Desc = "ซื้อและอัพเกรดความเร็วอัตโนมัติ",
+    Value = Config.AutoUpgradeSpeed,
+    Callback = function(v) Config.AutoUpgradeSpeed = v end
+})
+
+UpgradeSec:Toggle({
+    Title = "ออโต้อัพเกรดพื้นที่/พล็อต (Auto Upgrade Plot)",
+    Desc = "อัพเกรดพื้นที่พล็อตเลี้ยงไข่อัตโนมัติ",
+    Value = Config.AutoUpgradePlot,
+    Callback = function(v) Config.AutoUpgradePlot = v end
+})
+
+UpgradeSec:Toggle({
+    Title = "ออโต้ซื้อเทรล (Auto Buy Trail)",
+    Desc = "ซื้อเทรล/เอฟเฟกต์อัตโนมัติ",
+    Value = Config.AutoBuyTrails,
+    Callback = function(v) Config.AutoBuyTrails = v end
+})
+
+UpgradeSec:Dropdown({
+    Title = "เลือกเทรลที่จะซื้อ (Select Trail)",
+    Values = { "GreyTrail", "GreenTrail", "BlueTrail" },
+    Value = Config.SelectedTrail,
+    Default = Config.SelectedTrail,
+    Callback = function(v) Config.SelectedTrail = v end
+})
+
+---------------------------------------------------------
+-- TAB 3: MOVEMENT
+---------------------------------------------------------
+local MoveSec = MoveTab:Section({ Title = "ปรับแต่งตัวละคร (Player Stats)" })
+
+MoveSec:Toggle({
+    Title = "เปิดใช้งานความเร็วเดิน (WalkSpeed Toggle)",
+    Value = Config.WalkSpeedToggle,
+    Callback = function(v)
+        Config.WalkSpeedToggle = v
+        local hum = getHumanoid()
+        if hum then
+            hum.WalkSpeed = v and Config.WalkSpeedValue or 16
+        end
+    end
+})
+
+MoveSec:Slider({
+    Title = "ความเร็วการเดิน (WalkSpeed)",
+    Min = 16,
+    Max = 350,
+    Value = Config.WalkSpeedValue,
+    Default = Config.WalkSpeedValue,
+    Step = 1,
+    Callback = function(v)
+        local numVal = tonumber(v) or 16
+        Config.WalkSpeedValue = numVal
+        if Config.WalkSpeedToggle then
+            local hum = getHumanoid()
+            if hum then hum.WalkSpeed = numVal end
+        end
+    end
+})
+
+MoveSec:Toggle({
+    Title = "เปิดใช้งานแรงกระโดด (JumpPower Toggle)",
+    Value = Config.JumpPowerToggle,
+    Callback = function(v)
+        Config.JumpPowerToggle = v
+        local hum = getHumanoid()
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = v and Config.JumpPowerValue or 50
+        end
+    end
+})
+
+MoveSec:Slider({
+    Title = "แรงกระโดด (JumpPower)",
+    Min = 50,
+    Max = 400,
+    Value = Config.JumpPowerValue,
+    Default = Config.JumpPowerValue,
+    Step = 5,
+    Callback = function(v)
+        local numVal = tonumber(v) or 50
+        Config.JumpPowerValue = numVal
+        if Config.JumpPowerToggle then
+            local hum = getHumanoid()
+            if hum then
+                hum.UseJumpPower = true
+                hum.JumpPower = numVal
+            end
+        end
+    end
+})
+
+MoveSec:Toggle({
+    Title = "กระโดดไม่จำกัด (Infinite Jump)",
+    Value = Config.InfiniteJump,
+    Callback = function(v) Config.InfiniteJump = v end
+})
+
+MoveSec:Toggle({
+    Title = "เดินทะลุกำแพง (Noclip)",
+    Value = Config.Noclip,
+    Callback = function(v) Config.Noclip = v end
+})
+
+local FlySec = MoveTab:Section({ Title = "ระบบการบิน (Flight System)" })
+
+FlySec:Toggle({
+    Title = "เปิดโหมดบิน (Fly Toggle)",
+    Value = Config.FlyToggle,
+    Callback = function(v)
+        Config.FlyToggle = v
+        ToggleFly(v)
+    end
+})
+
+FlySec:Slider({
+    Title = "ความเร็วในการบิน (Fly Speed)",
+    Min = 10,
+    Max = 250,
+    Value = Config.FlySpeed,
+    Default = Config.FlySpeed,
+    Step = 5,
+    Callback = function(v)
+        Config.FlySpeed = tonumber(v) or 50
+    end
+})
+
+---------------------------------------------------------
+-- TAB 4: UTILITY
+---------------------------------------------------------
+local UtilSec = UtilityTab:Section({ Title = "ระบบช่วยเหลือ (Utility)" })
+
+UtilSec:Toggle({
+    Title = "ป้องกันโดนเตะ AFK (Anti-AFK)",
+    Value = Config.AntiAFK,
+    Callback = function(v) Config.AntiAFK = v end
+})
+
+UtilSec:Button({
+    Title = "รีจอยน์เซิร์ฟเวอร์เดิม (Rejoin Server)",
+    Callback = function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end
+})
+
+UtilSec:Button({
+    Title = "ย้ายเซิร์ฟเวอร์ใหม่ (Server Hop)",
+    Callback = function()
+        local raw = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")
+        local servers = HttpService:JSONDecode(raw).data
+        for _, s in pairs(servers) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+                break
+            end
+        end
+    end
+})
+
+---------------------------------------------------------
+-- FLOATING AVATAR DASHBOARD & SMOOTH DRAGGABLE TOGGLE
 ---------------------------------------------------------
 
 local DashboardGui = Instance.new("ScreenGui")
@@ -277,7 +527,6 @@ Frame.Position = UDim2.new(0.015, 0, 0.35, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
 Frame.BorderSizePixel = 0
 Frame.Active = true
-Frame.Draggable = true
 Frame.Parent = DashboardGui
 
 local UICorner = Instance.new("UICorner")
@@ -355,241 +604,59 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Click Button overlay to Toggle UI
-local ClickButton = Instance.new("TextButton")
-ClickButton.Name = "ToggleClickArea"
-ClickButton.Size = UDim2.fromScale(1, 1)
-ClickButton.BackgroundTransparency = 1
-ClickButton.Text = ""
-ClickButton.Parent = Frame
+-- CUSTOM SMOOTH DRAGGABLE & CLICK TOGGLE ENGINE
+local dragging = false
+local dragInput, dragStart, startPos
+local totalDragDistance = 0
 
-local isWindowOpen = true
-ClickButton.MouseButton1Click:Connect(function()
-    isWindowOpen = not isWindowOpen
-    pcall(function()
-        if Window.Toggle then
-            Window:Toggle()
-        elseif Window.Minimize then
-            Window:Minimize()
-        end
-    end)
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    totalDragDistance = delta.Magnitude
+    Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+Frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Frame.Position
+        totalDragDistance = 0
+
+        local connection
+        connection = input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                if connection then connection:Disconnect() end
+
+                -- If moved less than 6 pixels, treat as a click to Toggle UI
+                if totalDragDistance < 6 then
+                    pcall(function()
+                        if Window.Toggle then
+                            Window:Toggle()
+                        elseif Window.Minimize then
+                            Window:Minimize()
+                        end
+                    end)
+                end
+            end
+        end)
+    end
 end)
 
--- TABS
-local AutoPlayTab = Window:Tab({ Title = "ออโต้เล่น (Auto Play)", Icon = "play" })
-local UpgradeTab  = Window:Tab({ Title = "ออโต้อัพเกรด (Auto Upgrade)", Icon = "zap" })
-local MoveTab     = Window:Tab({ Title = "การเคลื่อนที่ (Movement)", Icon = "move" })
-local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", Icon = "settings" })
-
----------------------------------------------------------
--- TAB 1: AUTO PLAY
----------------------------------------------------------
-AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" })
-
-AutoPlayTab:Toggle({
-    Title = "ออโต้ขโมยไข่ (Auto Steal Egg)",
-    Desc = "ขโมยและเก็บไข่อัตโนมัติในบริเวณรอบๆ",
-    Value = Config.AutoSteal,
-    Callback = function(v) Config.AutoSteal = v end
-})
-
-AutoPlayTab:Slider({
-    Title = "ดีเลย์ขโมยไข่ (Steal Delay)",
-    Desc = "ความเร็วในการส่งคำสั่งขโมย (วินาที)",
-    Min = 0.05,
-    Max = 1,
-    Value = Config.StealDelay,
-    Default = Config.StealDelay,
-    Step = 0.05,
-    Callback = function(v)
-        Config.StealDelay = tonumber(v) or 0.1
+Frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
-})
+end)
 
-AutoPlayTab:Toggle({
-    Title = "ออโต้ขายไข่ (Auto Sell Egg)",
-    Desc = "นำไข่ไปขายที่จุดรับซื้ออัตโนมัติ",
-    Value = Config.AutoSell,
-    Callback = function(v) Config.AutoSell = v end
-})
-
-AutoPlayTab:Toggle({
-    Title = "ออโต้ใส่สัตว์เลี้ยงที่ดีที่สุด (Auto Equip Best)",
-    Desc = "สวมใส่สัตว์เลี้ยงที่เก่งที่สุดให้อัตโนมัติ",
-    Value = Config.AutoEquipBest,
-    Callback = function(v) Config.AutoEquipBest = v end
-})
-
----------------------------------------------------------
--- TAB 2: AUTO UPGRADE
----------------------------------------------------------
-UpgradeTab:Section({ Title = "ระบบอัพเกรดอัตโนมัติ (Auto Upgrades)" })
-
-UpgradeTab:Toggle({
-    Title = "ออโต้อัพเกรดความเร็ว (Auto Upgrade Speed)",
-    Desc = "ซื้อและอัพเกรดความเร็วอัตโนมัติ",
-    Value = Config.AutoUpgradeSpeed,
-    Callback = function(v) Config.AutoUpgradeSpeed = v end
-})
-
-UpgradeTab:Toggle({
-    Title = "ออโต้อัพเกรดพื้นที่/พล็อต (Auto Upgrade Plot)",
-    Desc = "อัพเกรดพื้นที่พล็อตเลี้ยงไข่อัตโนมัติ",
-    Value = Config.AutoUpgradePlot,
-    Callback = function(v) Config.AutoUpgradePlot = v end
-})
-
-UpgradeTab:Toggle({
-    Title = "ออโต้ซื้อเทรล (Auto Buy Trail)",
-    Desc = "ซื้อเทรล/เอฟเฟกต์อัตโนมัติ",
-    Value = Config.AutoBuyTrails,
-    Callback = function(v) Config.AutoBuyTrails = v end
-})
-
-UpgradeTab:Dropdown({
-    Title = "เลือกเทรลที่จะซื้อ (Select Trail)",
-    Values = { "GreyTrail", "GreenTrail", "BlueTrail" },
-    Value = Config.SelectedTrail,
-    Default = Config.SelectedTrail,
-    Callback = function(v) Config.SelectedTrail = v end
-})
-
----------------------------------------------------------
--- TAB 3: MOVEMENT
----------------------------------------------------------
-MoveTab:Section({ Title = "ปรับแต่งตัวละคร (Player Stats)" })
-
-MoveTab:Toggle({
-    Title = "เปิดใช้งานความเร็วเดิน (WalkSpeed Toggle)",
-    Value = Config.WalkSpeedToggle,
-    Callback = function(v)
-        Config.WalkSpeedToggle = v
-        local hum = getHumanoid()
-        if hum then
-            hum.WalkSpeed = v and Config.WalkSpeedValue or 16
-        end
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
     end
-})
-
-MoveTab:Slider({
-    Title = "ความเร็วการเดิน (WalkSpeed)",
-    Min = 16,
-    Max = 350,
-    Value = Config.WalkSpeedValue,
-    Default = Config.WalkSpeedValue,
-    Step = 1,
-    Callback = function(v)
-        local numVal = tonumber(v) or 16
-        Config.WalkSpeedValue = numVal
-        if Config.WalkSpeedToggle then
-            local hum = getHumanoid()
-            if hum then hum.WalkSpeed = numVal end
-        end
-    end
-})
-
-MoveTab:Toggle({
-    Title = "เปิดใช้งานแรงกระโดด (JumpPower Toggle)",
-    Value = Config.JumpPowerToggle,
-    Callback = function(v)
-        Config.JumpPowerToggle = v
-        local hum = getHumanoid()
-        if hum then
-            hum.UseJumpPower = true
-            hum.JumpPower = v and Config.JumpPowerValue or 50
-        end
-    end
-})
-
-MoveTab:Slider({
-    Title = "แรงกระโดด (JumpPower)",
-    Min = 50,
-    Max = 400,
-    Value = Config.JumpPowerValue,
-    Default = Config.JumpPowerValue,
-    Step = 5,
-    Callback = function(v)
-        local numVal = tonumber(v) or 50
-        Config.JumpPowerValue = numVal
-        if Config.JumpPowerToggle then
-            local hum = getHumanoid()
-            if hum then
-                hum.UseJumpPower = true
-                hum.JumpPower = numVal
-            end
-        end
-    end
-})
-
-MoveTab:Toggle({
-    Title = "กระโดดไม่จำกัด (Infinite Jump)",
-    Value = Config.InfiniteJump,
-    Callback = function(v) Config.InfiniteJump = v end
-})
-
-MoveTab:Toggle({
-    Title = "เดินทะลุกำแพง (Noclip)",
-    Value = Config.Noclip,
-    Callback = function(v) Config.Noclip = v end
-})
-
-MoveTab:Section({ Title = "ระบบการบิน (Flight System)" })
-
-MoveTab:Toggle({
-    Title = "เปิดโหมดบิน (Fly Toggle)",
-    Value = Config.FlyToggle,
-    Callback = function(v)
-        Config.FlyToggle = v
-        ToggleFly(v)
-    end
-})
-
-MoveTab:Slider({
-    Title = "ความเร็วในการบิน (Fly Speed)",
-    Min = 10,
-    Max = 250,
-    Value = Config.FlySpeed,
-    Default = Config.FlySpeed,
-    Step = 5,
-    Callback = function(v)
-        Config.FlySpeed = tonumber(v) or 50
-    end
-})
-
----------------------------------------------------------
--- TAB 4: UTILITY
----------------------------------------------------------
-UtilityTab:Section({ Title = "ระบบช่วยเหลือ (Utility)" })
-
-UtilityTab:Toggle({
-    Title = "ป้องกันโดนเตะ AFK (Anti-AFK)",
-    Value = Config.AntiAFK,
-    Callback = function(v) Config.AntiAFK = v end
-})
-
-UtilityTab:Button({
-    Title = "รีจอยน์เซิร์ฟเวอร์เดิม (Rejoin Server)",
-    Callback = function()
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-    end
-})
-
-UtilityTab:Button({
-    Title = "ย้ายเซิร์ฟเวอร์ใหม่ (Server Hop)",
-    Callback = function()
-        local raw = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")
-        local servers = HttpService:JSONDecode(raw).data
-        for _, s in pairs(servers) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
-                break
-            end
-        end
-    end
-})
+end)
 
 WindUI:Notify({
     Title = "Steel an Egg Hub",
-    Content = "โหลด Avatar Dashboard Toggle & FPS/Ping แสดงผลเรียบร้อย!",
+    Content = "อัพเดทแท็บ UI, ระบบออโต้ลู่วิ่ง และการ์ดลากขยับเรียบร้อย!",
     Duration = 5,
 })
