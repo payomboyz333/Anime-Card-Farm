@@ -1,1164 +1,3051 @@
---[[
-    พยอมบอยฮับ (PayomboyZ Hub) | Steel an Egg Premium Automation Script
-    UI Framework: WindUI
-    Localization: Thai / English
-]]
+local Players           = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService        = game:GetService("RunService")
+local Workspace         = game:GetService("Workspace")
+local TeleportService   = game:GetService("TeleportService")
+local HttpService       = game:GetService("HttpService")
+local VirtualUser       = game:GetService("VirtualUser")
+local Lighting          = game:GetService("Lighting")
 
--- Game Load Wait
-if not game:IsLoaded() then
-    pcall(function() game.Loaded:Wait() end)
+-- autoexec safety: this file runs at injection, before the place is ready,
+-- and it must stay inert in any other game
+if game.PlaceId ~= 107778070777162 then return end
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local LocalPlayer = Players.LocalPlayer
+repeat task.wait(0.25) until LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+local ENV = (typeof(getgenv) == "function") and getgenv() or _G
+
+-- reloading retires the previous session instead of stacking loops
+ENV.NyxSession = (ENV.NyxSession or 0) + 1
+local SESSION = ENV.NyxSession
+if ENV.NyxCleanup then pcall(ENV.NyxCleanup) end
+
+local function alive() return ENV.NyxSession == SESSION end
+
+----------------------------------------------------------------
+-- game modules
+----------------------------------------------------------------
+local function safeRequire(inst)
+    if not inst then return nil end
+    local ok, mod = pcall(require, inst)
+    return ok and mod or nil
 end
 
--- Ultra-Reliable WindUI Loader with Multi-CDN Fallbacks
-local WindUI
-local success, err = pcall(function()
-    WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+local Lib       = ReplicatedStorage:WaitForChild("Library", 20)
+local ClientLib = Lib and Lib:WaitForChild("Client", 20)
+local LibUtil   = Lib and Lib:FindFirstChild("Util")
+local Directory = ReplicatedStorage:FindFirstChild("Directory")
+
+local EggCmds  = safeRequire(ClientLib and ClientLib:FindFirstChild("EggCmds"))
+local AssetCmds= safeRequire(ClientLib and ClientLib:FindFirstChild("AssetCmds"))
+local PlotCmds = safeRequire(ClientLib and ClientLib:FindFirstChild("PlotCmds"))
+local Save     = safeRequire(ClientLib and ClientLib:FindFirstChild("Save"))
+local Network  = safeRequire(ClientLib and ClientLib:FindFirstChild("Network"))
+
+-- inventory rows are packed; the game reads them through these and so must we,
+-- or every filter reads nil and treats every pet as a worthless common
+local AssetSer  = safeRequire(LibUtil and LibUtil:FindFirstChild("AssetItemSerialization"))
+local AssetGen  = safeRequire(LibUtil and LibUtil:FindFirstChild("AssetGenerationUtil"))
+local PriceOf   = safeRequire(LibUtil and LibUtil:FindFirstChild("GetPriceValueForItem"))
+local EggUtil   = safeRequire(LibUtil and LibUtil:FindFirstChild("EggItemUtil"))
+local AreaLookup= safeRequire(LibUtil and LibUtil:FindFirstChild("GuardAreaLookupUtil"))
+
+local AssetsDir = safeRequire(Directory and Directory:FindFirstChild("Assets"))
+local BasesDir  = safeRequire(Directory and Directory:FindFirstChild("Bases"))
+local TreadDir  = safeRequire(Directory and Directory:FindFirstChild("Treadmills"))
+local TrailsDir = safeRequire(Directory and Directory:FindFirstChild("Trails"))
+local GuardsDir = safeRequire(Directory and Directory:FindFirstChild("Guards"))
+
+if not (EggCmds and PlotCmds and Network and Save) then
+    warn("[Nyx] โหลดโมดูลเกมไม่สำเร็จ — เกมนี้อาจอัปเดตโครงสร้างแล้ว")
+    return
+end
+
+local NET = Network.NET_MAP
+local NetworkFolder = ReplicatedStorage:FindFirstChild("Network")
+
+local function remoteKind(endpoint)
+    local inst = NetworkFolder and NetworkFolder:FindFirstChild(tostring(endpoint))
+    if not inst then return nil end
+    return inst:IsA("RemoteFunction") and "function" or "event"
+end
+
+local function invoke(endpoint, ...)
+    local args = table.pack(...)
+    if remoteKind(endpoint) == "event" then
+        local ok = pcall(function() Network.Fire(endpoint, table.unpack(args, 1, args.n)) end)
+        return ok
+    end
+    local ok, a, b = pcall(function() return Network.Invoke(endpoint, table.unpack(args, 1, args.n)) end)
+    if not ok then return false, tostring(a) end
+    return a, b
+end
+
+local function fire(endpoint, ...)
+    local args = table.pack(...)
+    pcall(function() Network.Fire(endpoint, table.unpack(args, 1, args.n)) end)
+end
+
+local function char()     return LocalPlayer.Character end
+local function hrp()      local c = char() return c and c:FindFirstChild("HumanoidRootPart") end
+local function humanoid() local c = char() return c and c:FindFirstChildOfClass("Humanoid") end
+
+----------------------------------------------------------------
+-- rarity tables
+----------------------------------------------------------------
+local RARITY_ORDER = {
+    "Common", "Uncommon", "Rare", "Epic", "Legendary",
+    "Mythic", "Divine", "Secret", "Cosmic", "Eternal",
+}
+
+local RARITY_TH = {
+    Common = "ธรรมดา", Uncommon = "ไม่ธรรมดา", Rare = "หายาก", Epic = "มหากาพย์",
+    Legendary = "ตำนาน", Mythic = "เทพนิยาย", Divine = "ศักดิ์สิทธิ์",
+    Secret = "ลับ", Cosmic = "จักรวาล", Eternal = "อมตะ",
+}
+
+local AREAS = { "Lake", "Forest", "Desert", "Jungle", "Snow", "Volcano", "Prehistoric", "Abyss Ocean", "Cosmic" }
+
+local AREA_SPEED = {}
+if GuardsDir and GuardsDir.Directory then
+    for id, cfg in pairs(GuardsDir.Directory) do
+        if type(cfg) == "table" and tonumber(cfg.WalkSpeed) then AREA_SPEED[id] = tonumber(cfg.WalkSpeed) end
+    end
+end
+
+local CategoryRarity, RarityRank = {}, {}
+do
+    for i, r in ipairs(RARITY_ORDER) do RarityRank[r] = i end
+    if AssetsDir and AssetsDir.ByRarity then
+        for rarity, list in pairs(AssetsDir.ByRarity) do
+            if type(list) == "table" then
+                for k, v in pairs(list) do
+                    CategoryRarity[(type(v) == "string") and v or tostring(k)] = rarity
+                end
+            end
+        end
+    end
+    if AssetsDir and AssetsDir.Directory then
+        for id, cfg in pairs(AssetsDir.Directory) do
+            if type(cfg) == "table" and type(cfg.Rarity) == "table" and cfg.Rarity._id then
+                CategoryRarity[id] = cfg.Rarity._id
+                if cfg.Rarity.RarityNumber and not RarityRank[cfg.Rarity._id] then
+                    RarityRank[cfg.Rarity._id] = cfg.Rarity.RarityNumber
+                end
+            end
+        end
+    end
+end
+
+local function rarityOf(cat) return CategoryRarity[cat] or "Common" end
+local function rankOf(cat)   return RarityRank[rarityOf(cat)] or 0 end
+local function earnRate(cat)
+    local cfg = AssetsDir and AssetsDir.Directory and AssetsDir.Directory[cat]
+    return (cfg and cfg.EarningRate) or 0
+end
+
+local function raritySet(list)
+    local t = {}
+    for _, r in ipairs(list or {}) do t[r] = true end
+    return t
+end
+
+local function setToList(set)
+    local out = {}
+    for _, r in ipairs(RARITY_ORDER) do if set[r] then out[#out + 1] = r end end
+    return out
+end
+
+-- 45763 -> "45.76K"
+local function shortNum(n)
+    n = tonumber(n) or 0
+    for _, u in ipairs({ { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } }) do
+        if n >= u[1] then return ("%.2f%s"):format(n / u[1], u[2]) end
+    end
+    return ("%.0f"):format(n)
+end
+
+----------------------------------------------------------------
+-- config
+----------------------------------------------------------------
+local Cfg = {
+    -- farming
+    AutoSteal        = false,
+    StealRarities    = raritySet(RARITY_ORDER),
+    StealAreas       = (function() local t = {} for _, a in ipairs(AREAS) do t[a] = true end return t end)(),
+    PickMode         = "Efficient",     -- Efficient = คิดระยะทาง | BestOnly = เอาแรร์สุด
+    MinMutations     = 0,
+
+    AutoHatch        = true,
+    AutoPlace        = true,
+    PlaceRarities    = raritySet(RARITY_ORDER),
+    AutoEquipBest    = true,
+
+    -- movement
+    MoveMode         = "Instant",       -- Instant = วาปตรง | Warp = วาปทีละสเต็ป
+    WarpPct          = 0.8,
+    ZoneHopStep      = 260,
+    GuardSafeGap     = 26,
+    BoostWalkSpeed   = 900,
+
+    -- survival
+    GodMode          = true,
+    AntiAFK          = true,
+
+    -- selling pets
+    AutoSellPets     = false,
+    SellPetMode      = "ราคาต่ำกว่าที่ตั้ง",   -- | "ระดับที่เลือก" | "เข้าทั้งสองเงื่อนไข"
+    SellPetBelow     = 0,               -- ราคาขาย (เงินเกม) ต่ำกว่านี้ = ขาย
+    SellPetRarities  = {},
+    SellKeepTop      = 10,
+    SellMaxPerRun    = 60,
+    SellLanes        = 3,          -- ยิงคำสั่งขายค้างพร้อมกันได้กี่ตัว
+    SellPace         = 0.05,       -- เว้นระหว่างการยิงแต่ละครั้ง (วินาที)
+
+    -- selling eggs
+    AutoSellEggs     = false,
+    SellEggRarities  = {},
+    SellEggBelow     = 0,
+    SellEggKeepBag   = 20,              -- เหลือช่องกระเป๋าไข่ไว้อย่างน้อยเท่านี้
+
+    -- progression
+    AutoBaseUpgrade  = false,
+    AutoTreadmillUp  = false,
+    AutoTrails       = false,
+    AutoFuse         = false,
+    AutoClaim        = false,
+
+    -- system
+    ToggleKey        = "RightControl",  -- ปุ่มเปิด/ปิดหน้าต่าง (ชื่อ Enum.KeyCode)
+    ShowFloatIcon    = true,            -- ไอคอนสี่เหลี่ยมลอยไว้กดเปิดตอนพับ
+    FloatX           = 18,              -- ตำแหน่งไอคอน (จำไว้ตอนลากย้าย)
+    FloatY           = 260,
+    AntiLag          = false,
+    HideOtherPlayers = false,
+    LowFXOnly        = false,
+    AutoHop          = false,
+    HopChecks        = 3,               -- ต้องเช็คซ้ำกี่ครั้งว่าโซนนี้ไม่มีไข่ที่ต้องการ ก่อนย้ายเซิร์ฟ
+    HopMaxTries      = 6,               -- ย้ายติดกันกี่ครั้งโดยไม่ได้ไข่เลย แล้วให้หยุดย้าย
+    WebhookURL       = "",
+    WebhookSteal     = false,
+}
+
+local Runtime = {
+    stealing    = false,
+    lock        = false,
+    carryUid    = nil,
+    skip        = {},
+    log         = {},
+    stats       = { eggs = 0, hatched = 0, soldPets = 0, soldEggs = 0, startedAt = os.clock(), startMoney = 0 },
+    instantReady= false,
+    lastHopAt   = nil,
+    hopChain    = 0,          -- hops in a row that stole nothing, kept across servers
+    hopStopped  = false,
+    lastError   = nil,
+    conns       = {},
+}
+
+----------------------------------------------------------------
+-- config persistence
+----------------------------------------------------------------
+local CFG_DIR  = "NyxSAE"
+
+-- WindUI is handed the same folder for its own cache and writes files of its own
+-- in there, so our settings live under a name nothing else will ever pick. The
+-- old plain "config.json" is still read once, so an existing setup is not lost.
+local CFG_FILE   = CFG_DIR .. "/nyx_config.json"
+local CFG_BACKUP = CFG_DIR .. "/nyx_config.bak.json"
+local CFG_LEGACY = CFG_DIR .. "/config.json"
+
+local hasFS = (typeof(writefile) == "function") and (typeof(readfile) == "function")
+if hasFS and typeof(makefolder) == "function" and not (isfolder and isfolder(CFG_DIR)) then
+    pcall(makefolder, CFG_DIR)
+end
+
+-- where the settings actually came from, so the panel can say it out loud
+-- instead of the user having to guess why a toggle came back off
+Runtime.cfgStatus = "ยังไม่ได้อ่านไฟล์"
+
+local function fileExists(path)
+    if not hasFS then return false end
+    if typeof(isfile) ~= "function" then
+        -- no isfile in this executor: a successful read is the existence test
+        local ok, body = pcall(readfile, path)
+        return ok and type(body) == "string" and #body > 0
+    end
+    local ok, yes = pcall(isfile, path)
+    return ok and yes == true
+end
+
+local function readJson(path)
+    if not fileExists(path) then return nil end
+    local okr, body = pcall(readfile, path)
+    if not okr or type(body) ~= "string" or #body < 2 then return nil end
+    local okd, data = pcall(function() return HttpService:JSONDecode(body) end)
+    if not okd or type(data) ~= "table" then return nil end
+    return data
+end
+
+-- Writing and hoping is how a settings file goes missing without anyone finding
+-- out until the next rejoin: the copy on disk is read back and decoded before the
+-- save counts, and the last known-good copy is kept next to it so a half-written
+-- file can never be the only copy left.
+-- True only while the window is being assembled. Some WindUI builds fire an
+-- element's Callback once at construction, and a toggle handed its own element
+-- instead of a boolean writes `false` into the config and saves it -- settings
+-- that "disappear on rejoin" with nobody having touched them. Nothing is written
+-- to disk while this is set, and the config is put back to what was loaded once
+-- the window is up.
+local uiBuilding = false
+
+local function saveConfig()
+    if uiBuilding then return false end
+    if not hasFS then
+        Runtime.cfgStatus = "executor นี้เขียนไฟล์ไม่ได้ — ค่าจะหายเมื่อออกเกม"
+        return false
+    end
+
+    local okEnc, body = pcall(function() return HttpService:JSONEncode(Cfg) end)
+    if not okEnc or type(body) ~= "string" then
+        Runtime.cfgStatus = "แปลงค่าเป็น JSON ไม่ได้"
+        return false
+    end
+
+    if fileExists(CFG_FILE) then
+        pcall(function()
+            local old = readfile(CFG_FILE)
+            if type(old) == "string" and #old > 2 then writefile(CFG_BACKUP, old) end
+        end)
+    end
+
+    local okW = pcall(writefile, CFG_FILE, body)
+    if not okW then
+        Runtime.cfgStatus = "เขียนไฟล์ไม่สำเร็จ"
+        return false
+    end
+
+    if readJson(CFG_FILE) == nil then
+        Runtime.cfgStatus = "เขียนแล้วอ่านกลับไม่ได้ — ไฟล์อาจถูกทับ"
+        return false
+    end
+
+    Runtime.cfgSavedAt = os.clock()
+    Runtime.cfgStatus  = ("บันทึกแล้ว %s"):format(os.date("%H:%M:%S"))
+    return true
+end
+
+-- a slider drag fires the callback on every pixel; one disk write per pixel is
+-- both pointless and a good way to catch a half-written file
+local cfgSavePending = false
+local function saveConfigSoon()
+    if cfgSavePending then return end
+    cfgSavePending = true
+    task.delay(0.4, function()
+        cfgSavePending = false
+        saveConfig()
+    end)
+end
+
+local function applyConfigTable(data)
+    for k, v in pairs(data) do
+        if Cfg[k] ~= nil then Cfg[k] = v end
+    end
+
+    -- a saved file with an empty steal filter means the loop can never do
+    -- anything and says nothing about why. Selling filters are allowed to be
+    -- empty (that means "sell nothing", which is a safe answer); these are not.
+    local function emptySet(t) return type(t) ~= "table" or next(t) == nil end
+    if emptySet(Cfg.StealAreas) then
+        Cfg.StealAreas = {}
+        for _, a in ipairs(AREAS) do Cfg.StealAreas[a] = true end
+    end
+    if emptySet(Cfg.StealRarities) then Cfg.StealRarities = raritySet(RARITY_ORDER) end
+    if emptySet(Cfg.PlaceRarities) then Cfg.PlaceRarities = raritySet(RARITY_ORDER) end
+end
+
+local function loadConfig()
+    if not hasFS then
+        Runtime.cfgStatus = "executor นี้อ่านไฟล์ไม่ได้ — ใช้ค่าเริ่มต้น"
+        return false
+    end
+
+    local data, from = readJson(CFG_FILE), CFG_FILE
+    if not data then data, from = readJson(CFG_BACKUP), CFG_BACKUP end
+    if not data then data, from = readJson(CFG_LEGACY), CFG_LEGACY end
+
+    if not data then
+        Runtime.cfgStatus = "ยังไม่มีไฟล์ค่าที่บันทึกไว้ — ใช้ค่าเริ่มต้น"
+        return false
+    end
+
+    applyConfigTable(data)
+
+    local n = 0
+    for _ in pairs(data) do n += 1 end
+    Runtime.cfgStatus = ("โหลด %d ค่าจาก %s"):format(n, from)
+
+    -- pull an old or a recovered file forward into the current name right away,
+    -- so the next run does not depend on the fallback again
+    if from ~= CFG_FILE then saveConfig() end
+    return true
+end
+loadConfig()
+
+----------------------------------------------------------------
+-- notify / webhook
+----------------------------------------------------------------
+local Notify   -- assigned once WindUI is up
+local UIWindow -- kept at file scope so a reload can close the old window
+
+local httpRequest = (syn and syn.request) or (http and http.request) or http_request or request
+
+local function webhook(title, desc)
+    if Cfg.WebhookURL == "" or not httpRequest then return end
+    task.spawn(function()
+        pcall(function()
+            httpRequest({
+                Url = Cfg.WebhookURL,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = HttpService:JSONEncode({
+                    username = "Nyx | Steal An Egg",
+                    embeds = { { title = title, description = desc, color = 0x8B5CF6,
+                        footer = { text = LocalPlayer.Name .. " • " .. os.date("%H:%M:%S") } } },
+                }),
+            })
+        end)
+    end)
+end
+
+local function logLine(kind, text)
+    table.insert(Runtime.log, 1, ("[%s] %s"):format(os.date("%H:%M:%S"), text))
+    -- hard cap: a log that grows forever is a memory leak with a nice name
+    for i = #Runtime.log, 41, -1 do Runtime.log[i] = nil end
+end
+
+----------------------------------------------------------------
+-- save data cache
+--
+-- Save.Get walks the whole save every call and several jobs want it every tick.
+-- One cached copy per 400ms is invisible to the logic and a lot cheaper.
+----------------------------------------------------------------
+local saveCache, saveCacheAt = nil, 0
+
+local function saveData(fresh)
+    local now = os.clock()
+    if not fresh and saveCache and now - saveCacheAt < 0.4 then return saveCache end
+    local ok, data = pcall(Save.Get, LocalPlayer)
+    if ok and type(data) == "table" then
+        saveCache, saveCacheAt = data, now
+        return data
+    end
+    return saveCache or {}
+end
+
+local function moneyNow() return tonumber(saveData().Money) or 0 end
+
+-- rebuilding 200 tables every time a job glances at the inventory is where the
+-- memory churn came from; the pet list is stable for a couple of seconds at a time
+local petCache, petCacheAt = nil, 0
+
+-- `yieldEvery` spreads the rebuild across frames. Unpacking two hundred pets
+-- costs six hundred pcalls and two hundred table allocations; doing that inside a
+-- single frame is a ~0.7s hitch, and it was the real cause of the selling stutter
+-- (the requests themselves are cheap). Anything not on a frame-critical path
+-- should pass a chunk size and let it breathe.
+local function petItems(fresh, yieldEvery)
+    local now = os.clock()
+    if not fresh and petCache and now - petCacheAt < 2 then return petCache end
+
+    local data = saveData()
+    local inv  = data.Inventory or {}
+    local equipped = {}
+    for _, uid in ipairs(data.EquippedAssets or {}) do equipped[uid] = true end
+
+    local list = {}
+    if not AssetSer then return list end
+    local seen = 0
+    for uid, raw in pairs(inv) do
+        seen += 1
+        if yieldEvery and seen % yieldEvery == 0 then task.wait() end
+        local ok, item = pcall(AssetSer.Deserialize, raw)
+        if ok and type(item) == "table" and item.Category then
+            local rate = 0
+            if AssetGen then
+                local okr, r = pcall(AssetGen.GetRateWithoutBoosts, item)
+                if okr then rate = tonumber(r) or 0 end
+            end
+            local price = rate * 100
+            if PriceOf then
+                local okp, p = pcall(PriceOf, item)
+                if okp and tonumber(p) then price = tonumber(p) end
+            end
+            list[#list + 1] = {
+                uid = uid, cat = item.Category, rarity = rarityOf(item.Category),
+                rate = rate, price = price,
+                favorite = item.IsFavorite == true,
+                inFuse   = item.InFuse == true,
+                equipped = equipped[uid] == true,
+            }
+        end
+    end
+    petCache, petCacheAt = list, now
+    -- the panel wants the number, not the list: keeping it here means the UI never
+    -- has a reason to unpack the inventory on its own tick
+    Runtime.petCount = #list
+    return list
+end
+
+local function eggInventory() return saveData().EggInventory or {} end
+
+local function myRuntimeRecords()
+    local ok, recs = pcall(EggCmds.GetOwnerRuntimeRecords, LocalPlayer.UserId)
+    return (ok and type(recs) == "table") and recs or {}
+end
+
+local function plotData()
+    local ok, pd = pcall(PlotCmds.GetPlotData)
+    return ok and pd or nil
+end
+
+----------------------------------------------------------------
+-- client integrity
+--
+-- Measured on the 2026-08-15 build, because every assumption from the day before
+-- turned out to be wrong:
+--
+-- * The corrector moved to ReplicatedFirst.IntroLoader.Analytics (Movement ->
+--   Correction -> Rollback) and it Destroy()s its own ModuleScripts right after
+--   requiring them, so require() answers "Requested module has been destroyed"
+--   and the old hookfunction-on-ApplyTarget path can never reach them again.
+--
+-- * Cutting the Analytics connections off RunService does stop the pull-back --
+--   and gets the account kicked for "Client integrity violation (Error Code:
+--   267)" about a minute later, because the server watches for those reports and
+--   notices when they stop. That path stays closed.
+--
+-- * The pull-back itself is not a Lua write we can intercept: with the whole
+--   metatable instrumented, a teleport that snapped home produced no PivotTo, no
+--   BulkMoveTo and no CFrame write from anyone but us. Rollback only zeroes our
+--   velocity; the reposition arrives through replication, under Lua.
+--
+-- What it cannot survive is being outvoted. The corrector restores our position
+-- once and then waits for its next sample, so a teleport that is re-asserted on
+-- every Heartbeat wins every frame after the first: measured 90 frames of holding
+-- a spot 200 studs away, and a full nest-to-bank steal in 0.54s. That is what
+-- pin() below does, and it needs no hook at all.
+--
+-- The only thing worth hooking is the report: the corrector announces itself to
+-- the server through "ClientCharacter: CorrectionStarted", one FireServer per
+-- pull-back carrying just our name, and nothing else in the game fires it.
+-- Dropping exactly that call leaves every heartbeat, ping and gameplay remote
+-- alone -- which is the whole difference between this and the kick above.
+----------------------------------------------------------------
+local function muteCorrectionReport()
+    if ENV.NyxCorrectionMuted then return true end
+    if typeof(getrawmetatable) ~= "function" or typeof(setreadonly) ~= "function"
+        or typeof(getnamecallmethod) ~= "function" then
+        return false
+    end
+
+    local ok = pcall(function()
+        local mt = getrawmetatable(game)
+        setreadonly(mt, false)
+
+        local oldNamecall = mt.__namecall
+        local wrap = (typeof(newcclosure) == "function") and newcclosure or function(f) return f end
+
+        mt.__namecall = wrap(function(self, ...)
+            local method = getnamecallmethod()
+            if method == "FireServer" or method == "InvokeServer" then
+                local okn, name = pcall(function() return self.Name end)
+                if okn and type(name) == "string" and string.find(name, "CorrectionStarted", 1, true) then
+                    return
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+
+        setreadonly(mt, true)
+
+        -- a reload has to be able to put the game's own metamethod back, or every
+        -- reload wraps the previous wrapper
+        ENV.NyxRestoreMT = function()
+            pcall(function()
+                setreadonly(mt, false)
+                mt.__namecall = oldNamecall
+                setreadonly(mt, true)
+            end)
+        end
+    end)
+
+    ENV.NyxCorrectionMuted = ok
+    return ok
+end
+
+-- kept under the old name because the jobs and the panel both ask for it: arming
+-- instant movement is now just muting that one report, and instant works with or
+-- without it
+local function killClientIntegrity()
+    muteCorrectionReport()
+    return true
+end
+
+----------------------------------------------------------------
+-- movement
+----------------------------------------------------------------
+-- the one fixed spot every routine starts from and returns to: just outside the
+-- gate, lined up with the only gap in the wall (Areas.GameplayZ, x=553)
+local ANCHOR  = Vector3.new(536.4492797851562, 70.28306579589844, -365.0294189453125)
+local GATE_IN = Vector3.new(578, 70.3, -365.03)
+local MIN_HOVER = 3
+
+local SEP_LINE = (function()
+    local objs = Workspace:FindFirstChild("__OBJECTS")
+    local areas = objs and objs:FindFirstChild("Areas")
+    return areas and areas:FindFirstChild("SeparationLine")
+end)()
+
+local GuardAreasFolder = (function()
+    local objs = Workspace:FindFirstChild("__OBJECTS")
+    local areas = objs and objs:FindFirstChild("Areas")
+    return areas and areas:FindFirstChild("GuardAreas")
+end)()
+
+-- No automatic downgrade to the warp path. Warp is a fallback for executors that
+-- cannot teleport at all, not something to slip into mid-run: it is slow enough
+-- that eggs are gone before we arrive, so if instant is what the player picked,
+-- instant is what every trip uses.
+local function instantOK()
+    return Runtime.instantReady and Cfg.MoveMode == "Instant"
+end
+
+local function blinkExact(pos)
+    local root = hrp()
+    if not root then return false end
+    root.CFrame = CFrame.new(pos)
+    root.AssemblyLinearVelocity = Vector3.zero
+    return true
+end
+
+-- A single teleport is undone: the corrector samples us, restores the last
+-- position it liked, and we are home again within a handful of frames. Writing the
+-- same spot back on every Heartbeat outvotes it -- it restores once per sample, we
+-- restore once per frame -- and the position that replicates is ours. Every
+-- instant move goes through here; the returned function is the only way to stop
+-- it, so it is always called from a path that runs even on failure.
+-- The corrector does not run on one signal, so neither does this: the same write
+-- goes out on the physics step, the frame step and the render step, and whichever
+-- of them fires last in a frame is ours. Measured: a single-signal pin needed
+-- three or four frames to settle and still oscillated; this one does not.
+local function pin(pos)
+    local stopped = false
+    local conns = {}
+
+    local function apply()
+        if stopped then return end
+        local root = hrp()
+        if root then
+            root.CFrame = CFrame.new(pos)
+            root.AssemblyLinearVelocity = Vector3.zero
+        end
+    end
+
+    conns[#conns + 1] = RunService.Heartbeat:Connect(apply)
+    pcall(function() conns[#conns + 1] = RunService.PreSimulation:Connect(apply) end)
+    pcall(function() conns[#conns + 1] = RunService.PostSimulation:Connect(apply) end)
+    if RunService:IsClient() then
+        pcall(function() conns[#conns + 1] = RunService.RenderStepped:Connect(apply) end)
+    end
+
+    apply()
+    Runtime.pinConns = conns
+    return function()
+        if stopped then return end
+        stopped = true
+        for _, c in ipairs(conns) do pcall(function() c:Disconnect() end) end
+        if Runtime.pinConns == conns then Runtime.pinConns = nil end
+    end
+end
+
+-- A pinned teleport is not instant on the frame it is issued: the corrector still
+-- gets its restore in, and it takes a frame or three for our writes to be the last
+-- word. This waits for that instead of guessing a frame count -- and it never
+-- reports failure as a reason to move some other way, only as timing information.
+local function waitPinned(pos, tol, timeout)
+    tol = tol or 8
+    local deadline = os.clock() + (timeout or 0.35)
+    repeat
+        RunService.Heartbeat:Wait()
+        local root = hrp()
+        if root and (root.Position - pos).Magnitude <= tol then return true end
+    until os.clock() > deadline
+    return false
+end
+
+-- teleport, wait until it has actually taken, then let go
+local function blinkHold(pos, seconds)
+    if not hrp() then return false end
+    local unpin = pin(pos)
+    local landed = waitPinned(pos, 6, math.max(seconds or 0.12, 0.3))
+    -- a couple of frames of holding after landing is what makes it replicate
+    for _ = 1, 3 do RunService.Heartbeat:Wait() end
+    unpin()
+    return landed
+end
+
+local function insideGameplay()
+    local root = hrp()
+    if not (root and SEP_LINE and AreaLookup and AreaLookup.IsInGameplaySide) then return false end
+    local ok, inside = pcall(AreaLookup.IsInGameplaySide, SEP_LINE, root.Position)
+    return ok and inside == true
+end
+
+local function enforceWalkSpeed()
+    local want = Cfg.BoostWalkSpeed
+    if not want or want <= 0 then return end
+    local hum = humanoid()
+    if hum and hum.WalkSpeed < want then hum.WalkSpeed = want end
+end
+
+-- guard positions, one pass, reused by both the picker and the warp fallback
+local function guardPositions()
+    local list = {}
+    if not GuardAreasFolder then return list end
+    for _, model in ipairs(GuardAreasFolder:GetChildren()) do
+        local guard = model:FindFirstChild("Guard")
+        if guard then
+            local ok, gp = pcall(function() return guard:GetPivot().Position end)
+            if ok and gp then list[#list + 1] = Vector3.new(gp.X, 0, gp.Z) end
+        end
+    end
+    return list
+end
+
+local function nearestGuardDist(pos, list)
+    local flat, best = Vector3.new(pos.X, 0, pos.Z), math.huge
+    for _, gp in ipairs(list or guardPositions()) do
+        local d = (gp - flat).Magnitude
+        if d < best then best = d end
+    end
+    return best
+end
+
+----------------------------------------------------------------
+-- warp fallback (executors without hookfunction)
+--
+-- The server scores horizontal travel over a sliding window: WalkSpeed * mult +
+-- flat allowance per sample, and only samples taken with the feet on the ground
+-- count. So the fastest legal travel without the hook is one teleport per frame,
+-- sized to that budget, ground-snapped, with a beat of standing still every few
+-- hundred studs.
+----------------------------------------------------------------
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Exclude
+groundParams.IgnoreWater = true
+
+local function groundYAt(pos)
+    local ignore = { char() }
+    local origin = pos + Vector3.new(0, 4, 0)
+    for _ = 1, 10 do
+        groundParams.FilterDescendantsInstances = ignore
+        local hit = Workspace:Raycast(origin, Vector3.new(0, -600, 0), groundParams)
+        if not hit then return nil end
+        if hit.Instance.CanCollide and hit.Instance.Transparency < 1 then return hit.Position.Y end
+        table.insert(ignore, hit.Instance)
+    end
+    return nil
+end
+
+local function settleFeet(seconds)
+    local t0 = os.clock()
+    while os.clock() - t0 < (seconds or 0.08) do
+        task.wait()
+        local r = hrp()
+        if r then r.AssemblyLinearVelocity = Vector3.zero end
+    end
+end
+
+local function steerAroundGuards(pos, gap, list)
+    local out = pos
+    for _ = 1, 3 do
+        local worst, worstGap
+        for _, gp in ipairs(list) do
+            local d = (gp - Vector3.new(out.X, 0, out.Z)).Magnitude
+            if d < gap and (not worstGap or d < worstGap) then worst, worstGap = gp, d end
+        end
+        if not worst then return out, true end
+        local away = Vector3.new(out.X, 0, out.Z) - worst
+        if away.Magnitude < 0.1 then away = Vector3.new(0, 0, 1) end
+        away = away.Unit * (gap - worstGap + 6)
+        out = out + Vector3.new(away.X, 0, away.Z)
+    end
+    return out, false
+end
+
+local function warpTo(dest, arriveDist, opts)
+    opts = opts or {}
+    arriveDist = arriveDist or 2.5
+    local gap      = opts.guardGap or Cfg.GuardSafeGap or 26
+    local deadline = os.clock() + (opts.timeout or 14)
+
+    while os.clock() < deadline do
+        -- a retired session must stop steering the character immediately, or the
+        -- reload spends its first seconds fighting the run it just replaced
+        if not alive() then return false, "เซสชันถูกแทนที่" end
+        enforceWalkSpeed()
+        local dt = RunService.Heartbeat:Wait()
+        local root = hrp()
+        if not root then return false, "ไม่มีตัวละคร" end
+
+        local delta = dest - root.Position
+        local flat  = Vector3.new(delta.X, 0, delta.Z)
+        if flat.Magnitude <= arriveDist then return true end
+
+        local hum   = humanoid()
+        local speed = math.max(60, (hum and hum.WalkSpeed or 16) * (Cfg.WarpPct or 0.8))
+        local step  = math.min(speed * dt, flat.Magnitude)
+        local nextPos = root.Position + flat.Unit * step
+
+        if not opts.ignoreGuards then
+            local guards = guardPositions()
+            local effGap = flat.Magnitude < 40 and math.min(gap, 12) or gap
+            local steered, clear = steerAroundGuards(nextPos, effGap, guards)
+            if not clear and nearestGuardDist(root.Position, guards) < 8 then return false, "ยามขวางทาง" end
+            nextPos = steered
+        end
+
+        local gy = groundYAt(nextPos)
+        if gy then nextPos = Vector3.new(nextPos.X, gy + MIN_HOVER, nextPos.Z) end
+
+        root.CFrame = CFrame.new(nextPos)
+        root.AssemblyLinearVelocity = Vector3.zero
+    end
+    return false, "วาปไม่ทันเวลา"
+end
+
+local function warpChain(dest, arriveDist, opts)
+    opts = opts or {}
+    local root = hrp()
+    if not root then return false, "ไม่มีตัวละคร" end
+
+    local hop  = math.max(60, Cfg.ZoneHopStep or 260)
+    local from = root.Position
+    local flat = Vector3.new(dest.X - from.X, 0, dest.Z - from.Z)
+    local legs = math.max(1, math.ceil(flat.Magnitude / hop))
+
+    for i = 1, legs - 1 do
+        local wp = from + flat * (i / legs)
+        local ok, err = warpTo(Vector3.new(wp.X, from.Y, wp.Z), 4, opts)
+        if not ok then return false, err end
+        settleFeet(0.08)
+    end
+    return warpTo(dest, arriveDist or 2.5, opts)
+end
+
+-- park on the anchor: instant when the corrector can be outvoted, stepped otherwise
+local function toAnchor()
+    if instantOK() then return blinkHold(ANCHOR, 0.1) end
+    local root = hrp()
+    if not root then return false end
+    if (Vector3.new(root.Position.X, 0, root.Position.Z) - Vector3.new(ANCHOR.X, 0, ANCHOR.Z)).Magnitude < 4 then
+        return blinkExact(ANCHOR)
+    end
+    if insideGameplay() then warpChain(GATE_IN, 4, { guardGap = 14 }) end
+    warpChain(ANCHOR, 3, { ignoreGuards = true })
+    return blinkExact(ANCHOR)
+end
+
+local function moveTo(pos)
+    if instantOK() then
+        local gy = groundYAt(pos)
+        return blinkHold(gy and Vector3.new(pos.X, gy + MIN_HOVER, pos.Z) or (pos + Vector3.new(0, 3, 0)), 0.12)
+    end
+    return warpChain(pos, 5, { ignoreGuards = true })
+end
+
+----------------------------------------------------------------
+-- god mode
+--
+-- a death drops whatever we carry and respawns us far from the anchor, so one
+-- death becomes a death loop. health is pinned from the damage event itself —
+-- no per-frame loop, which matters when a hundred clients share a CPU.
+----------------------------------------------------------------
+local function hardenCharacter(c)
+    c = c or char()
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    pcall(function()
+        hum.BreakJointsOnDeath = false
+        hum.RequiresNeck       = false
+        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+    end)
+    if Runtime.conns.health then Runtime.conns.health:Disconnect() end
+    Runtime.conns.health = hum.HealthChanged:Connect(function(h)
+        if Cfg.GodMode and h < hum.MaxHealth then hum.Health = hum.MaxHealth end
+    end)
+end
+
+----------------------------------------------------------------
+-- eggs
+----------------------------------------------------------------
+local function areaEggRecords()
+    local ok, snap = pcall(EggCmds.GetAreaEggSnapshot)
+    if not ok or type(snap) ~= "table" then return {} end
+    return snap.Records or snap
+end
+
+-- Every egg row carries the pet it will hatch into as AssetCategory, so what is
+-- sitting in the bag or growing in the pen is knowable before it cracks. Growth
+-- time is derived from the placement stamp rather than EggItemUtil's own helper,
+-- which asserts on the shapes we have to hand.
+local function eggRoster()
+    local recs = myRuntimeRecords()
+    local now  = os.time()
+    local list = {}
+
+    for uid, raw in pairs(eggInventory()) do
+        if type(raw) == "table" and raw.AssetCategory then
+            local rec    = recs[uid]
+            local placed = rec and rec.Placement or nil
+            local ready, remain = false, nil
+
+            if placed then
+                local ok, r = pcall(EggCmds.IsLocalEggReady, uid)
+                ready = ok and r == true
+
+                if not ready and EggUtil and EggUtil.GetGrowthDuration then
+                    local okd, dur = pcall(EggUtil.GetGrowthDuration, rec)
+                    if okd and tonumber(dur) then
+                        local credit = (tonumber(placed.GrowthCreditSeconds) or 0)
+                            + (tonumber(placed.NightGrowthCreditSeconds) or 0)
+                        local elapsed = now - (tonumber(placed.PlacedAt) or now) + credit
+                        remain = math.max(0, math.floor(tonumber(dur) - elapsed))
+                    end
+                end
+            end
+
+            list[#list + 1] = {
+                uid = uid, cat = raw.AssetCategory, rarity = rarityOf(raw.AssetCategory),
+                placed = placed ~= nil, ready = ready, remain = remain,
+            }
+        end
+    end
+    return list
+end
+
+local function clockText(sec)
+    if not sec then return "?" end
+    if sec <= 0 then return "พร้อม" end
+    if sec < 60 then return ("%ds"):format(sec) end
+    if sec < 3600 then return ("%dm"):format(math.floor(sec / 60)) end
+    return ("%dh %dm"):format(math.floor(sec / 3600), math.floor(sec % 3600 / 60))
+end
+
+local function unplacedEggs()
+    local recs = myRuntimeRecords()
+    local out = {}
+    for uid, raw in pairs(eggInventory()) do
+        if not (recs[uid] and recs[uid].Placement) and type(raw) == "table" and raw.AssetCategory then
+            local price = 0
+            if EggUtil and EggUtil.GetSellPrice then
+                local ok, p = pcall(EggUtil.GetSellPrice, raw)
+                if ok then price = tonumber(p) or 0 end
+            end
+            out[#out + 1] = { uid = uid, cat = raw.AssetCategory, rarity = rarityOf(raw.AssetCategory), price = price }
+        end
+    end
+    return out
+end
+
+local function occupiedSpots()
+    local spots = {}
+    for _, rec in pairs(myRuntimeRecords()) do
+        if rec.Placement and rec.Placement.LocalCFrame then
+            table.insert(spots, rec.Placement.LocalCFrame.Position)
+        end
+    end
+    return spots
+end
+
+local function nextFreeSpot(taken)
+    local pd = plotData()
+    if not pd or not pd.PetArea or not pd.CenterPoint then return nil end
+    local pa, center = pd.PetArea, pd.CenterPoint.CFrame
+    local halfX = math.max(pa.Size.X * 0.5 - 5, 2)
+    local halfZ = math.max(pa.Size.Z * 0.5 - 5, 2)
+    local spacing = 5
+
+    for radius = 0, math.max(halfX, halfZ), spacing do
+        for dx = -radius, radius, spacing do
+            for dz = -radius, radius, spacing do
+                if math.abs(dx) == radius or math.abs(dz) == radius or radius == 0 then
+                    if math.abs(dx) <= halfX and math.abs(dz) <= halfZ then
+                        local world = pa.CFrame * CFrame.new(dx, 0, dz)
+                        local flat  = CFrame.new(world.Position.X, pa.CFrame.Position.Y, world.Position.Z)
+                        local lcf   = center:ToObjectSpace(flat)
+                        local free  = true
+                        for _, p in ipairs(taken) do
+                            if (Vector3.new(p.X, 0, p.Z) - Vector3.new(lcf.X, 0, lcf.Z)).Magnitude < spacing - 0.5 then
+                                free = false break
+                            end
+                        end
+                        if free then return lcf end
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function atHome()
+    local root = hrp()
+    if not root then return false end
+    local ok, inside = pcall(PlotCmds.IsWorldPositionWithinLocalPlotBounds, root.Position)
+    return ok and inside == true
+end
+
+local function goHome()
+    local pd = plotData()
+    if not pd or not pd.PetArea then return false end
+    return moveTo(pd.PetArea.CFrame.Position + Vector3.new(0, 4, 0))
+end
+
+-- hatching answers from anywhere on the map, so this never leaves the anchor
+local function hatchReady()
+    local hatched = 0
+    for uid, rec in pairs(myRuntimeRecords()) do
+        if rec.Placement then
+            local ok, ready = pcall(EggCmds.IsLocalEggReady, uid)
+            if ok and ready then
+                if EggCmds.RequestHatchEgg(uid) then
+                    task.wait(0.15)
+                    if EggCmds.RequestCompleteHatchEgg(uid) then
+                        hatched += 1
+                        Runtime.stats.hatched += 1
+                        logLine("hatch", ("ฟัก %s"):format(rec.AssetCategory or "?"))
+                    end
+                end
+            end
+        end
+    end
+    return hatched
+end
+
+local function placeEggs()
+    local queue = {}
+    for _, egg in ipairs(unplacedEggs()) do
+        if Cfg.PlaceRarities[egg.rarity] then queue[#queue + 1] = egg end
+    end
+    if #queue == 0 then return 0 end
+    table.sort(queue, function(a, b) return rankOf(a.cat) > rankOf(b.cat) end)
+
+    -- Placing is a "you must be closer" check on every single egg, so standing on
+    -- the plot has to survive the whole batch, not just the trip out. The plot spot
+    -- is pinned for the duration: one teleport, twenty placements, no walking.
+    local unpin
+    local function release() if unpin then local f = unpin unpin = nil pcall(f) end end
+
+    if instantOK() then
+        local pd = plotData()
+        local spot = pd and pd.PetArea and (pd.PetArea.CFrame.Position + Vector3.new(0, 4, 0))
+        if spot then
+            unpin = pin(spot)
+            waitPinned(spot, 8, 0.35)
+        end
+    elseif not atHome() then
+        goHome()
+    end
+
+    local taken, placed = occupiedSpots(), 0
+    for _, egg in ipairs(queue) do
+        local lcf = nextFreeSpot(taken)
+        if not lcf then break end
+        local ok, err = EggCmds.RequestPlaceEgg(egg.uid, lcf)
+        if ok then
+            placed += 1
+            table.insert(taken, lcf.Position)
+            task.wait(0.08)
+        elseif tostring(err):find("closer") then
+            table.insert(taken, lcf.Position)
+        else
+            break
+        end
+    end
+
+    release()
+    if placed > 0 then toAnchor() end
+    return placed
+end
+
+-- selling an egg needs it in our hands first: equip the tool, then fire the sale.
+-- no stand, no prompt, works from the anchor.
+local function eggSellPlan()
+    local plan = {}
+    local limit = tonumber(Cfg.SellEggBelow) or 0
+    for _, egg in ipairs(unplacedEggs()) do
+        local byRarity = Cfg.SellEggRarities[egg.rarity] == true
+        local byPrice  = limit > 0 and egg.price < limit
+        if byRarity or byPrice then plan[#plan + 1] = egg end
+    end
+    table.sort(plan, function(a, b) return a.price < b.price end)
+    return plan
+end
+
+-- one egg per call by default: the seller thread paces these the same way it
+-- paces pets, so a bag of a hundred never lands on a single frame
+local function sellEggsOnce(count)
+    local plan = eggSellPlan()
+    if #plan == 0 then return 0 end
+
+    local sold = 0
+    for i = 1, math.min(count or 1, #plan) do
+        local egg = plan[i]
+        if invoke(NET.Eggs.REQUEST_EQUIP_TOOL, egg.uid) then
+            fire(NET.AssetInventory.SELL_ASSET, { egg.uid })
+            sold += 1
+            Runtime.stats.soldEggs += 1
+            task.wait(0.04)
+        end
+    end
+    if sold > 0 then
+        pcall(function() invoke(NET.Eggs.REQUEST_UNEQUIP_TOOL) end)
+        saveCache = nil
+        logLine("sell", ("ขายไข่ %d ใบ"):format(sold))
+    end
+    return sold
+end
+
+local function sellEggs(maxCount)
+    local total = 0
+    for _ = 1, math.min(maxCount or (Cfg.SellMaxPerRun or 60), 200) do
+        local n = sellEggsOnce(1)
+        if n == 0 then break end
+        total += n
+        task.wait(0.04)
+    end
+    return total
+end
+
+----------------------------------------------------------------
+-- pets: equip / sell
+----------------------------------------------------------------
+local function equipBest()
+    invoke(NET.Backpack.EQUIP_BEST)
+
+    local limit = tonumber(invoke(NET.ActiveAssets.REQUEST_EQUIP_LIMIT)) or 0
+    if limit <= 0 then return 0 end
+
+    -- runs every few seconds with the whole inventory behind it, so it breathes
+    -- instead of unpacking two hundred pets inside one frame
+    local list = petItems(false, 40)
+    if #list == 0 then return 0 end
+    table.sort(list, function(a, b) return a.rate > b.rate end)
+
+    local want, equipped = {}, {}
+    for i = 1, math.min(limit, #list) do want[list[i].uid] = true end
+    for _, p in ipairs(list) do if p.equipped then equipped[p.uid] = true end end
+
+    local changed = 0
+    for uid in pairs(equipped) do
+        if not want[uid] then
+            if AssetCmds then pcall(AssetCmds.RequestUnequipAsset, uid) else invoke(NET.ActiveAssets.REQUEST_UNEQUIP, uid) end
+            changed += 1
+            task.wait(0.06)
+        end
+    end
+    for uid in pairs(want) do
+        if not equipped[uid] then
+            if AssetCmds then pcall(AssetCmds.RequestEquipAsset, uid) else invoke(NET.ActiveAssets.REQUEST_EQUIP, uid) end
+            changed += 1
+            task.wait(0.06)
+        end
+    end
+    return changed
+end
+
+-- ActiveAssets.REQUEST_SELL takes ONE uid, is validated server side, and answers
+-- from anywhere. AssetInventory.SELL_ASSET only works on a held tool and
+-- SELL_ALL_ASSETS is the stand's bulk dump — neither respects a filter.
+local function sellPetPlan(yieldEvery)
+    local list = petItems(false, yieldEvery)
+    table.sort(list, function(a, b) return a.rate > b.rate end)
+
+    local keep = {}
+    for i = 1, math.min(Cfg.SellKeepTop or 0, #list) do keep[list[i].uid] = true end
+
+    local plan = {}
+    for _, p in ipairs(list) do
+        -- hard rails: these are never sold, whatever the filters say
+        if not (p.equipped or p.favorite or p.inFuse or keep[p.uid]) then
+            local limit    = tonumber(Cfg.SellPetBelow) or 0
+            local byPrice  = limit > 0 and p.price < limit
+            local byRarity = Cfg.SellPetRarities[p.rarity] == true
+
+            local take
+            if Cfg.SellPetMode == "ระดับที่เลือก" then take = byRarity
+            elseif Cfg.SellPetMode == "เข้าทั้งสองเงื่อนไข" then take = byRarity and byPrice
+            else take = byPrice end
+
+            if take then plan[#plan + 1] = p end
+        end
+    end
+    table.sort(plan, function(a, b) return a.price < b.price end)
+    return plan
+end
+
+----------------------------------------------------------------
+-- realtime seller
+--
+-- The stutter came from the old shape: rebuild a 200-entry plan, then fire eight
+-- RemoteFunction invokes on one frame and block until they all answer. Eight
+-- yields landing together is a visible hitch, and it repeated every ten seconds.
+--
+-- This runs continuously instead. One launch per tick at most, a few in flight at
+-- a time, and the candidate list is only rebuilt when the inventory actually
+-- changed. No frame ever carries more than a single request, so there is nothing
+-- left to stutter — and a pet that becomes sellable is gone within a tick or two
+-- instead of waiting for the next sweep.
+----------------------------------------------------------------
+local sellDirty   = true
+local sellQueue   = {}
+local sellFlight  = 0
+local sellLastScan = 0
+
+local function markSellDirty() sellDirty = true end
+
+local function refillSellQueue()
+    -- 40 at a time: the rebuild is spread over a handful of frames instead of
+    -- landing on one, which is the difference between a smooth run and a freeze
+    local plan = sellPetPlan(40)
+    table.clear(sellQueue)
+    -- cheapest first, and the queue is popped from the end
+    for i = #plan, 1, -1 do sellQueue[#sellQueue + 1] = plan[i] end
+
+    local total = 0
+    for _, p in ipairs(plan) do total += p.price end
+    local head = {}
+    for i = 1, math.min(5, #plan) do
+        head[#head + 1] = ("• %s (%s) — %s"):format(plan[i].cat, RARITY_TH[plan[i].rarity] or plan[i].rarity, shortNum(plan[i].price))
+    end
+    if #plan > 5 then head[#head + 1] = ("...และอีก %d ตัว"):format(#plan - 5) end
+    -- the panel reads this instead of rebuilding the plan itself every 5 seconds
+    Runtime.sellPreview = { count = #plan, total = total, head = table.concat(head, "\n") }
+
+    sellDirty = false
+    sellLastScan = os.clock()
+end
+
+-- kept for the API and the "sell now" path: same pacing, just runs to completion
+local function sellPets(maxCount)
+    local plan = sellPetPlan()
+    local cap  = math.min(maxCount or math.huge, math.max(1, Cfg.SellMaxPerRun or 60))
+    local sold, earned = 0, 0
+
+    for _, p in ipairs(plan) do
+        if sold >= cap then break end
+        if invoke(NET.ActiveAssets.REQUEST_SELL, p.uid) then
+            sold += 1
+            earned += p.price
+        end
+        task.wait(0.03)
+    end
+
+    Runtime.stats.soldPets += sold
+    saveCache, petCache = nil, nil
+    markSellDirty()
+    if sold > 0 then logLine("sell", ("ขายสัตว์ %d ตัว ได้ %s"):format(sold, shortNum(earned))) end
+    return sold, earned
+end
+
+----------------------------------------------------------------
+-- stealing
+----------------------------------------------------------------
+local function areaReachable(areaId)
+    local need = AREA_SPEED[areaId]
+    if not need then return true end
+    local hum = humanoid()
+    return (hum and hum.WalkSpeed or 16) > need + 1
+end
+
+local function guardState(areaId)
+    local model = GuardAreasFolder and GuardAreasFolder:FindFirstChild(areaId)
+    local guard = model and model:FindFirstChild("Guard")
+    return guard and guard:GetAttribute("GuardState") or nil
+end
+
+local function eggPasses(rec)
+    if not rec or not rec.AssetCategory then return false end
+    if rec.State ~= "Slot" and rec.State ~= "Dropped" then return false end
+    local until_ = Runtime.skip[rec.Uid]
+    if until_ and os.clock() < until_ then return false end
+    if tostring(rec.Uid):find("FirstAreaEgg") then return false end
+    if not Cfg.StealAreas[rec.AreaId] then return false end
+    if not areaReachable(rec.AreaId) then return false end
+    if not Cfg.StealRarities[rarityOf(rec.AssetCategory)] then return false end
+    local muts = 0
+    if type(rec.Mutations) == "table" then for _ in pairs(rec.Mutations) do muts += 1 end end
+    if muts < Cfg.MinMutations then return false end
+    return true
+end
+
+-- How many eggs the player's own filter still matches, ignoring the short skip
+-- timer: an egg we failed to grab a second ago is still an egg in this server, and
+-- treating it as "nothing here" is exactly how a hop loop starts.
+local function matchingEggCount()
+    local n = 0
+    for _, rec in pairs(areaEggRecords()) do
+        if rec and rec.AssetCategory
+            and (rec.State == "Slot" or rec.State == "Dropped")
+            and not tostring(rec.Uid):find("FirstAreaEgg")
+            and Cfg.StealAreas[rec.AreaId]
+            and Cfg.StealRarities[rarityOf(rec.AssetCategory)] then
+            local muts = 0
+            if type(rec.Mutations) == "table" then for _ in pairs(rec.Mutations) do muts += 1 end end
+            if muts >= Cfg.MinMutations then n += 1 end
+        end
+    end
+    return n
+end
+
+local function bestEgg()
+    -- every run leaves from the anchor, so distance is scored from there
+    local hum = humanoid()
+    local speed = math.max((hum and hum.WalkSpeed or 16) * (Cfg.WarpPct or 0.8), 50)
+    local guards = guardPositions()
+
+    local best, bestScore
+    for _, rec in pairs(areaEggRecords()) do
+        if eggPasses(rec) then
+            local value = rankOf(rec.AssetCategory) * 1e6 + earnRate(rec.AssetCategory) / 1e3
+            if type(rec.Mutations) == "table" then
+                for _ in pairs(rec.Mutations) do value *= 1.5 end
+            end
+            if guardState(rec.AreaId) == "Chasing" then value *= 0.5 end
+            if rec.BottomCFrame and nearestGuardDist(rec.BottomCFrame.Position, guards) < 8 then value *= 0.1 end
+
+            local score = value
+            if Cfg.PickMode == "Efficient" then
+                local dist = rec.BottomCFrame and (rec.BottomCFrame.Position - ANCHOR).Magnitude or 3000
+                score = value / (dist * 2 / speed + 4)
+            end
+            if not bestScore or score > bestScore then best, bestScore = rec, score end
+        end
+    end
+    return best
+end
+
+-- anchor -> nest -> anchor. two teleports and a grab.
+local function instantSteal(rec)
+    local egg = rec.BottomCFrame and rec.BottomCFrame.Position
+    if not egg then return false, "ไม่มีตำแหน่งไข่" end
+
+    blinkExact(ANCHOR)
+
+    local claimed = false
+    local conn = EggCmds.AreaEggClaimed:Connect(function() claimed = true end)
+    local unpin = nil
+    local function release()
+        if unpin then
+            local f = unpin
+            unpin = nil
+            pcall(f)
+        end
+    end
+    local function finish(ok, err)
+        release()
+        conn:Disconnect()
+        Runtime.carryUid = nil
+        if not ok then Runtime.skip[rec.Uid] = os.clock() + 8 end
+        blinkHold(ANCHOR, 0.1)
+        return ok, err
+    end
+
+    -- The client is already fed by AreaEggSnapshotUpdated / AreaEggUpdated, so the
+    -- snapshot in hand is live. Asking the server for a fresh one before every
+    -- single egg cost 123-221ms of the ~700ms round trip and told us nothing new
+    -- (measured 2026-08-15). The cached record is used as-is; the only case that
+    -- ever needed a re-read -- a nest that moved on a reset cycle -- shows up as a
+    -- "not found" refusal below, and that path asks for the snapshot itself.
+    for _, live in pairs(areaEggRecords()) do
+        if live.Uid == rec.Uid and live.BottomCFrame then egg = live.BottomCFrame.Position break end
+    end
+
+    -- we stand on the nest for a fifth of a second, so only a guard already inside
+    -- its own hit radius is a reason to walk away
+    if nearestGuardDist(egg) < 5 then return finish(false, "ยามเฝ้ารังอยู่") end
+
+    -- stand on the nest and hold it: the grab is refused while the server still
+    -- has us anywhere else, and a plain teleport is undone before the request
+    -- lands. The pin is what makes the difference between 0.5s per egg and never
+    -- arriving at all.
+    local stand = egg + Vector3.new(0, 3, 0)
+    unpin = pin(stand)
+    -- the grab is refused while the server still has us somewhere else, so wait
+    -- for the pin to actually own the position before spending requests on it
+    waitPinned(stand, 8, 0.35)
+
+    -- Our position reaches the server a frame or two after we set it, so the first
+    -- refusals are latency, not a miss. Asking again only after the previous answer
+    -- came back made every egg cost two or three full round trips (~300ms measured);
+    -- the attempts are launched in parallel instead and the first success wins, so
+    -- the wait is one round trip plus however long replication actually needed.
+    local grabbed, gerr, bagFull, gone = false, nil, false, false
+    local inflight, done = 0, false
+    local deadline = os.clock() + 1.5
+
+    while not done and not grabbed and os.clock() < deadline do
+        if inflight < 4 then
+            inflight += 1
+            task.spawn(function()
+                local ok2, res, err2 = pcall(EggCmds.RequestCarryAreaEgg, rec.Uid)
+                inflight -= 1
+                if not ok2 then gerr = res return end
+                if res then grabbed = true return end
+                gerr = err2
+                local msg = tostring(err2)
+                if msg:find("full") then bagFull, done = true, true
+                elseif msg:find("not found") or msg:find("unavailable") then gone, done = true, true end
+            end)
+        end
+        task.wait(0.04)
+    end
+
+    if bagFull then
+        release()
+        conn:Disconnect()
+        blinkHold(ANCHOR, 0.1)
+        return false, "กระเป๋าไข่เต็ม"
+    end
+    if gone then
+        -- the only thing a stale snapshot can cost us: refresh it for the next egg
+        -- instead of paying for one before every egg
+        task.spawn(function() pcall(EggCmds.RequestAreaEggSnapshot) end)
+    end
+
+    release()
+    if not grabbed then return finish(false, tostring(gerr)) end
+    Runtime.carryUid = rec.Uid
+
+    -- carrying it home is the half the corrector cares about, so the anchor is
+    -- held the same way until the egg is banked
+    unpin = pin(ANCHOR)
+
+    local function bankedByRecord()
+        for _, live in pairs(areaEggRecords()) do
+            if live.Uid == rec.Uid then return live.State == "Claimed" end
+        end
+        return true
+    end
+
+    local t0 = os.clock()
+    while not claimed and os.clock() - t0 < 3 do
+        task.wait(0.03)
+        if os.clock() - t0 > 0.25 and bankedByRecord() then claimed = true end
+    end
+    release()
+    conn:Disconnect()
+    Runtime.carryUid = nil
+    if not claimed then blinkHold(ANCHOR, 0.1) return false, "ไข่หลุดระหว่างทาง" end
+
+    Runtime.stats.eggs += 1
+    local cat = rec.AssetCategory
+    logLine("steal", ("ขโมย %s (%s)"):format(cat, RARITY_TH[rarityOf(cat)] or rarityOf(cat)))
+    if Cfg.WebhookSteal then
+        webhook("🥷 ขโมยไข่สำเร็จ", ("**%s** (%s) — โซน %s"):format(cat, RARITY_TH[rarityOf(cat)] or rarityOf(cat), rec.AreaId))
+    end
+    blinkExact(ANCHOR)
+    return true
+end
+
+-- same trip for executors without hookfunction: gate walked in warp steps
+local function warpSteal(rec)
+    local egg = rec.BottomCFrame and rec.BottomCFrame.Position
+    if not egg then return false, "ไม่มีตำแหน่งไข่" end
+    toAnchor()
+
+    local claimed = false
+    local conn = EggCmds.AreaEggClaimed:Connect(function() claimed = true end)
+    local function finish(ok, err)
+        conn:Disconnect()
+        Runtime.carryUid = nil
+        if not ok then Runtime.skip[rec.Uid] = os.clock() + 8 end
+        toAnchor()
+        return ok, err
+    end
+
+    local root = hrp()
+    if root and math.abs(root.Position.Z - ANCHOR.Z) > 18 then
+        warpTo(Vector3.new(root.Position.X, root.Position.Y, ANCHOR.Z), 4, { ignoreGuards = true, timeout = 6 })
+    end
+    warpTo(GATE_IN, 4, { ignoreGuards = true, timeout = 8 })
+    settleFeet(0.12)
+    if not insideGameplay() then return finish(false, "เข้าโซนไม่สำเร็จ") end
+
+    pcall(EggCmds.RequestAreaEggSnapshot)
+    task.wait(0.1)
+    for _, live in pairs(areaEggRecords()) do
+        if live.Uid == rec.Uid and live.BottomCFrame then egg = live.BottomCFrame.Position break end
+    end
+    if nearestGuardDist(egg) < 10 then return finish(false, "ยามเฝ้ารังอยู่") end
+
+    local moved, moveErr = warpChain(egg, 2, { guardGap = Cfg.GuardSafeGap })
+    if not moved then return finish(false, moveErr or "ไปไม่ถึงไข่") end
+    settleFeet(0.08)
+
+    local grabbed, gerr
+    local deadline = os.clock() + 2.5
+    repeat
+        grabbed, gerr = EggCmds.RequestCarryAreaEgg(rec.Uid)
+        if grabbed then break end
+        local msg = tostring(gerr)
+        if msg:find("not found") or msg:find("unavailable") or msg:find("full") then break end
+        task.wait(0.1)
+    until os.clock() > deadline
+    if not grabbed then return finish(false, tostring(gerr)) end
+
+    Runtime.carryUid = rec.Uid
+    warpChain(GATE_IN, 4, { guardGap = 14 })
+    toAnchor()
+
+    local t0 = os.clock()
+    while not claimed and os.clock() - t0 < 4 do task.wait(0.05) end
+    conn:Disconnect()
+    Runtime.carryUid = nil
+    if not claimed then toAnchor() return false, "ไข่หลุดระหว่างทาง" end
+
+    Runtime.stats.eggs += 1
+    logLine("steal", ("ขโมย %s"):format(rec.AssetCategory))
+    toAnchor()
+    return true
+end
+
+local function stealOnce()
+    local rec = bestEgg()
+    if not rec then return false, "ไม่มีไข่ตรงตัวกรอง" end
+    if instantOK() then return instantSteal(rec) end
+    return warpSteal(rec)
+end
+
+----------------------------------------------------------------
+-- bag pressure
+--
+-- The egg bag caps at 115 and placed eggs live in it, so a full bag stops the
+-- steal loop, the fuse machine and everything else at once. This is the job that
+-- keeps the pipeline moving instead of waiting for a timer to notice.
+----------------------------------------------------------------
+local EGG_BAG_CAP = 115
+
+local function bagCount()
+    local n = 0
+    for _ in pairs(eggInventory()) do n += 1 end
+    return n
+end
+
+local function relieveBag(force)
+    local bag = bagCount()
+    if not force and bag < EGG_BAG_CAP - (Cfg.SellEggKeepBag or 20) then return false end
+    hatchReady()
+    -- a bag emergency is the one time selling is allowed to run in bulk, and even
+    -- then it is capped so it cannot become a freeze of its own
+    if Cfg.AutoSellEggs then sellEggs(25) end
+    if Cfg.AutoPlace then placeEggs() end
+    return true
+end
+
+----------------------------------------------------------------
+-- progression
+----------------------------------------------------------------
+local function baseUpgradeStep()
+    if not BasesDir or not BasesDir.BASES then return end
+    local data = saveData()
+    local lvl  = tonumber(data.BaseUpgradeLevel) or 0
+    local maxLvl = 99
+    if BasesDir.GetMaxBaseLevel then
+        local ok, m = pcall(BasesDir.GetMaxBaseLevel)
+        if ok and tonumber(m) then maxLvl = tonumber(m) end
+    end
+    if lvl >= maxLvl then return end
+
+    local nextCfg = BasesDir.BASES[lvl + 1]
+    local cost = nextCfg and tonumber(nextCfg.Cost)
+    if not cost then return end
+    if moneyNow() < cost then return end
+
+    fire(NET.Plots.REQUEST_BASE_UPGRADE)
+    logLine("base", ("อัปฐานเป็นเลเวล %d (%s)"):format(lvl + 1, shortNum(cost)))
+    saveCache, petCache = nil, nil
+end
+
+local function treadmillUpgradeStep()
+    if not TreadDir or not TreadDir.GetByUpgradeLevel then return end
+    local data = saveData()
+    local lvl  = tonumber(data.TreadmillUpgradeLevel) or 0
+
+    local ok, nextTm = pcall(TreadDir.GetByUpgradeLevel, lvl + 1)
+    if not ok or type(nextTm) ~= "table" then return end
+    local price = tonumber(nextTm.Price) or math.huge
+    if moneyNow() < price then return end
+
+    invoke(NET.Treadmills.REQUEST_UPGRADE, nextTm._id)
+    logLine("treadmill", ("อัปลู่วิ่งเป็น %s (%s)"):format(nextTm.DisplayName or nextTm._id, shortNum(price)))
+    saveCache, petCache = nil, nil
+end
+
+local function trailsStep()
+    if not TrailsDir or not TrailsDir.Directory then return end
+    local data  = saveData()
+    local owned = data.TrailInventory or {}
+    local money = tonumber(data.Money) or 0
+
+    local list = {}
+    for id, cfg in pairs(TrailsDir.Directory) do
+        if type(cfg) == "table" then
+            list[#list + 1] = { id = cfg._id or id, price = tonumber(cfg.Price) or math.huge, speed = tonumber(cfg.SpeedMultiplier) or 0 }
+        end
+    end
+    table.sort(list, function(a, b) return a.speed > b.speed end)
+
+    for _, item in ipairs(list) do
+        if not owned[item.id] and item.price > 0 and item.price <= money then
+            invoke(NET.Trails.REQUEST_PURCHASE, item.id)
+            logLine("trail", ("ซื้อเทรล %s"):format(item.id))
+            saveCache, petCache = nil, nil
+            task.wait(0.3)
+            owned = saveData(true).TrailInventory or owned
+            break
+        end
+    end
+
+    for _, item in ipairs(list) do
+        if owned[item.id] then
+            if data.EquippedTrail ~= item.id then invoke(NET.Trails.REQUEST_SELECT, item.id) end
+            return
+        end
+    end
+end
+
+-- Two things made this look permanently broken:
+--   * the machine keeps whatever was loaded into it between attempts, so every
+--     later insert answers "Fuse machine is full!" and the run gave up
+--   * a fuse pays out an egg, so a full egg bag answers "Your egg inventory is
+--     full!" and nothing happens either
+-- So: clear the bag if needed, finish or empty whatever is already loaded, then
+-- load a fresh trio.
+local function fuseFinish(label)
+    local ok, err = invoke(NET.FuseMachine.START_FUSE)
+    if not ok then return false, err end
+    task.wait(0.4)
+    invoke(NET.FuseMachine.COMPLETE_REVEAL)
+    invoke(NET.FuseMachine.ACKNOWLEDGE_INFO)
+    logLine("fuse", ("ผสม %s"):format(label))
+    saveCache, petCache = nil, nil
+    markSellDirty()
+    return true
+end
+
+local function fuseStep()
+    if bagCount() >= EGG_BAG_CAP - 1 then relieveBag(true) end
+
+    local pets = petItems()
+    local loaded, byCat = {}, {}
+    for _, p in ipairs(pets) do
+        if p.inFuse then
+            loaded[#loaded + 1] = p
+        elseif not (p.equipped or p.favorite) then
+            byCat[p.cat] = byCat[p.cat] or {}
+            table.insert(byCat[p.cat], p.uid)
+        end
+    end
+
+    -- something is already sitting in the machine: finish it, or clear it out
+    if #loaded >= 3 then
+        local ok, err = fuseFinish(loaded[1].cat)
+        if ok then return true end
+        Runtime.lastError = "ผสมไม่ได้: " .. tostring(err)
+        return false
+    elseif #loaded > 0 then
+        for _, p in ipairs(loaded) do invoke(NET.FuseMachine.REMOVE_MOB, p.uid) end
+        saveCache, petCache = nil, nil
+    end
+
+    for cat, uids in pairs(byCat) do
+        if #uids >= 3 then
+            local inserted = 0
+            for i = 1, 3 do
+                if invoke(NET.FuseMachine.INSERT_MOB, uids[i]) then inserted += 1 end
+            end
+            if inserted == 3 then
+                local ok, err = fuseFinish(cat .. " x3")
+                if ok then return true end
+                for i = 1, 3 do invoke(NET.FuseMachine.REMOVE_MOB, uids[i]) end
+                Runtime.lastError = "ผสมไม่ได้: " .. tostring(err)
+                return false
+            end
+            -- partial load is worse than none: take it back out and stop
+            for i = 1, 3 do invoke(NET.FuseMachine.REMOVE_MOB, uids[i]) end
+            return false
+        end
+    end
+    return false
+end
+
+local function claimStep()
+    invoke(NET.OfflineAssets.REQUEST_REDEEM)
+    invoke(NET.Index.REQUEST_CLAIM_ALL)
+end
+
+----------------------------------------------------------------
+-- anti-lag
+--
+-- Not a cosmetic toggle: on a box running many clients the render work is what
+-- kills the frame budget. Effects are destroyed rather than hidden, and the
+-- sweep is throttled so it never becomes the lag itself.
+----------------------------------------------------------------
+local KILL_CLASSES = {
+    ParticleEmitter = true, Trail = true, Smoke = true, Fire = true,
+    Sparkles = true, Beam = true, Explosion = true, Highlight = true,
+}
+
+local function stripInstance(inst)
+    local cls = inst.ClassName
+    if KILL_CLASSES[cls] then
+        inst:Destroy()
+        return
+    end
+    if Cfg.LowFXOnly then return end
+    if cls == "Texture" or cls == "Decal" then
+        inst:Destroy()
+    elseif inst:IsA("BasePart") then
+        inst.Material = Enum.Material.SmoothPlastic
+        inst.Reflectance = 0
+        inst.CastShadow = false
+        if inst:IsA("MeshPart") then inst.RenderFidelity = Enum.RenderFidelity.Performance end
+    end
+end
+
+local function antiLagGlobals()
+    pcall(function()
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 1e6
+        Lighting.Brightness = 1
+        for _, fx in ipairs(Lighting:GetChildren()) do
+            if fx:IsA("PostEffect") or fx:IsA("Atmosphere") then fx:Destroy() end
+        end
+        local terrain = Workspace:FindFirstChildOfClass("Terrain")
+        if terrain then
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveSpeed = 0
+            terrain.WaterReflectance = 0
+            terrain.WaterTransparency = 0
+        end
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
+    end)
+end
+
+-- the map is ~37k instances, so the first pass yields every few thousand instead
+-- of hitching the client, and it runs once. after that only new instances matter.
+local fullPassRunning = false
+
+-- Counting instances is the wrong budget. Three thousand of these in one frame is
+-- a visible hitch when they are MeshParts (four property writes each) and nothing
+-- at all when they are Attachments, so the pass watches the clock instead: work
+-- until this frame has had its few milliseconds, then hand the frame back. The map
+-- takes a couple of seconds longer to sweep and never costs a dropped frame.
+local FULL_PASS_MS = 0.004
+
+local function antiLagFullPass()
+    if fullPassRunning then return end
+    fullPassRunning = true
+    task.spawn(function()
+        antiLagGlobals()
+        local all = Workspace:GetDescendants()
+        local slice = os.clock()
+        for i = 1, #all do
+            local inst = all[i]
+            if inst.Parent then pcall(stripInstance, inst) end
+            if os.clock() - slice > FULL_PASS_MS then
+                task.wait()
+                slice = os.clock()
+            end
+        end
+        all = nil
+        Runtime.lastError = nil
+        logLine("lag", ("แก้แลค: กวาดครบทั้งแมพแล้ว"))
+        fullPassRunning = false
+    end)
+end
+
+-- anything the game streams in afterwards is caught here instead of by rescanning
+-- the whole tree on a timer, which was the expensive way to find nothing
+local fxQueue = {}
+
+Runtime.conns.fx = Workspace.DescendantAdded:Connect(function(inst)
+    if not Cfg.AntiLag then return end
+    fxQueue[#fxQueue + 1] = inst
 end)
 
-if not success or not WindUI then
+local function hideOtherPlayers()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            for _, part in ipairs(p.Character:GetDescendants()) do
+                if part:IsA("BasePart") or part:IsA("Decal") then
+                    pcall(function() part.LocalTransparencyModifier = 1 end)
+                elseif part:IsA("ParticleEmitter") or part:IsA("Trail") then
+                    pcall(function() part:Destroy() end)
+                end
+            end
+        end
+    end
+end
+
+local function antiLagSweep()
+    if not Cfg.AntiLag then
+        if #fxQueue > 0 then table.clear(fxQueue) end
+        return
+    end
+
+    antiLagGlobals()
+
+    -- drain what streamed in, newest first, on a frame budget rather than a count:
+    -- 1500 MeshParts in one frame is a hitch, 1500 attachments is nothing
+    local slice    = os.clock()
+    local deadline = slice + 0.75      -- a stream that outruns us waits for the next sweep
+    while #fxQueue > 0 and os.clock() < deadline do
+        local inst = table.remove(fxQueue)
+        if inst and inst.Parent then pcall(stripInstance, inst) end
+        if os.clock() - slice > 0.003 then
+            RunService.Heartbeat:Wait()
+            slice = os.clock()
+        end
+    end
+    if #fxQueue > 4000 then table.clear(fxQueue) end
+
+    if Cfg.HideOtherPlayers then pcall(hideOtherPlayers) end
+end
+
+----------------------------------------------------------------
+-- housekeeping
+----------------------------------------------------------------
+local function gcSweep()
+    local now = os.clock()
+    for uid, until_ in pairs(Runtime.skip) do
+        if now > until_ then Runtime.skip[uid] = nil end
+    end
+    for i = #Runtime.log, 41, -1 do Runtime.log[i] = nil end
+    saveCache, petCache = nil, nil
+    table.clear(fxQueue)
+    -- drop anything the game left parented to nil in our own folders
+    pcall(function() collectgarbage("count") end)
+end
+
+local serverHop   -- defined below; the gate in front of it is what matters
+
+-- Hop the moment this server has nothing the player wants -- and only then.
+--
+-- The trap is that "no eggs" and "no data yet" look identical. A client that just
+-- teleported in has an empty egg snapshot for the first few seconds, so a check
+-- that trusts the first empty answer hops again immediately, and again on the next
+-- server: an endless hop loop that never steals anything. Everything here exists to
+-- tell those two states apart:
+--
+--   * the snapshot must be populated at all (records > 0) -- an empty table is "not
+--     loaded", never "no eggs", and it stops the hop cold;
+--   * the script must have been in this server long enough for the feed to arrive;
+--   * the empty answer must survive HopChecks separate reads, each after its own
+--     fresh RequestAreaEggSnapshot, spaced a second apart, and a single matching egg
+--     in any of them cancels the whole thing;
+--   * consecutive hops that steal nothing are counted ACROSS servers (in a file --
+--     each teleport is a new Lua state), and after HopMaxTries the hopping stops by
+--     itself and says why. A filter no server can satisfy is a filter problem, and
+--     hopping forever is not an answer to it.
+local HOP_FILE = CFG_DIR .. "/hopstate.json"
+
+local function readHopState()
+    local data = hasFS and readJson and readJson(HOP_FILE) or nil
+    if type(data) ~= "table" then return { count = 0, at = 0 } end
+    -- a run that has been quiet for five minutes is not the same chain of hops
+    if (os.time() - (tonumber(data.at) or 0)) > 300 then return { count = 0, at = 0 } end
+    return { count = tonumber(data.count) or 0, at = tonumber(data.at) or 0 }
+end
+
+local function writeHopState(count)
+    if not hasFS then return end
     pcall(function()
-        WindUI = loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+        writefile(HOP_FILE, HttpService:JSONEncode({ count = count, at = os.time() }))
     end)
 end
 
-if not success or not WindUI then
-    pcall(function()
-        WindUI = loadstring(game:HttpGet("https://cdn.jsdelivr.net/gh/Footagesus/WindUI@main/dist/main.lua"))()
+Runtime.hopChain = readHopState().count
+
+-- true = there is something to take, false = there is not, nil = we cannot tell yet
+local function zoneHasWanted()
+    pcall(EggCmds.RequestAreaEggSnapshot)
+    task.wait(0.25)
+
+    local seen = 0
+    for _ in pairs(areaEggRecords()) do seen += 1 end
+    if seen == 0 then return nil end          -- no data is not the same as no eggs
+
+    return matchingEggCount() > 0, seen
+end
+
+local function hopIfTrulyEmpty()
+    if not Cfg.AutoHop then return false end
+    if Runtime.carryUid then return false end
+    if Runtime.hopStopped then return false end
+
+    -- a client that just arrived has not received the egg feed yet
+    if os.clock() - (Runtime.stats.startedAt or 0) < 12 then return false end
+    if Runtime.lastHopAt and os.clock() - Runtime.lastHopAt < 20 then return false end
+
+    local checks = math.clamp(tonumber(Cfg.HopChecks) or 3, 2, 6)
+    local seenAny = 0
+    for i = 1, checks do
+        local has, seen = zoneHasWanted()
+        if has == nil then
+            -- snapshot still empty: the server has not told us anything yet
+            return false
+        end
+        if has then return false end
+        seenAny = math.max(seenAny, seen or 0)
+        if i < checks then task.wait(1) end
+    end
+
+    -- every hop that steals nothing counts; a filter nothing can satisfy stops here
+    local chain = (Runtime.hopChain or 0) + 1
+    Runtime.hopChain = chain
+    writeHopState(chain)
+
+    local maxTries = math.clamp(tonumber(Cfg.HopMaxTries) or 6, 1, 30)
+    if chain > maxTries then
+        Runtime.hopStopped = true
+        logLine("hop", ("ย้ายเซิร์ฟ %d ครั้งติดยังไม่เจอไข่ตรงตัวกรอง — หยุดย้าย ลองเพิ่มระดับหรือโซนในตัวกรอง"):format(chain - 1))
+        Notify("ย้ายเซิร์ฟเวอร์",
+            ("ย้ายมา %d ครั้งติดยังไม่เจอไข่ที่ตั้งไว้เลย — หยุดย้ายแล้ว ลองเพิ่มระดับไข่หรือโซนในตัวกรอง"):format(chain - 1), 8)
+        return false
+    end
+
+    Runtime.lastHopAt = os.clock()
+    logLine("hop", ("โซนนี้ไม่มีไข่ตรงตัวกรอง (เช็ค %d ครั้ง, เห็นไข่ในแมพ %d ใบ) — ย้ายเซิร์ฟ ครั้งที่ %d")
+        :format(checks, seenAny, chain))
+    return serverHop()
+end
+
+function serverHop()
+    local ok, servers = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(
+            ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100"):format(game.PlaceId)))
     end)
+    if ok and servers and servers.data then
+        for _, s in ipairs(servers.data) do
+            if s.playing and s.maxPlayers and s.playing < s.maxPlayers and s.id ~= game.JobId then
+                pcall(TeleportService.TeleportToPlaceInstance, TeleportService, game.PlaceId, s.id, LocalPlayer)
+                return true
+            end
+        end
+    end
+    pcall(TeleportService.Teleport, TeleportService, game.PlaceId, LocalPlayer)
+    return false
+end
+
+----------------------------------------------------------------
+-- scheduler
+--
+-- One thread, time-driven, so the script keeps its cadence at 15 FPS and under a
+-- background throttler instead of drifting with the frame rate. Jobs that move
+-- the character share one lock with the steal loop.
+----------------------------------------------------------------
+local Jobs = {}
+
+-- Every job used to start with nextAt = 0, so the first pass of the scheduler ran
+-- ALL of them inside one frame: hatch, place, equip-best, the sell scan, the
+-- upgrade checks, the anti-lag sweep and the first panel rebuild, back to back,
+-- while the window was still being built. That pile-up was the freeze on startup.
+-- Each job now opens on its own slot, and the loop below gives each one its own
+-- frame, so the cost is spread instead of stacked.
+local function job(name, interval, fn)
+    local slot = #Jobs
+    Jobs[slot + 1] = {
+        name = name, interval = interval, fn = fn,
+        nextAt = os.clock() + 0.45 * slot,
+    }
+end
+
+local function withLock(fn, ...)
+    if Runtime.lock or Runtime.stealing then return false end
+    Runtime.lock = true
+    local ok, err = pcall(fn, ...)
+    Runtime.lock = false
+    if not ok then Runtime.lastError = tostring(err) end
+    return ok
+end
+
+job("upkeep", 2, function()
+    enforceWalkSpeed()
+    if Cfg.GodMode then
+        local hum = humanoid()
+        if hum and hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
+        if hum and not Runtime.conns.health then hardenCharacter() end
+    end
+    if not Runtime.instantReady and Cfg.MoveMode == "Instant" then
+        Runtime.instantReady = killClientIntegrity()
+    end
+end)
+
+job("eggs", 4, function()
+    if not (Cfg.AutoHatch or Cfg.AutoPlace or Cfg.AutoEquipBest) then return end
+    withLock(function()
+        if Cfg.AutoHatch then
+            if hatchReady() > 0 then markSellDirty() end
+        end
+        if Cfg.AutoPlace then placeEggs() end
+        if Cfg.AutoEquipBest then equipBest() end
+        -- placing is the one job that has to stand on the plot, so it always
+        -- hands the anchor back before anything else looks at where we are
+        toAnchor()
+    end)
+end)
+
+job("bag", 6, function()
+    if not Cfg.AutoSteal then return end
+    if bagCount() >= EGG_BAG_CAP - 3 then withLock(relieveBag, true) end
+end)
+
+-- the queue is rebuilt on change, not on a timer, but a slow safety rescan keeps
+-- it honest if something changed the inventory without telling us
+job("sellScan", 4, function()
+    -- keeps the panel honest whether or not selling is armed; only fires when the
+    -- queue has run dry or the list has had time to drift
+    if #sellQueue == 0 or os.clock() - sellLastScan > 12 then markSellDirty() end
+end)
+
+-- money-gated upgrades are checked every second: the whole point is that the
+-- purchase happens the moment it is affordable, not on the next slow tick
+job("progress", 1, function()
+    if Cfg.AutoBaseUpgrade then pcall(baseUpgradeStep) end
+    if Cfg.AutoTreadmillUp then pcall(treadmillUpgradeStep) end
+end)
+
+job("slowProgress", 15, function()
+    if Cfg.AutoTrails then pcall(trailsStep) end
+    if Cfg.AutoClaim then pcall(claimStep) end
+    if Cfg.AutoFuse then withLock(fuseStep) end
+end)
+
+job("antilag", 30, function() pcall(antiLagSweep) end)
+job("gc", 60, gcSweep)
+
+task.spawn(function()
+    while alive() do
+        local now = os.clock()
+        for _, j in ipairs(Jobs) do
+            if not alive() then return end
+            if now >= j.nextAt then
+                j.nextAt = now + j.interval
+                local ok, err = pcall(j.fn)
+                if not ok then Runtime.lastError = j.name .. ": " .. tostring(err) end
+                -- one job per frame: two of these landing together is the stutter
+                RunService.Heartbeat:Wait()
+                now = os.clock()
+            end
+        end
+        task.wait(0.3)
+    end
+end)
+
+-- seller thread: at most one request launched per tick, a few in flight at once.
+-- That is the whole anti-stutter trick — the old code fired eight yields on the
+-- same frame and the frame showed it.
+task.spawn(function()
+    local eggQueue, eggQueueAt = {}, 0
+
+    -- Self-tuning pace.
+    --
+    -- Pacing our own requests was not enough on its own: the hitch does not come
+    -- from sending them, it comes from the GAME reacting to items disappearing —
+    -- its save module and its inventory panels redraw, and that cost is not ours
+    -- to optimise away. So instead of guessing a safe rate, watch the frame clock
+    -- and let it set the rate: back off the moment frames stretch, creep back up
+    -- while they stay smooth. Fastest the client can take, never faster.
+    local frameMax, frameConn = 0, nil
+    local pace  = math.max(Cfg.SellPace or 0.05, 0.03)
+    local lanes = math.clamp(Cfg.SellLanes or 3, 1, 6)
+    local nextTune = 0
+    -- what a quiet frame costs on THIS machine. A fixed millisecond threshold is
+    -- useless here: one client alone runs at 10ms, a hundred boxed together run at
+    -- 60ms and are perfectly healthy. Learned from windows where we sold nothing,
+    -- so our own cost never pollutes the reference.
+    local baseline, launched = nil, 0
+
+    local function watchFrames(on)
+        if on and not frameConn then
+            frameConn = RunService.Heartbeat:Connect(function(dt)
+                if dt > frameMax then frameMax = dt end
+            end)
+            Runtime.conns.frameWatch = frameConn
+        elseif not on and frameConn then
+            frameConn:Disconnect()
+            frameConn = nil
+            Runtime.conns.frameWatch = nil
+            frameMax = 0
+        end
+    end
+
+    while alive() do
+        local paced = false
+
+        -- the plan is rebuilt off the hot path and in chunks, and only when it is
+        -- actually stale. the panel reads the same result, so nothing else in the
+        -- script ever unpacks the inventory on a frame that matters.
+        if sellDirty and sellFlight == 0 then
+            local ok, err = pcall(refillSellQueue)
+            if not ok then
+                sellDirty = false
+                Runtime.lastError = "sell: " .. tostring(err)
+            end
+        end
+
+        if Cfg.AutoSellPets and #sellQueue > 0 then
+            if sellFlight < lanes then
+                local p = table.remove(sellQueue)
+                if p then
+                    sellFlight += 1
+                    paced = true
+                    launched += 1
+                    task.spawn(function()
+                        local ok = invoke(NET.ActiveAssets.REQUEST_SELL, p.uid)
+                        sellFlight -= 1
+                        if ok then
+                            Runtime.stats.soldPets += 1
+                            Runtime.sellEarned = (Runtime.sellEarned or 0) + (p.price or 0)
+                        end
+                    end)
+                end
+            end
+        end
+
+        -- eggs get the same treatment: one queue, rebuilt every few seconds, one
+        -- sale per tick. never mid-steal — holding an egg tool while carrying a
+        -- stolen one is asking for a dropped egg.
+        if Cfg.AutoSellEggs and not Runtime.stealing then
+            if #eggQueue == 0 and os.clock() - eggQueueAt > 3 then
+                eggQueueAt = os.clock()
+                local ok, plan = pcall(eggSellPlan)
+                if ok and plan then
+                    for i = #plan, 1, -1 do eggQueue[#eggQueue + 1] = plan[i] end
+                end
+            end
+            if #eggQueue > 0 and not paced then
+                local egg = table.remove(eggQueue)
+                if egg and invoke(NET.Eggs.REQUEST_EQUIP_TOOL, egg.uid) then
+                    fire(NET.AssetInventory.SELL_ASSET, { egg.uid })
+                    Runtime.stats.soldEggs += 1
+                    paced = true
+                    launched += 1
+                    if #eggQueue == 0 then
+                        pcall(function() invoke(NET.Eggs.REQUEST_UNEQUIP_TOOL) end)
+                        saveCache = nil
+                    end
+                end
+            end
+        elseif #eggQueue > 0 then
+            table.clear(eggQueue)
+        end
+
+        -- measure whenever selling is armed, not only while the queue is busy: by
+        -- the time work shows up the governor already knows how the client is doing
+        local armed = Cfg.AutoSellPets or Cfg.AutoSellEggs
+        watchFrames(armed)
+
+        if armed and os.clock() >= nextTune then
+            nextTune = os.clock() + 0.5
+            local worst = frameMax
+            frameMax = 0
+
+            if worst > 0 then
+                if launched == 0 then
+                    -- an idle window: this is what "normal" costs right now
+                    baseline = baseline and (baseline * 0.8 + worst * 0.2) or worst
+                elseif baseline then
+                    local floorPace = math.max(Cfg.SellPace or 0.05, 0.03)
+                    local hitch  = worst > math.max(baseline * 1.8, baseline + 0.03)
+                    local smooth = worst <= baseline * 1.25
+
+                    if hitch then
+                        pace  = math.min(pace * 1.7, 0.8)
+                        lanes = 1
+                    elseif smooth then
+                        pace  = math.max(pace * 0.8, floorPace)
+                        lanes = math.min(lanes + 1, math.clamp(Cfg.SellLanes or 3, 1, 6))
+                    end
+                end
+            end
+
+            launched = 0
+            Runtime.sellPace     = pace
+            Runtime.sellLanes    = lanes
+            Runtime.sellWorstMs  = math.floor(worst * 1000)
+            Runtime.sellBaseMs   = baseline and math.floor(baseline * 1000) or nil
+        end
+
+        task.wait(paced and pace or 0.25)
+    end
+end)
+
+-- The client is pushed egg updates, so an empty map does not have to be polled:
+-- every snapshot change bumps this counter and the loop below waits on it. A nest
+-- that refills wakes the steal thread on the frame it lands instead of on the next
+-- fixed tick, which is most of the difference when a narrow filter means we spend
+-- more time waiting for eggs than taking them.
+Runtime.eggTick = 0
+for _, name in ipairs({ "AreaEggSnapshotUpdated", "AreaEggUpdated", "AreaEggRemoved" }) do
+    local sig = EggCmds[name]
+    if type(sig) == "table" and sig.Connect then
+        local ok, conn = pcall(function()
+            return sig:Connect(function() Runtime.eggTick += 1 end)
+        end)
+        if ok then Runtime.conns["egg_" .. name] = conn end
+    end
+end
+
+local function waitForEggChange(timeout)
+    local mark = Runtime.eggTick
+    local t0 = os.clock()
+    repeat
+        task.wait(0.05)
+    until Runtime.eggTick ~= mark or os.clock() - t0 > timeout or not alive() or not Cfg.AutoSteal
+end
+
+-- steal runs in its own thread and chains back to back: a whole trip costs less
+-- than half a second, so waiting for a scheduler tick between eggs would waste
+-- more time than the trip itself
+task.spawn(function()
+    while alive() do
+        if Cfg.AutoSteal and not Runtime.stealing and not Runtime.lock then
+            Runtime.stealing = true
+            local misses, chain, empty = 0, 0, false
+            repeat
+                local ok, err = stealOnce()
+                misses = ok and 0 or (misses + 1)
+                chain += 1
+                if not ok then
+                    Runtime.lastError = tostring(err)
+                    empty = tostring(err):find("ตัวกรอง") ~= nil
+                    if tostring(err):find("เต็ม") then relieveBag(true) misses = 0 end
+                    if empty then hopIfTrulyEmpty() end
+                else
+                    empty = false
+                    -- an egg in hand ends the hop chain: this server works
+                    if (Runtime.hopChain or 0) > 0 then
+                        Runtime.hopChain = 0
+                        writeHopState(0)
+                    end
+                    Runtime.hopStopped = false
+                end
+                -- hand the floor back every so often: with eggs always available the
+                -- chain would otherwise never end and hatching would never get a turn
+            until misses >= 3 or chain >= 20 or not Cfg.AutoSteal or not alive()
+            Runtime.stealing = false
+            toAnchor()
+
+            if empty then
+                -- nothing to take: sleep on the egg feed, not on a timer
+                waitForEggChange(2)
+            else
+                -- a real window for the scheduler, not a race with it
+                task.wait(0.35)
+            end
+        end
+        task.wait(0.15)
+    end
+end)
+
+----------------------------------------------------------------
+-- character / afk
+----------------------------------------------------------------
+Runtime.conns.charAdded = LocalPlayer.CharacterAdded:Connect(function(c)
+    c:WaitForChild("HumanoidRootPart", 10)
+    task.wait(1)
+    hardenCharacter(c)
+    Runtime.carryUid = nil
+    toAnchor()
+end)
+
+Runtime.conns.afk = LocalPlayer.Idled:Connect(function()
+    if not Cfg.AntiAFK then return end
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+end)
+
+Runtime.instantReady = killClientIntegrity()
+hardenCharacter()
+Runtime.stats.startMoney = moneyNow()
+
+-- The map sweep is the single most expensive thing here and it competes with the
+-- one thing the player is watching: the window appearing. It costs nothing to let
+-- the panel finish first -- the eggs are already being stolen by then.
+if Cfg.AntiLag then
+    task.delay(5, function() if alive() and Cfg.AntiLag then antiLagFullPass() end end)
+end
+
+----------------------------------------------------------------
+-- UI
+--
+-- WindUI is cached to disk after the first download: a hundred clients booting
+-- at once should not be a hundred HTTP round trips.
+----------------------------------------------------------------
+local WindUI
+do
+    local src
+    local cachePath = CFG_DIR .. "/windui.lua"
+    if hasFS and isfile and isfile(cachePath) then
+        local ok, body = pcall(readfile, cachePath)
+        if ok and #body > 1000 then src = body end
+    end
+    if not src then
+        local ok, body = pcall(game.HttpGet, game, "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua")
+        if ok then
+            src = body
+            if hasFS then pcall(writefile, cachePath, body) end
+        end
+    end
+    if src then
+        local ok, lib = pcall(function() return loadstring(src)() end)
+        if ok then WindUI = lib end
+    end
 end
 
 if not WindUI then
+    warn("[Nyx] โหลด UI ไม่ได้ — สคริปต์ยังทำงานผ่าน getgenv().NyxAPI ได้ปกติ")
+    Notify = function() end
+else
+
+local function keyFromName(name)
+    local ok, key = pcall(function() return Enum.KeyCode[tostring(name)] end)
+    return ok and key or Enum.KeyCode.RightControl
+end
+
+-- what the settings were before a single element existed; whatever the library
+-- does to them while building the panel is undone from this copy afterwards
+local function deepCopy(t)
+    local out = {}
+    for k, v in pairs(t) do out[k] = (type(v) == "table") and deepCopy(v) or v end
+    return out
+end
+local cfgAtBuild = deepCopy(Cfg)
+uiBuilding = true
+
+UIWindow = WindUI:CreateWindow({
+    Title       = "Nyx • Steal An Egg",
+    Icon        = "egg",
+    Author      = "v2 • ไทย",
+    Folder      = CFG_DIR,
+    Size        = UDim2.fromOffset(560, 440),
+    Transparent = true,
+    Theme       = "Dark",
+    SideBarWidth = 150,
+    -- deliberately NOT passing ToggleKey: WindUI installs its own InputBegan
+    -- handler for it, and with our binding active the key fired twice — the panel
+    -- closed and reopened in the same keypress
+})
+
+Notify = function(title, text, dur)
+    pcall(function() WindUI:Notify({ Title = title, Content = text, Duration = dur or 4 }) end)
+end
+
+-- WindUI hands a multi dropdown back as an array in some builds and as a
+-- {name = true} dictionary in others, and a single dropdown as a bare string.
+-- Reading only one of those shapes is how a filter silently ends up empty and
+-- the whole loop sits there doing nothing.
+-- same story as the dropdowns: a toggle can hand back the element instead of a
+-- boolean, and a truthy table silently arms whatever it controls
+local function isOn(v) return v == true end
+
+local function toSet(value)
+    local set = {}
+    if type(value) == "table" then
+        for k, v in pairs(value) do
+            if type(k) == "number" then
+                if type(v) == "string" then set[v] = true end
+            elseif v then
+                set[k] = true
+            end
+        end
+    elseif type(value) == "string" then
+        set[value] = true
+    end
+    return set
+end
+
+local TabFarm  = UIWindow:Tab({ Title = "ฟาร์ม",  Icon = "egg" })
+local TabSell  = UIWindow:Tab({ Title = "ขาย",    Icon = "coins" })
+local TabProg  = UIWindow:Tab({ Title = "พัฒนา",  Icon = "trending-up" })
+local TabSys   = UIWindow:Tab({ Title = "ระบบ",   Icon = "settings" })
+
+----------------------------------------------------------------
+-- tab: farm
+----------------------------------------------------------------
+local StatusBox = TabFarm:Paragraph({ Title = "สถานะ", Desc = "กำลังเริ่ม..." })
+
+TabFarm:Toggle({
+    Title = "ขโมยไข่อัตโนมัติ",
+    Desc  = "วาปไปหยิบแล้ววาปกลับจุดยืนประจำ วนไม่หยุด",
+    Value = Cfg.AutoSteal,
+    Callback = function(v) Cfg.AutoSteal = isOn(v) saveConfig() end,
+})
+
+TabFarm:Dropdown({
+    Title = "ระดับไข่ที่จะขโมย",
+    Desc  = "เลือกได้หลายระดับพร้อมกัน",
+    Values = RARITY_ORDER,
+    Value = setToList(Cfg.StealRarities),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v) Cfg.StealRarities = toSet(v) saveConfig() end,
+})
+
+TabFarm:Dropdown({
+    Title = "โซนที่จะเข้า",
+    Values = AREAS,
+    Value = (function() local t = {} for _, a in ipairs(AREAS) do if Cfg.StealAreas[a] then t[#t + 1] = a end end return t end)(),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v)
+        Cfg.StealAreas = toSet(v)
+        saveConfig()
+    end,
+})
+
+TabFarm:Dropdown({
+    Title = "วิธีเลือกไข่",
+    Desc  = "Efficient = คิดระยะทางด้วย ได้ไข่ถี่กว่า | BestOnly = ไล่ล่าใบแรร์สุดเสมอ",
+    Values = { "Efficient", "BestOnly" },
+    Value = Cfg.PickMode,
+    Callback = function(v) Cfg.PickMode = v saveConfig() end,
+})
+
+TabFarm:Slider({
+    Title = "การกลายพันธุ์ขั้นต่ำ",
+    Value = { Min = 0, Max = 5, Default = Cfg.MinMutations },
+    Callback = function(v) Cfg.MinMutations = v saveConfigSoon() end,
+})
+
+TabFarm:Section({ Title = "ไข่ในฐาน" })
+
+TabFarm:Dropdown({
+    Title = "จัดการไข่อัตโนมัติ",
+    Desc  = "ฟักเมื่อพร้อม / วางลงแปลง",
+    Values = { "ฟัก", "วาง" },
+    Value = (function()
+        local t = {}
+        if Cfg.AutoHatch then t[#t + 1] = "ฟัก" end
+        if Cfg.AutoPlace then t[#t + 1] = "วาง" end
+        return t
+    end)(),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v)
+        local set = toSet(v)
+        Cfg.AutoHatch = set["ฟัก"] == true
+        Cfg.AutoPlace = set["วาง"] == true
+        saveConfig()
+    end,
+})
+
+TabFarm:Toggle({
+    Title = "สลับสัตว์ตัวเก่งเข้าคอก (Equip Best)",
+    Desc  = "จัดอันดับทั้งกระเป๋าแล้วสลับตัวรายได้สูงสุดเข้าคอกให้เต็มทุก 4 วินาที",
+    Value = Cfg.AutoEquipBest,
+    Callback = function(v)
+        Cfg.AutoEquipBest = isOn(v)
+        saveConfig()
+        if isOn(v) then task.spawn(function() withLock(equipBest) end) end
+    end,
+})
+
+TabFarm:Dropdown({
+    Title = "ระดับไข่ที่จะวางลงแปลง",
+    Values = RARITY_ORDER,
+    Value = setToList(Cfg.PlaceRarities),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v) Cfg.PlaceRarities = toSet(v) saveConfig() end,
+})
+
+----------------------------------------------------------------
+-- tab: sell
+----------------------------------------------------------------
+local SellPreview = TabSell:Paragraph({
+    Title = "ตัวอย่างรายการที่จะขาย",
+    Desc  = "อัปเดตอัตโนมัติทุก 5 วินาที — ไม่มีอะไรถูกขายจนกว่าจะเปิดสวิตช์",
+})
+
+TabSell:Toggle({
+    Title = "ขายสัตว์เลี้ยงอัตโนมัติ",
+    Value = Cfg.AutoSellPets,
+    Callback = function(v) Cfg.AutoSellPets = isOn(v) markSellDirty() saveConfig() end,
+})
+
+TabSell:Dropdown({
+    Title = "เงื่อนไขการขายสัตว์",
+    Desc  = "เลือกอย่างเดียวก็พอ ถ้าเลือก \"เข้าทั้งสองเงื่อนไข\" ต้องตั้งทั้งราคาและระดับ",
+    Values = { "ราคาต่ำกว่าที่ตั้ง", "ระดับที่เลือก", "เข้าทั้งสองเงื่อนไข" },
+    Value = Cfg.SellPetMode,
+    Callback = function(v) Cfg.SellPetMode = v markSellDirty() saveConfig() end,
+})
+
+TabSell:Input({
+    Title = "ขายสัตว์ที่ราคาต่ำกว่า",
+    Desc  = "ใส่ราคาขายเป็นเงินเกม เช่น 100000 หรือ 1m / 500k ก็ได้ | 0 = ปิดเงื่อนไขนี้",
+    Value = tostring(Cfg.SellPetBelow),
+    Callback = function(v)
+        local s = tostring(v):lower():gsub("[,%s]", "")
+        local num = tonumber(s:match("^[%d%.]+")) or 0
+        if s:find("k") then num = num * 1e3
+        elseif s:find("m") then num = num * 1e6
+        elseif s:find("b") then num = num * 1e9
+        elseif s:find("t") then num = num * 1e12 end
+        Cfg.SellPetBelow = num
+        markSellDirty()
+        saveConfig()
+        Notify("ขาย", ("ขายสัตว์ที่ราคาต่ำกว่า %s"):format(shortNum(num)), 3)
+    end,
+})
+
+TabSell:Dropdown({
+    Title = "ระดับสัตว์ที่ยอมขาย",
+    Values = RARITY_ORDER,
+    Value = setToList(Cfg.SellPetRarities),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v) Cfg.SellPetRarities = toSet(v) markSellDirty() saveConfig() end,
+})
+
+TabSell:Slider({
+    Title = "เก็บตัวเก่งสุดไว้กี่ตัว",
+    Desc  = "ตัวรายได้สูงสุดตามจำนวนนี้ไม่ถูกขายเด็ดขาด",
+    Value = { Min = 0, Max = 60, Default = Cfg.SellKeepTop },
+    Callback = function(v) Cfg.SellKeepTop = v markSellDirty() saveConfigSoon() end,
+})
+
+TabSell:Section({ Title = "ไข่" })
+
+TabSell:Toggle({
+    Title = "ขายไข่อัตโนมัติ",
+    Desc  = "ขายเฉพาะไข่ที่ยังไม่ได้วางลงแปลง",
+    Value = Cfg.AutoSellEggs,
+    Callback = function(v) Cfg.AutoSellEggs = isOn(v) markSellDirty() saveConfig() end,
+})
+
+TabSell:Dropdown({
+    Title = "ระดับไข่ที่จะขายทิ้ง",
+    Values = RARITY_ORDER,
+    Value = setToList(Cfg.SellEggRarities),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v) Cfg.SellEggRarities = toSet(v) markSellDirty() saveConfig() end,
+})
+
+TabSell:Input({
+    Title = "หรือขายไข่ที่ราคาต่ำกว่า",
+    Desc  = "0 = ปิดเงื่อนไขนี้ ใช้ระดับความหายากอย่างเดียว",
+    Value = tostring(Cfg.SellEggBelow),
+    Callback = function(v)
+        local s = tostring(v):lower():gsub("[,%s]", "")
+        local num = tonumber(s:match("^[%d%.]+")) or 0
+        if s:find("k") then num = num * 1e3 elseif s:find("m") then num = num * 1e6 end
+        Cfg.SellEggBelow = num
+        markSellDirty()
+        saveConfig()
+    end,
+})
+
+TabSell:Section({ Title = "ความเร็ว" })
+
+TabSell:Slider({
+    Title = "ความเร็วขาย",
+    Desc  = "จำนวนคำสั่งที่ค้างได้พร้อมกัน — สูงขึ้น = ขายไวขึ้น แต่ยิงถี่เกินเริ่มกระตุก 3 คือจุดที่ลื่นและไวพอ",
+    Value = { Min = 1, Max = 6, Default = Cfg.SellLanes },
+    Callback = function(v) Cfg.SellLanes = v saveConfigSoon() end,
+})
+
+TabSell:Slider({
+    Title = "เพดานต่อครั้งที่สั่งเอง (ตัว/ใบ)",
+    Desc  = "ใช้กับการสั่งขายผ่าน API เท่านั้น โหมดอัตโนมัติขายเรื่อยๆ ไม่มีเพดาน",
+    Value = { Min = 1, Max = 200, Default = Cfg.SellMaxPerRun },
+    Callback = function(v) Cfg.SellMaxPerRun = v saveConfigSoon() end,
+})
+
+TabSell:Paragraph({
+    Title = "กันพลาด",
+    Desc  = "ตัวที่สวมใส่อยู่ / ติดดาว (Favorite) / อยู่ในเครื่องผสม จะไม่ถูกขายทุกกรณี",
+})
+
+----------------------------------------------------------------
+-- tab: progression
+----------------------------------------------------------------
+local ProgBox = TabProg:Paragraph({ Title = "ความคืบหน้า", Desc = "กำลังอ่านข้อมูล..." })
+
+TabProg:Dropdown({
+    Title = "ระบบอัตโนมัติที่จะเปิด",
+    Desc  = "อัปฐานกับลู่วิ่งจะซื้อทันทีที่เงินถึง ตรวจทุก 1 วินาที",
+    Values = { "อัปเกรดฐาน", "อัปเกรดลู่วิ่ง", "ซื้อ/ใส่เทรล", "ผสมสัตว์", "รับรางวัล" },
+    Value = (function()
+        local t = {}
+        if Cfg.AutoBaseUpgrade then t[#t + 1] = "อัปเกรดฐาน" end
+        if Cfg.AutoTreadmillUp then t[#t + 1] = "อัปเกรดลู่วิ่ง" end
+        if Cfg.AutoTrails then t[#t + 1] = "ซื้อ/ใส่เทรล" end
+        if Cfg.AutoFuse then t[#t + 1] = "ผสมสัตว์" end
+        if Cfg.AutoClaim then t[#t + 1] = "รับรางวัล" end
+        return t
+    end)(),
+    Multi = true,
+    AllowNone = true,
+    Callback = function(v)
+        local set = toSet(v)
+        Cfg.AutoBaseUpgrade = set["อัปเกรดฐาน"] == true
+        Cfg.AutoTreadmillUp = set["อัปเกรดลู่วิ่ง"] == true
+        Cfg.AutoTrails      = set["ซื้อ/ใส่เทรล"] == true
+        Cfg.AutoFuse        = set["ผสมสัตว์"] == true
+        Cfg.AutoClaim       = set["รับรางวัล"] == true
+        saveConfig()
+    end,
+})
+
+TabProg:Paragraph({
+    Title = "หมายเหตุ",
+    Desc  = "การจุติ (Rebirth) ถูกถอดออก เพราะเวอร์ชันนี้ของเกมไม่มี remote ของมันอยู่จริง"
+        .. " — ของเดิมยิงไปก็ไม่มีอะไรเกิดขึ้น\nการผสมสัตว์ต้องมีช่องกระเป๋าไข่ว่าง"
+        .. " สคริปต์จะเคลียร์ให้เองก่อนผสม",
+})
+
+----------------------------------------------------------------
+-- tab: system
+----------------------------------------------------------------
+TabSys:Toggle({
+    Title = "โหมดอมตะ (God Mode)",
+    Desc  = "เปิดไว้ตลอด — ตายทีเดียวไข่หลุดแล้ววนตายซ้ำ",
+    Value = Cfg.GodMode,
+    Callback = function(v) Cfg.GodMode = isOn(v) saveConfig() end,
+})
+
+TabSys:Dropdown({
+    Title = "โหมดการเดินทาง",
+    Desc  = "Instant = วาปตรง (~0.7 วิ/ใบ) | Warp = วาปทีละสเต็ป ไม่แตะระบบของเกม",
+    Values = { "Instant", "Warp" },
+    Value = Cfg.MoveMode,
+    Callback = function(v) Cfg.MoveMode = v saveConfig() end,
+})
+
+TabSys:Section({ Title = "แก้แลค" })
+
+TabSys:Toggle({
+    Title = "เปิดระบบแก้แลค",
+    Desc  = "ลบเอฟเฟกต์ ลบพื้นผิว ปิดเงา ลดคุณภาพภาพ — กวาดซ้ำทุก 30 วินาที",
+    Value = Cfg.AntiLag,
+    Callback = function(v)
+        Cfg.AntiLag = isOn(v)
+        saveConfig()
+        if isOn(v) then antiLagFullPass() end
+    end,
+})
+
+TabSys:Dropdown({
+    Title = "ระดับการแก้แลค",
+    Desc  = "เบา = ลบเฉพาะเอฟเฟกต์ | หนัก = ลบพื้นผิว ปิดเงา ปรับวัสดุทั้งแมพ",
+    Values = { "หนัก (แนะนำ)", "เบา" },
+    Value = Cfg.LowFXOnly and "เบา" or "หนัก (แนะนำ)",
+    Callback = function(v) Cfg.LowFXOnly = (v == "เบา") saveConfig() end,
+})
+
+TabSys:Toggle({
+    Title = "ซ่อนผู้เล่นคนอื่น",
+    Desc  = "ตัวละครคนอื่นคือภาระเรนเดอร์ที่ใหญ่ที่สุดในเซิร์ฟเวอร์เต็ม",
+    Value = Cfg.HideOtherPlayers,
+    Callback = function(v) Cfg.HideOtherPlayers = isOn(v) saveConfig() end,
+})
+
+TabSys:Section({ Title = "อื่นๆ" })
+
+TabSys:Toggle({
+    Title = "กันหลุด AFK",
+    Value = Cfg.AntiAFK,
+    Callback = function(v) Cfg.AntiAFK = isOn(v) saveConfig() end,
+})
+
+TabSys:Toggle({
+    Title = "ย้ายเซิร์ฟเมื่อโซนนี้ไม่มีไข่ที่ต้องการ",
+    Desc  = "เช็คซ้ำหลายรอบว่าไม่มีจริง แล้วย้ายทันที ไม่ต้องรอ — เข้าเซิร์ฟใหม่แล้วเช็คใหม่",
+    Value = Cfg.AutoHop,
+    Callback = function(v)
+        Cfg.AutoHop = isOn(v)
+        -- turning it back on is a fresh decision: forget the old chain of hops
+        Runtime.hopStopped = false
+        Runtime.hopChain   = 0
+        saveConfig()
+    end,
+})
+
+TabSys:Slider({
+    Title = "เช็คซ้ำกี่ครั้งก่อนย้าย",
+    Desc  = "อ่านรายการไข่ใหม่ทุกครั้ง ห่างกัน 1 วินาที เจอไข่ที่ต้องการแม้ครั้งเดียว = ไม่ย้าย",
+    Value = { Min = 2, Max = 6, Default = Cfg.HopChecks },
+    Callback = function(v) Cfg.HopChecks = v saveConfigSoon() end,
+})
+
+TabSys:Slider({
+    Title = "ย้ายติดกันได้กี่ครั้ง",
+    Desc  = "ย้ายครบเท่านี้แล้วยังไม่ได้ไข่สักใบ = หยุดย้ายเอง (ตัวกรองแคบเกินไป) นับข้ามเซิร์ฟด้วย",
+    Value = { Min = 1, Max = 30, Default = Cfg.HopMaxTries },
+    Callback = function(v) Cfg.HopMaxTries = v saveConfigSoon() end,
+})
+
+TabSys:Input({
+    Title = "Discord Webhook",
+    Desc  = "เว้นว่าง = ปิด",
+    Value = Cfg.WebhookURL,
+    Callback = function(v) Cfg.WebhookURL = tostring(v) saveConfig() end,
+})
+
+TabSys:Toggle({
+    Title = "แจ้งเตือนทุกครั้งที่ขโมยได้",
+    Value = Cfg.WebhookSteal,
+    Callback = function(v) Cfg.WebhookSteal = isOn(v) saveConfig() end,
+})
+
+----------------------------------------------------------------
+-- window access
+--
+-- Minimising WindUI hides everything including its own way back in, so the panel
+-- gets two independent doors: a hotkey we own, and a small square that floats on
+-- top of the game. Neither depends on the library's internals staying put.
+----------------------------------------------------------------
+local UserInput = game:GetService("UserInputService")
+
+-- drive the window by explicit state instead of :Toggle(): Toggle is a no-op in
+-- some builds and there is no way to tell from the outside, while Closed/Open/Close
+-- report and do exactly what they say
+local function toggleWindow()
     pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "พยอมบอยฮับ Warning",
-            Text = "ไม่สามารถเชื่อมต่อ WindUI ได้ กรุณารันใหม่อีกครั้ง!",
-            Duration = 5
-        })
+        if UIWindow.Closed then UIWindow:Open() else UIWindow:Close() end
     end)
 end
+Runtime.toggleUI = toggleWindow
+Runtime.window   = UIWindow
 
--- Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
-local VirtualUser = game:GetService("VirtualUser")
-local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local StatsService = game:GetService("Stats")
-local CoreGui = game:GetService("CoreGui")
+do
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NyxFloat"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 999999
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    pcall(function() gui.Parent = (typeof(gethui) == "function") and gethui() or LocalPlayer:WaitForChild("PlayerGui") end)
 
-local LocalPlayer = Players.LocalPlayer
+    local btn = Instance.new("TextButton")
+    btn.Name = "Open"
+    btn.Size = UDim2.fromOffset(44, 44)
+    btn.Position = UDim2.fromOffset(tonumber(Cfg.FloatX) or 18, tonumber(Cfg.FloatY) or 260)
+    btn.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+    btn.BackgroundTransparency = 0.15
+    btn.BorderSizePixel = 0
+    btn.Text = "🥚"
+    btn.TextSize = 22
+    btn.TextColor3 = Color3.fromRGB(235, 235, 245)
+    btn.AutoButtonColor = true
+    btn.Visible = Cfg.ShowFloatIcon
+    btn.Parent = gui
 
--- Remotes Reference
-local Network = ReplicatedStorage:FindFirstChild("Network")
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = btn
 
--- Rarity Mapping Table
-local RarityLevels = {
-    ["Common"] = 1,
-    ["Uncommon"] = 2,
-    ["Rare"] = 3,
-    ["Epic"] = 4,
-    ["Legendary"] = 5,
-    ["Mythic"] = 6,
-    ["Divine"] = 7
-}
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(139, 92, 246)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.25
+    stroke.Parent = btn
 
----- Configuration State
-local Config = {
-    -- Auto Steal & Map Eggs
-    AutoStealMapEggs = false,
-    StealDelay = 0.1,
-    AutoTPToMapEggs = false,
-    
-    -- Auto Place & Hatch
-    AutoPlaceEgg = false,
-    AutoPlacePet = false,
-    AutoHatchEgg = false,
-    AutoTPHomeToPlace = true,
-    HatchDelay = 0.2,
-    MinRarityPlaceFilter = "Common",
-    MinRarityHatchFilter = "Common",
+    -- Drag it anywhere; a press that never moved counts as a click.
+    --
+    -- The icon used to jump on release because the release handler re-applied
+    -- AbsolutePosition as an offset — and AbsolutePosition already includes the
+    -- 36px topbar inset, so every drop shifted it by that inset. The position the
+    -- drag already produced is the correct one: leave it exactly where it is and
+    -- only read the numbers out of it.
+    local dragging, dragStart, startPos, moved = false, nil, nil, false
 
-    -- Auto Farm & Sell
-    AutoSell = false,
-    SellDelay = 0.5,
-    AutoTreadmill = false,
-    TreadmillSpeed = 0.1,
-    AutoEquipBest = false,
+    local function beginDrag(input)
+        dragging, moved = true, false
+        dragStart, startPos = input.Position, btn.Position
+    end
 
-    -- Auto Upgrade
-    AutoUpgradeSpeed = false,
-    AutoUpgradePlot = false,
-    AutoBuyTrails = false,
-    SelectedTrail = "GreyTrail",
+    local function endDrag()
+        if not dragging then return end
+        dragging = false
+        if moved then
+            Cfg.FloatX = math.floor(btn.Position.X.Offset)
+            Cfg.FloatY = math.floor(btn.Position.Y.Offset)
+            saveConfig()
+        else
+            toggleWindow()
+        end
+    end
 
-    -- Movement & Physics
-    WalkSpeedToggle = false,
-    WalkSpeedValue = 16,
-    JumpPowerToggle = false,
-    JumpPowerValue = 50,
-    InfiniteJump = false,
-    Noclip = false,
-    FlyToggle = false,
-    FlySpeed = 50,
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            beginDrag(input)
+        end
+    end)
 
-    -- Misc & Protection
-    AntiAFK = true,
-}
+    -- the button's own InputEnded misses releases that happen off the button, so
+    -- the global one is what actually ends the drag
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            endDrag()
+        end
+    end)
 
----------------------------------------------------------
--- WIND UI CREATION (WINDOW AT TOP FOR INSTANT RENDER)
----------------------------------------------------------
+    Runtime.conns.dragMove = UserInput.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            local d = input.Position - dragStart
+            if math.abs(d.X) > 3 or math.abs(d.Y) > 3 then moved = true end
+            btn.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        end
+    end)
 
-local Window = WindUI:CreateWindow({
-    Title = "พยอมบอยฮับ | Steel an Egg Automation",
-    Icon = "egg",
-    Author = "พยอมบอยฮับ",
-    Folder = "PayomboyZHub_Config",
-    Size = UDim2.fromOffset(630, 470),
-    Transparent = true,
-    Theme = "Dark",
+    Runtime.conns.dragEnd = UserInput.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            endDrag()
+        end
+    end)
+
+    Runtime.floatIcon = btn
+    Runtime.floatGui  = gui
+end
+
+-- our own binding, so the hotkey works even if the library changes how it reads
+-- input; a rebind in progress swallows the next key instead of toggling
+local rebinding = false
+
+Runtime.conns.hotkey = UserInput.InputBegan:Connect(function(input, processed)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    if rebinding then
+        rebinding = false
+        Cfg.ToggleKey = input.KeyCode.Name
+        saveConfig()
+        if Runtime.refreshKeyBox then Runtime.refreshKeyBox() end
+        Notify("ปุ่มลัด", ("ตั้งเป็น %s แล้ว"):format(input.KeyCode.Name), 4)
+        return
+    end
+
+    if processed then return end
+    if input.KeyCode == keyFromName(Cfg.ToggleKey) then toggleWindow() end
+end)
+
+TabSys:Section({ Title = "ปุ่มลัด & การเข้าถึง" })
+
+local KeyBox = TabSys:Paragraph({
+    Title = "ปุ่มเปิด/ปิดหน้าต่าง",
+    Desc  = ("ตอนนี้: %s"):format(Cfg.ToggleKey),
 })
 
----------------------------------------------------------
--- TABS & SECTIONS CREATION
----------------------------------------------------------
-
-local AutoPlayTab = Window:Tab({ Title = "ออโต้เล่น (Auto Play)", Icon = "play" })
-local EggTab      = Window:Tab({ Title = "ระบบไข่ (Auto Egg)", Icon = "egg" })
-local UpgradeTab  = Window:Tab({ Title = "ออโต้อัพเกรด (Auto Upgrade)", Icon = "zap" })
-local MoveTab     = Window:Tab({ Title = "การเคลื่อนที่ (Movement)", Icon = "move" })
-local UtilityTab  = Window:Tab({ Title = "ระบบเสริม (Misc)", Icon = "settings" })
-
----------------------------------------------------------
--- TAB 1: AUTO PLAY
----------------------------------------------------------
-pcall(function() AutoPlayTab:Section({ Title = "ระบบฟาร์มและเล่นอัตโนมัติ (Auto Farm)" }) end)
-pcall(function()
-    AutoPlayTab:Toggle({
-        Title = "ออโต้ขโมยไข่ในแมพ (Auto Steal Map Eggs)",
-        Desc = "วิ่งขโมยและเก็บไข่รอบๆ แมพให้อัตโนมัติ",
-        Value = Config.AutoStealMapEggs,
-        Callback = function(v) Config.AutoStealMapEggs = v end
-    })
-end)
-pcall(function()
-    AutoPlayTab:Toggle({
-        Title = "วาร์ปไปหาไข่ในแมพ (Auto TP To Map Eggs)",
-        Desc = "วาร์ปเข้าประชิดไข่ในแมพเพื่อขโมยทันที",
-        Value = Config.AutoTPToMapEggs,
-        Callback = function(v) Config.AutoTPToMapEggs = v end
-    })
-end)
-pcall(function()
-    AutoPlayTab:Slider({
-        Title = "ความเร็วขโมยไข่ (Steal Delay)",
-        Desc = "ระยะเวลารอในการขโมยไข่ (วินาที)",
-        Min = 0.05,
-        Max = 2.0,
-        Step = 0.05,
-        Value = Config.StealDelay,
-        Callback = function(v) Config.StealDelay = v end
-    })
-end)
-pcall(function()
-    AutoPlayTab:Toggle({
-        Title = "ออโต้ขายสินค้า (Auto Sell)",
-        Desc = "ขายไข่และสัตว์เลี้ยงทั้งกระเป๋าแบบ Remote & Touch",
-        Value = Config.AutoSell,
-        Callback = function(v) Config.AutoSell = v end
-    })
-end)
-pcall(function()
-    AutoPlayTab:Toggle({
-        Title = "ออโต้วิ่งบนลู่วิ่ง (Auto Treadmill)",
-        Desc = "วิ่งบนลู่วิ่งเพื่อเพิ่มค่าตัวคูณอย่างรวดเร็ว",
-        Value = Config.AutoTreadmill,
-        Callback = function(v) Config.AutoTreadmill = v end
-    })
-end)
-pcall(function()
-    AutoPlayTab:Toggle({
-        Title = "ออโต้ใส่สัตว์เลี้ยงที่ดีที่สุด (Auto Equip Best)",
-        Desc = "สวมใส่สัตว์เลี้ยงที่ดีที่สุดให้อัตโนมัติ",
-        Value = Config.AutoEquipBest,
-        Callback = function(v) Config.AutoEquipBest = v end
-    })
-end)
-
----------------------------------------------------------
--- TAB 2: AUTO EGG & PET AUTOMATION
----------------------------------------------------------
-pcall(function() EggTab:Section({ Title = "ระบบวางไข่ วางสัตว์เลี้ยง ฟักไข่ และคัดเลือกระดับ (Egg & Pet Automation)" }) end)
-pcall(function()
-    EggTab:Toggle({
-        Title = "ออโต้วางไข่ (Auto Place Egg)",
-        Desc = "นำไข่ในกระเป๋าลงวางบนพล็อตให้อัตโนมัติ",
-        Value = Config.AutoPlaceEgg,
-        Callback = function(v) Config.AutoPlaceEgg = v end
-    })
-end)
-pcall(function()
-    EggTab:Toggle({
-        Title = "ออโต้วางสัตว์เลี้ยง (Auto Place Pet)",
-        Desc = "นำสัตว์เลี้ยงจากกระเป๋าลงคอกพล็อตให้อัตโนมัติ",
-        Value = Config.AutoPlacePet,
-        Callback = function(v) Config.AutoPlacePet = v end
-    })
-end)
-pcall(function()
-    EggTab:Toggle({
-        Title = "ออโต้ฟักไข่ (Auto Hatch Egg)",
-        Desc = "เร่งฟักไข่บนรังพล็อตให้อัตโนมัติ",
-        Value = Config.AutoHatchEgg,
-        Callback = function(v) Config.AutoHatchEgg = v end
-    })
-end)
-pcall(function()
-    EggTab:Toggle({
-        Title = "ออโต้วาร์ปกลับบ้านเพื่อวาง/ฟักไข่ (Auto TP Home)",
-        Desc = "วาร์ปกลับพล็อตตนเองเมื่อขโมยไข่เสร็จ เพื่อความปลอดภัยและวางไข่ 100%",
-        Value = Config.AutoTPHomeToPlace,
-        Callback = function(v) Config.AutoTPHomeToPlace = v end
-    })
-end)
-pcall(function()
-    EggTab:Dropdown({
-        Title = "ระดับไข่ขั้นต่ำที่จะวางลงพล็อต (Min Place Rarity)",
-        Desc = "กรองไข่ที่จะนำไปวางบนพล็อตเฉพาะระดับนี้ขึ้นไป",
-        Values = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
-        Value = Config.MinRarityPlaceFilter,
-        Callback = function(v) Config.MinRarityPlaceFilter = v end
-    })
-end)
-pcall(function()
-    EggTab:Dropdown({
-        Title = "ระดับไข่ขั้นต่ำที่จะฟัก (Min Hatch Rarity)",
-        Desc = "กรองไข่ที่จะกดฟักเฉพาะระดับนี้ขึ้นไป",
-        Values = { "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
-        Value = Config.MinRarityHatchFilter,
-        Callback = function(v) Config.MinRarityHatchFilter = v end
-    })
-end)
-
----------------------------------------------------------
--- TAB 3: AUTO UPGRADES
----------------------------------------------------------
-pcall(function() UpgradeTab:Section({ Title = "ระบบอัพเกรดพล็อตและตัวละคร (Auto Upgrades)" }) end)
-pcall(function()
-    UpgradeTab:Toggle({
-        Title = "ออโต้อัพเกรดลู่วิ่ง/ความเร็ว (Auto Upgrade Speed)",
-        Desc = "อัพเกรดความเร็วลู่วิ่งให้อัตโนมัติ",
-        Value = Config.AutoUpgradeSpeed,
-        Callback = function(v) Config.AutoUpgradeSpeed = v end
-    })
-end)
-pcall(function()
-    UpgradeTab:Toggle({
-        Title = "ออโต้อัพเกรดพล็อต/คอกเลี้ยง (Auto Upgrade Plot)",
-        Desc = "อัพเกรดพล็อตและคอกเลี้ยงเพื่อขยายพื้นที่ให้อัตโนมัติ",
-        Value = Config.AutoUpgradePlot,
-        Callback = function(v) Config.AutoUpgradePlot = v end
-    })
-end)
-pcall(function()
-    UpgradeTab:Toggle({
-        Title = "ออโต้ซื้อเอฟเฟกต์เดิน (Auto Buy Trails)",
-        Desc = "ซื้อเอฟเฟกต์เดินให้อัตโนมัติ",
-        Value = Config.AutoBuyTrails,
-        Callback = function(v) Config.AutoBuyTrails = v end
-    })
-end)
-
----------------------------------------------------------
--- TAB 4: MOVEMENT & PHYSICS
----------------------------------------------------------
-pcall(function() MoveTab:Section({ Title = "ปรับแต่งการเคลื่อนที่ (Movement Control)" }) end)
-pcall(function()
-    MoveTab:Toggle({
-        Title = "เปิดใช้งาน เดินเร็ว (WalkSpeed)",
-        Desc = "เพิ่มความเร็วในการเดินของตัวละคร",
-        Value = Config.WalkSpeedToggle,
-        Callback = function(v) Config.WalkSpeedToggle = v end
-    })
-end)
-pcall(function()
-    MoveTab:Slider({
-        Title = "ความเร็วการเดิน (WalkSpeed Value)",
-        Desc = "ปรับระดับความเร็วการเดิน",
-        Min = 16,
-        Max = 350,
-        Step = 1,
-        Value = Config.WalkSpeedValue,
-        Callback = function(v) Config.WalkSpeedValue = v end
-    })
-end)
-pcall(function()
-    MoveTab:Toggle({
-        Title = "เปิดใช้งาน กระโดดสูง (JumpPower)",
-        Desc = "เพิ่มพลังในการกระโดดของตัวละคร",
-        Value = Config.JumpPowerToggle,
-        Callback = function(v) Config.JumpPowerToggle = v end
-    })
-end)
-pcall(function()
-    MoveTab:Slider({
-        Title = "พลังการกระโดด (JumpPower Value)",
-        Desc = "ปรับระดับพลังการกระโดด",
-        Min = 50,
-        Max = 500,
-        Step = 5,
-        Value = Config.JumpPowerValue,
-        Callback = function(v) Config.JumpPowerValue = v end
-    })
-end)
-pcall(function()
-    MoveTab:Toggle({
-        Title = "กระโดดลอยฟ้าไม่จำกัด (Infinite Jump)",
-        Desc = "กระโดดกลางอากาศได้ต่อเนื่อง",
-        Value = Config.InfiniteJump,
-        Callback = function(v) Config.InfiniteJump = v end
-    })
-end)
-pcall(function()
-    MoveTab:Toggle({
-        Title = "เดินทะลุกำแพง (Noclip)",
-        Desc = "เดินทะลุสิ่งกีดขวางและกำแพงในเกม",
-        Value = Config.Noclip,
-        Callback = function(v) Config.Noclip = v end
-    })
-end)
-
-pcall(function() MoveTab:Section({ Title = "ระบบบิน (Fly Mode)" }) end)
-pcall(function()
-    MoveTab:Toggle({
-        Title = "เปิดโหมดบิน (Fly Mode)",
-        Desc = "บินได้อย่างอิสระบนท้องฟ้า (ไม่อืด / ไม่ตีกับความเร็วเดิน)",
-        Value = Config.FlyToggle,
-        Callback = function(v)
-            Config.FlyToggle = v
-            pcall(ToggleFly)
-        end
-    })
-end)
-pcall(function()
-    MoveTab:Slider({
-        Title = "ความเร็วในการบิน (Fly Speed)",
-        Desc = "ปรับระดับความเร็วในการบิน",
-        Min = 10,
-        Max = 300,
-        Step = 5,
-        Value = Config.FlySpeed,
-        Callback = function(v) Config.FlySpeed = v end
-    })
-end)
-
----------------------------------------------------------
--- TAB 5: MISC & SERVER UTILITIES
----------------------------------------------------------
-pcall(function() UtilityTab:Section({ Title = "ระบบช่วยเหลือและเซิร์ฟเวอร์ (Misc)" }) end)
-pcall(function()
-    UtilityTab:Toggle({
-        Title = "ป้องกันการโดนเตะ AFK (Anti-AFK)",
-        Desc = "ป้องกันเกมเตะออกเมื่อยืนนิ่งเกิน 20 นาที",
-        Value = Config.AntiAFK,
-        Callback = function(v) Config.AntiAFK = v end
-    })
-end)
-pcall(function()
-    UtilityTab:Button({
-        Title = "ย้ายเซิร์ฟเวอร์ใหม่ (Server Hop)",
-        Desc = "ค้นหาและย้ายไปยังเซิร์ฟเวอร์อื่นทันที",
-        Callback = function()
-            pcall(function()
-                local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")).data
-                for _, server in pairs(servers) do
-                    if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                        TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
-                        break
-                    end
-                end
-            end)
-        end
-    })
-end)
-pcall(function()
-    UtilityTab:Button({
-        Title = "รีจอยน์เซิร์ฟเวอร์เดิม (Rejoin Server)",
-        Desc = "เชื่อมต่อกลับเข้าเซิร์ฟเวอร์เดิมอีกครั้ง",
-        Callback = function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId)
-        end
-    })
-end)
-
----------------------------------------------------------
--- MOVEMENT & HELPER FUNCTIONS
----------------------------------------------------------
-
-local function getCharacter()
-    return LocalPlayer.Character
+Runtime.refreshKeyBox = function()
+    pcall(function() KeyBox:SetDesc(("ตอนนี้: %s"):format(Cfg.ToggleKey)) end)
 end
 
-local function getHumanoid()
-    local char = getCharacter()
-    return char and char:FindFirstChildOfClass("Humanoid")
-end
-
-local function getRootPart()
-    local char = getCharacter()
-    return char and (char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart)
-end
-
--- Anti-AFK Handler
-LocalPlayer.Idled:Connect(function()
-    if Config.AntiAFK then
-        pcall(function()
-            VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
-            task.wait(1)
-            VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+TabSys:Toggle({
+    Title = "ตั้งปุ่มใหม่",
+    Desc  = "เปิดสวิตช์นี้แล้วกดปุ่มที่ต้องการ 1 ครั้ง",
+    Value = false,
+    Callback = function(v)
+        rebinding = isOn(v)
+        if isOn(v) then
+            Notify("ปุ่มลัด", "กดปุ่มที่ต้องการได้เลย", 4)
+        end
+        task.delay(0.1, function()
+            pcall(function() KeyBox:SetDesc(("ตอนนี้: %s"):format(Cfg.ToggleKey)) end)
         end)
-    end
-end)
-
--- Fly Body Movers
-local flyBodyVelocity = nil
-local flyBodyGyro = nil
-
-function ToggleFly()
-    local root = getRootPart()
-    local hum = getHumanoid()
-    if not root or not hum then return end
-
-    if Config.FlyToggle then
-        hum.PlatformStand = true
-        pcall(function()
-            if flyBodyVelocity then flyBodyVelocity:Destroy() end
-            if flyBodyGyro then flyBodyGyro:Destroy() end
-        end)
-
-        flyBodyVelocity = Instance.new("BodyVelocity")
-        flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        flyBodyVelocity.Velocity = Vector3.zero
-        flyBodyVelocity.Parent = root
-
-        flyBodyGyro = Instance.new("BodyGyro")
-        flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-        flyBodyGyro.P = 9e4
-        flyBodyGyro.CFrame = root.CFrame
-        flyBodyGyro.Parent = root
-
-        task.spawn(function()
-            local camera = Workspace.CurrentCamera
-            while Config.FlyToggle and root and hum do
-                local moveDir = Vector3.zero
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                    moveDir = moveDir + camera.CFrame.LookVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                    moveDir = moveDir - camera.CFrame.LookVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                    moveDir = moveDir - camera.CFrame.RightVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                    moveDir = moveDir + camera.CFrame.RightVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                    moveDir = moveDir + Vector3.new(0, 1, 0)
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                    moveDir = moveDir - Vector3.new(0, 1, 0)
-                end
-
-                if moveDir.Magnitude > 0 then
-                    flyBodyVelocity.Velocity = moveDir.Unit * Config.FlySpeed
-                else
-                    flyBodyVelocity.Velocity = Vector3.zero
-                end
-                flyBodyGyro.CFrame = camera.CFrame
-                task.wait()
-            end
-            if flyBodyVelocity then flyBodyVelocity:Destroy() end
-            if flyBodyGyro then flyBodyGyro:Destroy() end
-            if hum then hum.PlatformStand = false end
-        end)
-    else
-        hum.PlatformStand = false
-        pcall(function()
-            if flyBodyVelocity then flyBodyVelocity:Destroy() end
-            if flyBodyGyro then flyBodyGyro:Destroy() end
-        end)
-    end
-end
-
--- Movement Stats Enforcer
-local function enforceMovementStats()
-    local hum = getHumanoid()
-    if not hum then return end
-    if Config.WalkSpeedToggle and not Config.FlyToggle then
-        if hum.WalkSpeed ~= Config.WalkSpeedValue then
-            hum.WalkSpeed = Config.WalkSpeedValue
-        end
-    end
-    if Config.JumpPowerToggle and not Config.FlyToggle then
-        hum.UseJumpPower = true
-        if hum.JumpPower ~= Config.JumpPowerValue then
-            hum.JumpPower = Config.JumpPowerValue
-        end
-    end
-end
-
-RunService.Heartbeat:Connect(enforceMovementStats)
-RunService.Stepped:Connect(enforceMovementStats)
-RunService.RenderStepped:Connect(enforceMovementStats)
-
--- Render Stepped Loop (Noclip)
-RunService.Stepped:Connect(function()
-    local char = getCharacter()
-    if Config.Noclip and char then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
--- Infinite Jump Listener
-UserInputService.JumpRequest:Connect(function()
-    if Config.InfiniteJump then
-        local hum = getHumanoid()
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
--- Helper: Find Local Player's Plot in Workspace
-local function getMyPlot()
-    local plots = Workspace:FindFirstChild("Plots")
-    if not plots then return nil end
-    for _, plot in pairs(plots:GetChildren()) do
-        for _, desc in pairs(plot:GetDescendants()) do
-            if desc:IsA("TextLabel") and (desc.Text == LocalPlayer.Name or desc.Text == LocalPlayer.DisplayName) then
-                return plot
-            end
-        end
-    end
-    return nil
-end
-
--- Helper: Check if LocalPlayer is standing inside or near their Plot
-local function isAtPlot()
-    local plot = getMyPlot()
-    if not plot then return false end
-    local root = getRootPart()
-    if not root then return false end
-
-    local targetPart = plot:FindFirstChild("SpawnPoint", true) 
-        or plot:FindFirstChild("PlotSign", true) 
-        or plot:FindFirstChild("PlayerPlotSign", true)
-        or plot:FindFirstChild("Spawn", true)
-        or plot:FindFirstChild("Gate", true)
-
-    if targetPart then
-        local targetPos = targetPart:IsA("Model") and targetPart:GetPivot().Position or targetPart.Position
-        return (root.Position - targetPos).Magnitude <= 35
-    end
-    return false
-end
-
--- Helper: Smart Teleport to Local Player's Plot / Home Base
-local function teleportToMyPlot()
-    local plot = getMyPlot()
-    if not plot then return false end
-    local root = getRootPart()
-    if not root then return false end
-
-    local targetPart = plot:FindFirstChild("SpawnPoint", true) 
-        or plot:FindFirstChild("PlotSign", true) 
-        or plot:FindFirstChild("PlayerPlotSign", true)
-        or plot:FindFirstChild("Spawn", true)
-        or plot:FindFirstChild("Gate", true)
-
-    if targetPart then
-        local targetCFrame = targetPart:IsA("Model") and targetPart:GetPivot() or targetPart.CFrame
-        root.CFrame = targetCFrame * CFrame.new(0, 3, 0)
-        return true
-    else
-        local primary = plot.PrimaryPart or plot:FindFirstChildWhichIsA("BasePart", true)
-        if primary then
-            root.CFrame = primary.CFrame * CFrame.new(0, 3, 0)
-            return true
-        end
-    end
-    return false
-end
-
-local lastPlotTPTime = 0
-local function smartTPToPlot()
-    if isAtPlot() then return true end
-    if os.clock() - lastPlotTPTime < 2.0 then return false end
-    lastPlotTPTime = os.clock()
-    return teleportToMyPlot()
-end
-
--- Helper: Rarity Parser
-local function parseEggRarity(rarityStr)
-    if not rarityStr then return "Common" end
-    local str = tostring(rarityStr):lower()
-    if str:find("divine") then return "Divine" end
-    if str:find("mythic") then return "Mythic" end
-    if str:find("legendary") or str:find("legend") then return "Legendary" end
-    if str:find("epic") then return "Epic" end
-    if str:find("rare") then return "Rare" end
-    if str:find("uncommon") then return "Uncommon" end
-    return "Common"
-end
-
--- Helper: Check Carried Egg in Character or Backpack
-local function getCarriedEggInfo()
-    local char = getCharacter()
-    if not char then return nil end
-
-    for _, item in pairs(char:GetChildren()) do
-        if item:IsA("Tool") or item:IsA("Model") then
-            local name = item.Name:lower()
-            if name:find("egg") or item:FindFirstChild("Egg") or item:GetAttribute("Rarity") or item:FindFirstChild("Rarity") then
-                local rarity = item:GetAttribute("Rarity") or (item:FindFirstChild("Rarity") and item.Rarity.Value) or item.Name
-                return { Instance = item, Rarity = parseEggRarity(rarity) }
-            end
-        end
-    end
-
-    for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
-        local name = item.Name:lower()
-        if name:find("egg") or item:FindFirstChild("Egg") or item:GetAttribute("Rarity") or item:FindFirstChild("Rarity") then
-            local rarity = item:GetAttribute("Rarity") or (item:FindFirstChild("Rarity") and item.Rarity.Value) or item.Name
-            return { Instance = item, Rarity = parseEggRarity(rarity) }
-        end
-    end
-
-    return nil
-end
-
-local function MeetsPlaceFilter(eggRarityStr)
-    local eggRarity = parseEggRarity(eggRarityStr)
-    local minLevel = RarityLevels[Config.MinRarityPlaceFilter] or 1
-    local currentLevel = RarityLevels[eggRarity] or 1
-    return currentLevel >= minLevel
-end
-
-local function MeetsHatchFilter(eggRarityStr)
-    local eggRarity = parseEggRarity(eggRarityStr)
-    local minLevel = RarityLevels[Config.MinRarityHatchFilter] or 1
-    local currentLevel = RarityLevels[eggRarity] or 1
-    return currentLevel >= minLevel
-end
-
----------------------------------------------------------
--- AUTOMATION LOOPS
----------------------------------------------------------
-
--- Auto Steal Eggs from Map Loop
-task.spawn(function()
-    while true do
-        task.wait(Config.StealDelay)
-        if Config.AutoStealMapEggs then
-            pcall(function()
-                local root = getRootPart()
-                for _, prompt in pairs(Workspace:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                        if text:find("steal") or text:find("carry") or text:find("egg") or text:find("take") or text:find("grab") then
-                            if Config.AutoTPToMapEggs and root and prompt.Parent and prompt.Parent:IsA("BasePart") then
-                                root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 2, 0)
-                                task.wait(0.05)
-                            end
-                            fireproximityprompt(prompt, 0)
-                        end
-                    end
-                end
-                
-                if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestAreaEggCarry") then
-                    Network.Eggs.RequestAreaEggCarry:InvokeServer()
-                end
-
-                local carriedEgg = getCarriedEggInfo()
-                if carriedEgg or (LocalPlayer.PlayerGui:FindFirstChild("MainGui") and LocalPlayer.PlayerGui.MainGui:FindFirstChild("RunBanner")) then
-                    if Config.AutoTPHomeToPlace then
-                        smartTPToPlot()
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Place Egg Loop
-task.spawn(function()
-    while true do
-        task.wait(1.0)
-        if Config.AutoPlaceEgg then
-            pcall(function()
-                local carriedEgg = getCarriedEggInfo()
-                if carriedEgg and not MeetsPlaceFilter(carriedEgg.Rarity) then
-                    return
-                end
-
-                if Config.AutoTPHomeToPlace then
-                    smartTPToPlot()
-                end
-
-                task.spawn(function()
-                    if Network and Network:FindFirstChild("Eggs") and Network.Eggs:FindFirstChild("RequestPlaceEgg") then
-                        pcall(function()
-                            Network.Eggs.RequestPlaceEgg:InvokeServer({})
-                            Network.Eggs.RequestPlaceEgg:InvokeServer()
-                        end)
-                    end
-                end)
-
-                local myPlot = getMyPlot()
-                local root = getRootPart()
-                if myPlot then
-                    for _, prompt in pairs(myPlot:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                            if text:find("place") or text:find("put") or text:find("deposit") or text:find("nest") or text:find("egg") or text:find("pen") then
-                                if root and prompt.Parent and prompt.Parent:IsA("BasePart") then
-                                    root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 3, 0)
-                                end
-                                fireproximityprompt(prompt, 0)
-                            end
-                            if text:find("upgrade") or text:find("pen") or text:find("expand") then
-                                fireproximityprompt(prompt, 0)
-                            end
-                        end
-                    end
-                end
-
-                if Network and Network:FindFirstChild("Plots") and Network.Plots:FindFirstChild("RequestBaseUpgrade") then
-                    task.spawn(function()
-                        pcall(function()
-                            Network.Plots.RequestBaseUpgrade:FireServer()
-                        end)
-                    end)
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Place Pet Loop
-task.spawn(function()
-    while true do
-        task.wait(1.2)
-        if Config.AutoPlacePet then
-            pcall(function()
-                if Config.AutoTPHomeToPlace then
-                    smartTPToPlot()
-                end
-                
-                local myPlot = getMyPlot()
-                local root = getRootPart()
-
-                if myPlot then
-                    for _, prompt in pairs(myPlot:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. prompt.Parent.Name):lower()
-                            if text:find("pet") or text:find("animal") or text:find("asset") or text:find("pen") or text:find("equip") then
-                                if root and prompt.Parent and prompt.Parent:IsA("BasePart") then
-                                    root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 3, 0)
-                                end
-                                fireproximityprompt(prompt, 0)
-                            end
-                            if text:find("upgrade") or text:find("pen") then
-                                fireproximityprompt(prompt, 0)
-                            end
-                        end
-                    end
-                end
-
-                if Network and Network:FindFirstChild("ActiveAssets") and Network.ActiveAssets:FindFirstChild("RequestEquip") then
-                    local clientAssets = Workspace:FindFirstChild("ClientRenderedAssets")
-                    if clientAssets then
-                        for _, asset in pairs(clientAssets:GetChildren()) do
-                            local parts = asset.Name:split("_")
-                            if parts[1] == tostring(LocalPlayer.UserId) and parts[2] then
-                                local assetUUID = parts[2]
-                                task.spawn(function()
-                                    pcall(function()
-                                        Network.ActiveAssets.RequestEquip:InvokeServer(assetUUID)
-                                    end)
-                                end)
-                            end
-                        end
-                    end
-                end
-
-                if Network and Network:FindFirstChild("Plots") and Network.Plots:FindFirstChild("RequestBaseUpgrade") then
-                    task.spawn(function()
-                        pcall(function()
-                            Network.Plots.RequestBaseUpgrade:FireServer()
-                        end)
-                    end)
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Hatch Egg Loop
-task.spawn(function()
-    while true do
-        task.wait(Config.HatchDelay or 1.0)
-        if Config.AutoHatchEgg then
-            pcall(function()
-                local myPlot = getMyPlot()
-                local root = getRootPart()
-
-                if Config.AutoTPHomeToPlace then
-                    smartTPToPlot()
-                end
-
-                local placedEggFolder = Workspace:FindFirstChild("PlacedEggRenders")
-                local userIdStr = tostring(LocalPlayer.UserId)
-
-                if placedEggFolder then
-                    for _, eggModel in pairs(placedEggFolder:GetChildren()) do
-                        local parts = eggModel.Name:split("_")
-                        local isMyEgg = (parts[1] == userIdStr) or (myPlot and eggModel:IsDescendantOf(myPlot))
-                        if isMyEgg then
-                            local eggId = parts[2] or eggModel.Name
-                            local rarity = eggModel:GetAttribute("Rarity") or (eggModel:FindFirstChild("Rarity") and eggModel.Rarity.Value) or eggModel.Name
-                            
-                            if MeetsHatchFilter(rarity) then
-                                if Network and Network:FindFirstChild("Eggs") then
-                                    local eggRemoteFolder = Network.Eggs
-                                    task.spawn(function()
-                                        pcall(function()
-                                            if eggRemoteFolder:FindFirstChild("RequestHatchEgg") then
-                                                eggRemoteFolder.RequestHatchEgg:InvokeServer(eggId)
-                                            end
-                                            if eggRemoteFolder:FindFirstChild("RequestCompleteHatchEgg") then
-                                                eggRemoteFolder.RequestCompleteHatchEgg:InvokeServer(eggId)
-                                            end
-                                        end)
-                                    end)
-                                end
-
-                                for _, prompt in pairs(eggModel:GetDescendants()) do
-                                    if prompt:IsA("ProximityPrompt") then
-                                        if root and prompt.Parent and prompt.Parent:IsA("BasePart") then
-                                            root.CFrame = prompt.Parent.CFrame * CFrame.new(0, 3, 0)
-                                        end
-                                        fireproximityprompt(prompt, 0)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-
-                if myPlot then
-                    for _, prompt in pairs(myPlot:GetDescendants()) do
-                        if prompt:IsA("ProximityPrompt") then
-                            local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
-                            if text:find("hatch") or text:find("open") or text:find("claim") or text:find("crack") then
-                                local parentObj = prompt.Parent
-                                local rarity = parentObj and (parentObj:GetAttribute("Rarity") or (parentObj:FindFirstChild("Rarity") and parentObj.Rarity.Value) or parentObj.Name)
-                                if MeetsHatchFilter(rarity) then
-                                    if root and parentObj and parentObj:IsA("BasePart") then
-                                        root.CFrame = parentObj.CFrame * CFrame.new(0, 3, 0)
-                                    end
-                                    fireproximityprompt(prompt, 0)
-                                end
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Sell Loop
-task.spawn(function()
-    while true do
-        task.wait(Config.SellDelay)
-        if Config.AutoSell then
-            pcall(function()
-                if Network then
-                    if Network:FindFirstChild("AssetInventory") and Network.AssetInventory:FindFirstChild("SellAllAssets") then
-                        Network.AssetInventory.SellAllAssets:FireServer()
-                    end
-                    if Network:FindFirstChild("ActiveAssets") and Network.ActiveAssets:FindFirstChild("RequestSell") then
-                        task.spawn(function()
-                            pcall(function()
-                                Network.ActiveAssets.RequestSell:InvokeServer()
-                            end)
-                        end)
-                    end
-                end
-
-                local root = getRootPart()
-                local sellPart = Workspace:FindFirstChild("Sell") or Workspace:FindFirstChild("SellZone") or Workspace:FindFirstChild("Deposit")
-                if sellPart and root then
-                    local targetPart = sellPart:IsA("BasePart") and sellPart or sellPart:FindFirstChildWhichIsA("BasePart")
-                    if targetPart then
-                        firetouchinterest(root, targetPart, 0)
-                        firetouchinterest(root, targetPart, 1)
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Claim Index Rewards & Group Rewards Loop
-task.spawn(function()
-    while true do
-        task.wait(10)
-        pcall(function()
-            if Network then
-                if Network:FindFirstChild("Index") and Network.Index:FindFirstChild("RequestClaim") then
-                    Network.Index.RequestClaim:InvokeServer()
-                end
-                if Network:FindFirstChild("GroupReward") and Network.GroupReward:FindFirstChild("ClaimReward") then
-                    Network.GroupReward.ClaimReward:InvokeServer()
-                end
-            end
-        end)
-    end
-end)
-
--- Auto Treadmill Loop
-task.spawn(function()
-    while true do
-        task.wait(Config.TreadmillSpeed)
-        if Config.AutoTreadmill then
-            pcall(function()
-                local root = getRootPart()
-                local myPlot = getMyPlot()
-                if root then
-                    if myPlot then
-                        local treadmill = myPlot:FindFirstChild("TreadmillBottom", true) or myPlot:FindFirstChild("Treadmill", true)
-                        if treadmill and treadmill:IsA("BasePart") then
-                            firetouchinterest(root, treadmill, 0)
-                            firetouchinterest(root, treadmill, 1)
-                        end
-                    end
-                    for _, v in pairs(Workspace:GetDescendants()) do
-                        if v.Name:lower():find("treadmill") or v.Name:lower():find("runpad") or v.Name:lower():find("speedpad") then
-                            if v:IsA("BasePart") then
-                                firetouchinterest(root, v, 0)
-                                firetouchinterest(root, v, 1)
-                            elseif v:IsA("ProximityPrompt") then
-                                fireproximityprompt(v)
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Equip Best & Upgrades Loop
-task.spawn(function()
-    while true do
-        task.wait(1.5)
-        if Config.AutoEquipBest then
-            task.spawn(function()
-                pcall(function()
-                    if Network then
-                        if Network:FindFirstChild("Backpack") and Network.Backpack:FindFirstChild("GetEquipBestStatus") then
-                            Network.Backpack.GetEquipBestStatus:InvokeServer()
-                        end
-                        if Network:FindFirstChild("Pets") then
-                            if Network.Pets:FindFirstChild("EquipBest") then
-                                Network.Pets.EquipBest:InvokeServer()
-                            elseif Network.Pets:FindFirstChild("RequestEquipBest") then
-                                Network.Pets.RequestEquipBest:InvokeServer()
-                            end
-                        end
-                    end
-                end)
-            end)
-        end
-
-        if Config.AutoBuyTrails then
-            pcall(function()
-                if Network and Network:FindFirstChild("Trails") and Network.Trails:FindFirstChild("RequestPurchase") then
-                    Network.Trails.RequestPurchase:InvokeServer(Config.SelectedTrail)
-                end
-            end)
-        end
-
-        if Config.AutoUpgradePlot or Config.AutoUpgradeSpeed then
-            pcall(function()
-                local myPlot = getMyPlot()
-                local searchArea = myPlot or Workspace
-                for _, prompt in pairs(searchArea:GetDescendants()) do
-                    if prompt:IsA("ProximityPrompt") then
-                        local parentName = prompt.Parent and prompt.Parent.Name:lower() or ""
-                        local text = (prompt.ActionText .. " " .. prompt.ObjectText .. " " .. parentName):lower()
-                        if Config.AutoUpgradePlot and (text:find("plot") or text:find("pen") or text:find("upgrade")) then
-                            fireproximityprompt(prompt)
-                        end
-                        if Config.AutoUpgradeSpeed and (text:find("speed") or text:find("treadmill") or text:find("multiplier")) then
-                            fireproximityprompt(prompt)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
----------------------------------------------------------
--- AVATAR DASHBOARD UI & FLOATING CARD
----------------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PayomboyZDashboard"
-ScreenGui.ResetOnSpawn = false
-
-if gethui then
-    ScreenGui.Parent = gethui()
-elseif syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-else
-    ScreenGui.Parent = CoreGui
-end
-
-local Frame = Instance.new("Frame")
-Frame.Name = "DashboardFrame"
-Frame.Size = UDim2.new(0, 200, 0, 55)
-Frame.Position = UDim2.new(0, 15, 0.45, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Frame.BorderSizePixel = 0
-Frame.Active = true
-Frame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = Frame
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(220, 30, 50)
-UIStroke.Thickness = 1.5
-UIStroke.Parent = Frame
-
-local AvatarImage = Instance.new("ImageLabel")
-AvatarImage.Name = "AvatarImage"
-AvatarImage.Size = UDim2.new(0, 42, 0, 42)
-AvatarImage.Position = UDim2.new(0, 6, 0, 6)
-AvatarImage.BackgroundTransparency = 1
-AvatarImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId .. "&w=150&h=150"
-AvatarImage.Parent = Frame
-
-local AvatarCorner = Instance.new("UICorner")
-AvatarCorner.CornerRadius = UDim.new(0, 8)
-AvatarCorner.Parent = AvatarImage
-
-local NameLabel = Instance.new("TextLabel")
-NameLabel.Name = "NameLabel"
-NameLabel.Size = UDim2.new(0, 140, 0, 18)
-NameLabel.Position = UDim2.new(0, 54, 0, 8)
-NameLabel.BackgroundTransparency = 1
-NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-NameLabel.TextSize = 13
-NameLabel.Font = Enum.Font.SourceSansBold
-NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-NameLabel.Text = LocalPlayer.DisplayName or LocalPlayer.Name
-NameLabel.Parent = Frame
-
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Name = "StatsLabel"
-StatsLabel.Size = UDim2.new(0, 140, 0, 18)
-StatsLabel.Position = UDim2.new(0, 54, 0, 28)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.TextColor3 = Color3.fromRGB(170, 170, 190)
-StatsLabel.TextSize = 12
-StatsLabel.Font = Enum.Font.SourceSans
-StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatsLabel.Text = "FPS: -- | Ping: --ms"
-StatsLabel.Parent = Frame
-
-local lastTime = tick()
-local frameCount = 0
-RunService.RenderStepped:Connect(function()
-    frameCount = frameCount + 1
-    local now = tick()
-    if now - lastTime >= 1 then
-        local fps = math.floor(frameCount / (now - lastTime))
-        frameCount = 0
-        lastTime = now
-
-        local ping = 0
-        pcall(function()
-            ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
-        StatsLabel.Text = string.format("FPS: %d | Ping: %dms", fps, ping)
-    end
-end)
-
-local dragging = false
-local dragInput, dragStart, startPos
-local totalDragDistance = 0
-
-local function updateDrag(input)
-    local delta = input.Position - dragStart
-    totalDragDistance = delta.Magnitude
-    Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
-Frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = Frame.Position
-        totalDragDistance = 0
-
-        local connection
-        connection = input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-                if connection then connection:Disconnect() end
-
-                if totalDragDistance < 6 then
-                    pcall(function()
-                        if Window.Toggle then
-                            Window:Toggle()
-                        elseif Window.Minimize then
-                            Window:Minimize()
-                        end
-                    end)
-                end
-            end
-        end)
-    end
-end)
-
-Frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        updateDrag(input)
-    end
-end)
-
-WindUI:Notify({
-    Title = "🔥 พยอมบอยฮับ (PayomboyZ Hub) 🔥",
-    Content = "ยินดีต้อนรับสู่ พยอมบอยฮับ! เมนูและระบบการทำงานพร้อมใช้งานเรียบร้อยครับ!",
-    Duration = 6,
+    end,
 })
+
+TabSys:Toggle({
+    Title = "แสดงไอคอนลอย",
+    Desc  = "สี่เหลี่ยมเล็กๆ ลากย้ายได้ กดเพื่อเปิดหน้าต่างตอนพับอยู่",
+    Value = Cfg.ShowFloatIcon,
+    Callback = function(v)
+        Cfg.ShowFloatIcon = isOn(v)
+        saveConfig()
+        if Runtime.floatIcon then Runtime.floatIcon.Visible = isOn(v) end
+    end,
+})
+
+----------------------------------------------------------------
+-- settings file
+--
+-- Every switch already writes on change; this section exists so a save that
+-- failed says so instead of only showing up as "my settings are gone" after the
+-- next rejoin.
+----------------------------------------------------------------
+TabSys:Section({ Title = "ไฟล์ตั้งค่า" })
+
+local CfgBox = TabSys:Paragraph({
+    Title = "การบันทึกค่า",
+    Desc  = tostring(Runtime.cfgStatus),
+})
+
+Runtime.refreshCfgBox = function()
+    pcall(function()
+        CfgBox:SetDesc(("%s\nไฟล์: %s"):format(tostring(Runtime.cfgStatus), CFG_FILE))
+    end)
+end
+Runtime.refreshCfgBox()
+
+TabSys:Button({
+    Title = "บันทึกค่าตอนนี้",
+    Desc  = "เขียนทับไฟล์ทันที แล้วอ่านกลับมาตรวจว่าเขียนติดจริง",
+    Callback = function()
+        local ok = saveConfig()
+        Runtime.refreshCfgBox()
+        Notify("ตั้งค่า", ok and "บันทึกเรียบร้อย" or ("บันทึกไม่สำเร็จ: " .. tostring(Runtime.cfgStatus)), 4)
+    end,
+})
+
+TabSys:Button({
+    Title = "โหลดค่าจากไฟล์",
+    Desc  = "ดึงค่าที่บันทึกไว้กลับมาใช้ (หน้าต่างต้องเปิดใหม่ถึงจะเห็นสวิตช์ขยับ)",
+    Callback = function()
+        local ok = loadConfig()
+        Runtime.refreshCfgBox()
+        Notify("ตั้งค่า", ok and tostring(Runtime.cfgStatus) or "ไม่มีไฟล์ให้โหลด", 4)
+    end,
+})
+
+local LogBox = TabSys:Paragraph({ Title = "บันทึกล่าสุด", Desc = "-" })
+
+-- the panel is up: put back anything its construction changed, and let saves work
+for k, v in pairs(cfgAtBuild) do Cfg[k] = v end
+cfgAtBuild = nil
+uiBuilding = false
+
+----------------------------------------------------------------
+-- UI refresh
+--
+-- One job, five seconds, and only while the window is open: a hidden panel that
+-- keeps rebuilding strings is pure waste on a box running many clients.
+----------------------------------------------------------------
+job("ui", 5, function()
+    local data = saveData()
+    local mins = math.max((os.clock() - Runtime.stats.startedAt) / 60, 0.01)
+    local money = tonumber(data.Money) or 0
+    local gain  = money - (Runtime.stats.startMoney or money)
+
+    pcall(function()
+        StatusBox:SetDesc(("โหมด: %s%s | ไข่ %d ใบ (%.1f/นาที) | ฟัก %d\nเงิน %s (+%s ตั้งแต่เริ่ม) | กระเป๋าไข่ %d/%d\n%s")
+            :format(
+                Cfg.MoveMode,
+                Runtime.instantReady and "" or " (วาปตรงยังไม่พร้อม ใช้ Warp แทน)",
+                Runtime.stats.eggs, Runtime.stats.eggs / mins, Runtime.stats.hatched,
+                shortNum(money), shortNum(gain),
+                bagCount(), EGG_BAG_CAP,
+                Runtime.lastError and ("ล่าสุด: " .. tostring(Runtime.lastError)) or "ทำงานปกติ"))
+    end)
+
+    -- read what the seller already computed; never rebuild the plan on this thread
+    pcall(function()
+        local pv = Runtime.sellPreview
+        if not pv then
+            SellPreview:SetDesc("กำลังอ่านกระเป๋า...")
+        elseif pv.count == 0 then
+            SellPreview:SetDesc("ตอนนี้ไม่มีสัตว์ตัวไหนเข้าตัวกรอง — เปิดสวิตช์ก็ไม่มีอะไรหาย")
+        else
+            SellPreview:SetDesc(("เข้าตัวกรอง %d ตัว รวมราว %s • คิวเหลือ %d\nจังหวะขายตอนนี้ %.1f ครั้ง/วิ (เฟรมแย่สุด %d ms)\n%s")
+                :format(pv.count, shortNum(pv.total), #sellQueue,
+                    1 / math.max(Runtime.sellPace or (Cfg.SellPace or 0.05), 0.001),
+                    Runtime.sellWorstMs or 0,
+                    pv.head or ""))
+        end
+    end)
+
+    pcall(function()
+        local lvl = tonumber(data.BaseUpgradeLevel) or 0
+        local tm  = tonumber(data.TreadmillUpgradeLevel) or 0
+        local nextBase = BasesDir and BasesDir.BASES and BasesDir.BASES[lvl + 1]
+        local nextTm
+        if TreadDir and TreadDir.GetByUpgradeLevel then
+            local ok, t = pcall(TreadDir.GetByUpgradeLevel, tm + 1)
+            if ok then nextTm = t end
+        end
+        ProgBox:SetDesc(("ฐาน เลเวล %d → ขั้นถัดไป %s\nลู่วิ่ง เลเวล %d → ขั้นถัดไป %s\nสัตว์ในกระเป๋า %d ตัว")
+            :format(
+                lvl, nextBase and shortNum(nextBase.Cost) or "สุดแล้ว",
+                tm, (type(nextTm) == "table") and ((nextTm.DisplayName or nextTm._id) .. " " .. shortNum(nextTm.Price)) or "สุดแล้ว",
+                Runtime.petCount or 0))
+    end)
+
+    pcall(function()
+        LogBox:SetDesc(#Runtime.log == 0 and "-" or table.concat(Runtime.log, "\n", 1, math.min(8, #Runtime.log)))
+    end)
+
+    if Runtime.refreshCfgBox then Runtime.refreshCfgBox() end
+end)
+
+end -- WindUI present
+
+----------------------------------------------------------------
+-- exports / cleanup
+----------------------------------------------------------------
+ENV.NyxAPI = {
+    Cfg = Cfg, Runtime = Runtime,
+    steal = stealOnce, anchor = toAnchor,
+    hatch = hatchReady, place = placeEggs,
+    sellPets = sellPets, sellPetPlan = sellPetPlan, sellEggs = sellEggs,
+    equipBest = equipBest, fuse = fuseStep,
+    baseUp = baseUpgradeStep, treadUp = treadmillUpgradeStep,
+    antiLag = antiLagFullPass, antiLagTick = antiLagSweep, hop = serverHop,
+    bag = bagCount, eggRoster = eggRoster,
+    saveCfg = saveConfig, loadCfg = loadConfig,
+}
+
+ENV.NyxCleanup = function()
+    for _, c in pairs(Runtime.conns) do pcall(function() c:Disconnect() end) end
+    Runtime.conns = {}
+    -- a pin left running would keep teleporting the character to a spot the next
+    -- session knows nothing about
+    for _, c in ipairs(Runtime.pinConns or {}) do
+        pcall(function() c:Disconnect() end)
+    end
+    Runtime.pinConns = nil
+    -- put the game's own metamethod back before the next copy of this file
+    -- installs its own, or every reload wraps the previous wrapper
+    if ENV.NyxRestoreMT then
+        pcall(ENV.NyxRestoreMT)
+        ENV.NyxRestoreMT = nil
+        ENV.NyxCorrectionMuted = false
+    end
+    -- the window, not the library: reloading used to stack a new panel on top of
+    -- every old one because the library has no Destroy of its own
+    pcall(function() if UIWindow then UIWindow:Destroy() end end)
+    UIWindow = nil
+    pcall(function() if Runtime.floatGui then Runtime.floatGui:Destroy() end end)
+    Runtime.floatGui, Runtime.floatIcon = nil, nil
+end
+
+if Notify then Notify("Nyx v2", "โหลดสำเร็จ • Steal An Egg", 4) end
