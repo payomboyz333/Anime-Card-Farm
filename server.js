@@ -375,15 +375,29 @@ app.post('/api/buy', (req, res) => {
 
 // ── 3. TRUEMONEY VOUCHER TOP-UP ─────────────────────────────────────
 
+function extractVoucherHash(urlStr) {
+  if (!urlStr) return '';
+  const trimmed = urlStr.trim();
+  // 1. v=HASH parameter
+  const vMatch = trimmed.match(/[?&]v=([a-zA-Z0-9]+)/);
+  if (vMatch) return vMatch[1];
+  // 2. /vouchers/HASH or /verify/HASH or /redeem/HASH
+  const pathMatch = trimmed.match(/(?:vouchers|verify|redeem)\/([a-zA-Z0-9]+)/);
+  if (pathMatch) return pathMatch[1];
+  // 3. Raw hash string
+  const rawMatch = trimmed.match(/^[a-zA-Z0-9]{8,40}$/);
+  if (rawMatch) return rawMatch[0];
+  // Fallback
+  return trimmed.replace(/^.*[=/]/, '').replace(/[^a-zA-Z0-9]/g, '');
+}
+
 app.post('/api/topup/truemoney', async (req, res) => {
   const { username, voucherUrl } = req.body;
   if (!username || !voucherUrl) {
     return res.status(400).json({ success: false, message: 'กรุณาระบุ Username และลิงก์ซองทรูมันนี่' });
   }
 
-  // Extract voucher code from URL
-  const match = voucherUrl.match(/v=([a-zA-Z0-9]+)/);
-  const voucherCode = match ? match[1] : voucherUrl.trim();
+  const voucherCode = extractVoucherHash(voucherUrl);
 
   if (!voucherCode) {
     return res.status(400).json({ success: false, message: 'รูปแบบลิงก์ซองทรูมันนี่วอลเล็ทไม่ถูกต้อง' });
@@ -397,12 +411,14 @@ app.post('/api/topup/truemoney', async (req, res) => {
 
     // Get admin truemoney phone setting
     db.get(`SELECT value FROM settings WHERE key = 'truemoney_phone'`, async (err, settingRow) => {
-      const mobilePhone = (settingRow && settingRow.value) 
+      let rawPhone = (settingRow && settingRow.value) 
         ? settingRow.value 
         : (process.env.TRUEMONEY_PHONE || '0623624327');
 
+      const mobilePhone = rawPhone.replace(/\D/g, '');
+
       if (mobilePhone === '0900000000') {
-        // Fallback for test mode if admin phone has not been configured in admin panel yet
+        // Fallback for test mode if admin phone is set to demo 0900000000
         const mockAmount = 100;
         db.get(`SELECT balance FROM users WHERE username = ?`, [username], (err, user) => {
           if (!user) return res.status(400).json({ success: false, message: 'ไม่พบผู้ใช้ในระบบ' });
@@ -413,7 +429,7 @@ app.post('/api/topup/truemoney', async (req, res) => {
 
           return res.json({
             success: true,
-            message: `🎉 [Demo Mode] เติมเงินสำเร็จ ${mockAmount} บาท! (กรุณาไปที่หน้า Admin เพื่อตั้งค่าเบอร์ TrueMoney รับเงินจริง)`,
+            message: `🎉 [Demo Mode] เติมเงินสำเร็จ ${mockAmount} บาท! (เบอร์รับเงินปัจจุบัน: ${mobilePhone})`,
             amount: mockAmount,
             newBalance: newBal
           });
@@ -452,14 +468,31 @@ app.post('/api/topup/truemoney', async (req, res) => {
             });
           });
         } else {
+          const code = resData && resData.status ? resData.status.code : null;
           const msg = resData && resData.status ? resData.status.message : 'ซองทรูมันนี่ไม่ถูกต้องหรือหมดอายุแล้ว';
-          return res.status(400).json({ success: false, message: msg });
+          return res.status(400).json({ success: false, message: `❌ ${msg} (${code || 'ERROR'})` });
         }
       } catch (apiErr) {
-        const errorMsg = apiErr.response && apiErr.response.data && apiErr.response.data.status 
-          ? apiErr.response.data.status.message 
-          : 'เกิดข้อผิดพลาดในการตรวจสอบซองทรูมันนี่ หรือซองไม่ถูกต้อง';
-        return res.status(400).json({ success: false, message: errorMsg });
+        const statusObj = apiErr.response && apiErr.response.data && apiErr.response.data.status ? apiErr.response.data.status : {};
+        const errCode = statusObj.code;
+        const errDataMsg = statusObj.message;
+
+        let userMsg = 'เกิดข้อผิดพลาดในการตรวจสอบซองทรูมันนี่ หรือซองไม่ถูกต้อง';
+        if (errCode === 'VOUCHER_OUT_OF_STOCK') {
+          userMsg = '❌ ซองทรูมันนี่นี้ถูกกดรับไปหมดแล้ว';
+        } else if (errCode === 'VOUCHER_NOT_FOUND' || errCode === 'INVALID_VOUCHER') {
+          userMsg = '❌ ลิงก์ซองทรูมันนี่ไม่ถูกต้อง หรือไม่พบข้อมูลซองนี้';
+        } else if (errCode === 'VOUCHER_EXPIRED') {
+          userMsg = '❌ ซองทรูมันนี่นี้หมดอายุแล้ว';
+        } else if (errCode === 'CANNOT_GET_OWN_VOUCHER') {
+          userMsg = '❌ ไม่สามารถดึงเงินเข้าซองที่เบอร์ตัวเองสร้างได้';
+        } else if (errCode === 'TARGET_USER_NOT_FOUND') {
+          userMsg = `❌ เบอร์โทรศัพท์รับเงิน (${mobilePhone}) ไม่พบในระบบ TrueMoney Wallet`;
+        } else if (errDataMsg) {
+          userMsg = `❌ ${errDataMsg}`;
+        }
+
+        return res.status(400).json({ success: false, message: userMsg });
       }
     });
   });
