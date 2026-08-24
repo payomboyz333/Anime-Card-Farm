@@ -152,15 +152,80 @@ app.post('/api/login', (req, res) => {
       return res.status(400).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
     }
 
-    // Get user purchased keys
+    // Get user purchased keys with 3-month timestamp expiration calculations
     db.all(`SELECT key_code, tier, created_at FROM sales_logs WHERE username = ? ORDER BY id DESC`, [username], (err, logs) => {
-      const keys = logs ? logs.map(l => ({ code: l.key_code, tier: l.tier, date: l.created_at })) : [];
+      const keys = logs ? logs.map(l => {
+        const createdAtDate = l.created_at ? new Date(l.created_at) : new Date();
+        const expireDate = new Date(createdAtDate.getTime() + (90 * 24 * 60 * 60 * 1000));
+        const now = new Date();
+        const diffMs = expireDate.getTime() - now.getTime();
+        const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        const isExpired = diffMs <= 0;
+
+        return {
+          key: l.key_code,
+          code: l.key_code,
+          tier: (l.tier || 'VIP').toUpperCase(),
+          date: l.created_at,
+          created_at: l.created_at,
+          expires_at: expireDate.toISOString(),
+          days_left: daysLeft,
+          is_expired: isExpired,
+          status: isExpired ? 'EXPIRED' : 'ACTIVE'
+        };
+      }) : [];
       return res.json({
         success: true,
         message: 'เข้าสู่ระบบสำเร็จ!',
         user: {
           username: user.username,
           balance: user.balance,
+          keys: keys
+        }
+      });
+    });
+  });
+});
+
+// Fetch User Profile & Purchase History
+app.get('/api/user/profile', (req, res) => {
+  const { username } = req.query;
+  if (!username) {
+    return res.status(400).json({ success: false, message: 'Username is required' });
+  }
+
+  db.get(`SELECT username, balance, discord_id FROM users WHERE username = ?`, [username], (err, user) => {
+    if (err || !user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    db.all(`SELECT key_code, tier, created_at FROM sales_logs WHERE username = ? ORDER BY id DESC`, [username], (err, logs) => {
+      const keys = logs ? logs.map(l => {
+        const createdAtDate = l.created_at ? new Date(l.created_at) : new Date();
+        const expireDate = new Date(createdAtDate.getTime() + (90 * 24 * 60 * 60 * 1000));
+        const now = new Date();
+        const diffMs = expireDate.getTime() - now.getTime();
+        const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        const isExpired = diffMs <= 0;
+
+        return {
+          key: l.key_code,
+          code: l.key_code,
+          tier: (l.tier || 'VIP').toUpperCase(),
+          date: l.created_at,
+          created_at: l.created_at,
+          expires_at: expireDate.toISOString(),
+          days_left: daysLeft,
+          is_expired: isExpired,
+          status: isExpired ? 'EXPIRED' : 'ACTIVE'
+        };
+      }) : [];
+      return res.json({
+        success: true,
+        user: {
+          username: user.username,
+          balance: user.balance,
+          discordId: user.discord_id,
           keys: keys
         }
       });
