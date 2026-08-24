@@ -54,6 +54,9 @@
         <button class="user-btn" id="navAuthBtn" onclick="handleNavAuthClick()" style="margin-left:auto;">
           <span id="navAuthText">🔑 เข้าสู่ระบบ / เติมเงิน</span>
         </button>
+        <button class="user-btn" id="navTopupBtn" onclick="openTopupPrompt()" style="background: linear-gradient(135deg, #22c55e, #16a34a); border-color: rgba(34, 197, 94, 0.5); color: #fff;">
+          <span>🧧 เติมเงินซองทรู</span>
+        </button>
         <a class="discord-link desktop-discord-btn" href="https://discord.gg/q2FNhgJae" target="_blank"
           rel="noopener noreferrer">
           <svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -1097,6 +1100,15 @@
       }
     }
 
+    function openTopupPrompt() {
+      if (!currentUser) {
+        showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการเติมเงิน!');
+        setTimeout(() => { window.location.href = 'login.html'; }, 600);
+        return;
+      }
+      openModal('topupModal');
+    }
+
     function switchAuthTab(mode) {
       const loginBtn = document.getElementById('authTabBtn_login');
       const regBtn = document.getElementById('authTabBtn_register');
@@ -1178,7 +1190,7 @@
       showToast('👋 ออกจากระบบเรียบร้อยแล้ว');
     }
 
-    function submitTrueMoneyTopup(e) {
+    async function submitTrueMoneyTopup(e) {
       e.preventDefault();
       const url = document.getElementById('tmnVoucherUrl').value.trim();
       const statusEl = document.getElementById('topupStatus');
@@ -1187,21 +1199,42 @@
         statusEl.innerHTML = '<span style="color:#ef4444;">❌ กรุณากรอกลิงก์ซองทรูมันนี่วอลเล็ทที่ถูกต้อง</span>';
         return;
       }
+
+      if (!currentUser) {
+        statusEl.innerHTML = '<span style="color:#ef4444;">❌ กรุณาเข้าสู่ระบบก่อนทำการเติมเงิน</span>';
+        return;
+      }
       
-      statusEl.innerHTML = '<span style="color:#f59e0b;">⏳ กำลังตรวจสอบซองทรูมันนี่...</span>';
-      
-      setTimeout(() => {
-        const amount = 150;
-        if (!currentUser) {
-          currentUser = { username: 'Gamer_' + Math.floor(Math.random()*1000), balance: 0, keys: [] };
+      statusEl.innerHTML = '<span style="color:#f59e0b;">⏳ กำลังตรวจสอบซองทรูมันนี่กับระบบหลังบ้าน...</span>';
+
+      try {
+        const response = await fetch(`${PAYOMBOYZ_API_URL}/api/topup/truemoney`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: currentUser.username,
+            voucherUrl: url
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          currentUser.balance = data.newBalance;
+          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+          updateAuthUI();
+          statusEl.innerHTML = `<span style="color:#22c55e;">${data.message}</span>`;
+          showToast(`🎉 ${data.message}`);
+          setTimeout(() => {
+            closeModal('topupModal');
+            document.getElementById('tmnVoucherUrl').value = '';
+            statusEl.innerHTML = '';
+          }, 1500);
+        } else {
+          statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
         }
-        currentUser.balance = (currentUser.balance || 0) + amount;
-        localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-        updateAuthUI();
-        statusEl.innerHTML = `<span style="color:#22c55e;">✅ เติมเงินสำเร็จ! ได้รับเครดิต +${amount} บาท</span>`;
-        document.getElementById('tmnVoucherUrl').value = '';
-        setTimeout(() => { closeModal('topupModal'); statusEl.innerHTML = ''; }, 1500);
-      }, 1200);
+      } catch (err) {
+        statusEl.innerHTML = '<span style="color:#ef4444;">❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เติมเงินได้</span>';
+      }
     }
 
     function buyKeyPrompt(tier, price) {
