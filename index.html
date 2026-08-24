@@ -1093,7 +1093,7 @@
       if (currentUser) {
         openModal('userModal');
       } else {
-        openModal('authModal');
+        window.location.href = 'login.html';
       }
     }
 
@@ -1207,7 +1207,7 @@
     function buyKeyPrompt(tier, price) {
       if (!currentUser) {
         showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการซื้อคีย์!');
-        openModal('authModal');
+        setTimeout(() => { window.location.href = 'login.html'; }, 600);
         return;
       }
       
