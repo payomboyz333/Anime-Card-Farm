@@ -39,3 +39,13 @@ luac.out
 *.x86_64
 *.hex
 
+# Dependencies
+node_modules/
+
+# Local Database
+database.db
+database.db-journal
+
+# Environment & Logs
+*.log
+.env
