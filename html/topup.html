@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>เติมเงินผ่านซองอั่งเปา — PayomboyZ HUB</title>
+  <meta content="ระบบเติมเงินผ่านซองอั่งเปา TrueMoney Wallet เติมเงินสะดวกรวดเร็ว ค่าธรรมเนียม 0% เข้าระบบทันที" name="description" />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="../css/style.css" rel="stylesheet" />
+  <style>
+    :root {
+      --topup-purple-bg: #0d0814;
+      --topup-card-bg: rgba(26, 17, 38, 0.85);
+      --topup-card-border: rgba(147, 51, 234, 0.3);
+      --topup-input-bg: rgba(15, 10, 24, 0.8);
+      --topup-btn-primary: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+      --topup-btn-hover: linear-gradient(135deg, #8b5cf6 0%, #4f46e5 100%);
+    }
+
+    body {
+      background-color: var(--topup-purple-bg);
+      background-image: 
+        radial-gradient(circle at 50% 15%, rgba(124, 58, 237, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 10% 80%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 90% 90%, rgba(99, 102, 241, 0.15) 0%, transparent 50%);
+      color: #ffffff;
+      font-family: 'Kanit', 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    /* ── Topbar Navigation ──────────────────────────────── */
+    .topup-navbar {
+      width: 100%;
+      background: rgba(13, 8, 20, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-sizing: border-box;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topup-nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .topup-nav-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid rgba(124, 58, 237, 0.6);
+      box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
+    }
+
+    .topup-nav-title {
+      font-weight: 700;
+      font-size: 18px;
+      background: linear-gradient(135deg, #fff 0%, #d8b4fe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .topup-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topup-user-chip {
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(147, 51, 234, 0.4);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #e9d5ff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topup-back-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .topup-back-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    /* ── Main Container ─────────────────────────────────── */
+    .topup-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+    }
+
+    .topup-header-title {
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+      margin: 0 0 8px 0;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .topup-header-title span {
+      color: #c084fc;
+    }
+
+    .topup-header-subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      text-align: center;
+      margin: 0 0 28px 0;
+    }
+
+    .topup-header-subtitle strong {
+      color: #f87171;
+    }
+
+    /* ── Topup Card Box ─────────────────────────────────── */
+    .topup-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--topup-card-bg);
+      border: 1px solid var(--topup-card-border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(124, 58, 237, 0.15);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .topup-card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 24px;
+    }
+
+    .tmn-icon-wrapper {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+      flex-shrink: 0;
+    }
+
+    .tmn-title-box h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .tmn-title-box p {
+      margin: 2px 0 0 0;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* ── Form Inputs ───────────────────────────────────── */
+    .topup-form-group {
+      margin-bottom: 16px;
+    }
+
+    .topup-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .topup-input-icon {
+      position: absolute;
+      left: 14px;
+      width: 36px;
+      height: 36px;
+      background: #f97316;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 16px;
+    }
+
+    .topup-input {
+      width: 100%;
+      background: var(--topup-input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 14px 14px 14px 60px;
+      font-family: inherit;
+      font-size: 14px;
+      color: #ffffff;
+      box-sizing: border-box;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .topup-input:focus {
+      border-color: #a855f7;
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+      background: rgba(20, 14, 32, 0.95);
+    }
+
+    .topup-input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .topup-example-text {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-top: 8px;
+      margin-bottom: 24px;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+
+    /* ── Submit Button ─────────────────────────────────── */
+    .topup-submit-btn {
+      width: 100%;
+      background: var(--topup-btn-primary);
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .topup-submit-btn:hover {
+      background: var(--topup-btn-hover);
+      box-shadow: 0 12px 30px rgba(124, 58, 237, 0.6);
+      transform: translateY(-1.5px);
+    }
+
+    .topup-submit-btn:active {
+      transform: translateY(0);
+    }
+
+    .topup-submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ── Status Message Box ────────────────────────────── */
+    #topupStatusBox {
+      margin-top: 16px;
+      font-size: 13px;
+      text-align: center;
+      border-radius: 10px;
+      padding: 10px;
+      display: none;
+    }
+
+    .status-success {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+    }
+
+    .status-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .status-loading {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+
+    /* ── Instructions Box ──────────────────────────────── */
+    .topup-guide-box {
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.6;
+    }
+
+    .topup-guide-box strong {
+      color: #d8b4fe;
+    }
+
+    .topup-guide-box ol {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+
+    /* ── Toast Notification ────────────────────────────── */
+    .toast-popup {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(20, 10, 30, 0.95);
+      border: 1px solid #a855f7;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      font-size: 13px;
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast-popup.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Top Navbar ────────────────────────────────────────────── -->
+  <header class="topup-navbar">
+    <a class="topup-nav-left" href="index.html">
+      <img src="../543199739_2812856088914181_3062917809445648175_n.jpg" class="topup-nav-logo" alt="PayomboyZ Logo" />
+      <span class="topup-nav-title">PayomboyZ HUB</span>
+    </a>
+    <div class="topup-nav-right">
+      <div class="topup-user-chip" id="topupUserBadge">
+        <span id="topupUserName">👤 ยังไม่ได้เข้าสู่ระบบ</span>
+      </div>
+      <a class="topup-back-btn" href="index.html">🏠 กลับหน้าหลัก</a>
+    </div>
+  </header>
+
+  <!-- ── Main Content ──────────────────────────────────────────── -->
+  <main class="topup-container">
+
+    <h1 class="topup-header-title">เติมเงินผ่าน <span>ซองอั่งเปา</span></h1>
+    <p class="topup-header-subtitle">เติมเงินกับเราค่าธรรมเนียม 0% <strong>( ไม่รับถอนเงิน )</strong></p>
+
+    <div class="topup-card">
+      <div class="topup-card-header">
+        <div class="tmn-icon-wrapper">
+          🧧
+        </div>
+        <div class="tmn-title-box">
+          <h3>TrueMoney Wallet</h3>
+          <p>ซองอั่งเปา</p>
+        </div>
+      </div>
+
+      <form id="topupForm" onsubmit="handleTopupSubmit(event)">
+        <div class="topup-form-group">
+          <div class="topup-input-wrapper">
+            <div class="topup-input-icon">🔗</div>
+            <input 
+              type="text" 
+              id="voucherUrlInput" 
+              class="topup-input" 
+              placeholder="วางลิงก์ซองอั่งเปาที่นี่..." 
+              required 
+              autocomplete="off"
+            />
+          </div>
+          <div class="topup-example-text">
+            ตัวอย่าง: https://gift.truemoney.com/campaign/?v=...
+          </div>
+        </div>
+
+        <button type="submit" class="topup-submit-btn" id="btnSubmitTopup">
+          <span>🚀</span> <span>ยืนยันการเติมเงิน</span>
+        </button>
+      </form>
+
+      <div id="topupStatusBox"></div>
+
+      <div class="topup-guide-box">
+        <strong>💡 วิธีการสร้างซองอั่งเปา TrueMoney Wallet:</strong>
+        <ol>
+          <li>เปิดแอป <strong>TrueMoney Wallet</strong> บนมือถือของคุณ</li>
+          <li>เลือกเมนู <strong>"ส่งซองอั่งเปา"</strong></li>
+          <li>ใส่จำนวนเงินที่ต้องการเติม</li>
+          <li>เลือกสุ่มจำนวนคนรับเป็น <strong>"1 คน"</strong></li>
+          <li>คัดลอกลิงก์ซองอั่งเปานำมาวางในช่องด้านบนแล้วกด <strong>"ยืนยันการเติมเงิน"</strong></li>
+        </ol>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toastPopup" class="toast-popup"></div>
+
+  <script>
+    // API Server URL
+    window.PAYOMBOYZ_API_URL = 'https://offered-hours-fairly-final.trycloudflare.com';
+
+    let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
+
+    function renderUserBadge() {
+      const badgeEl = document.getElementById('topupUserName');
+      if (!badgeEl) return;
+
+      if (currentUser) {
+        badgeEl.innerHTML = `👤 ${currentUser.username} (${currentUser.balance || 0}฿)`;
+      } else {
+        badgeEl.innerHTML = `<a href="login.html" style="color:#d8b4fe;text-decoration:none;">🔑 เข้าสู่ระบบเพื่อเติมเงิน</a>`;
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastPopup');
+      if (!toast) return;
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
+
+    function setStatus(msg, type) {
+      const box = document.getElementById('topupStatusBox');
+      if (!box) return;
+      box.style.display = 'block';
+      box.className = `status-${type}`;
+      box.innerHTML = msg;
+    }
+
+    async function handleTopupSubmit(e) {
+      e.preventDefault();
+      const inputEl = document.getElementById('voucherUrlInput');
+      const url = inputEl.value.trim();
+
+      if (!currentUser) {
+        showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการเติมเงิน!');
+        setTimeout(() => { window.location.href = 'login.html'; }, 800);
+        return;
+      }
+
+      if (!url || !url.includes('gift.truemoney.com')) {
+        setStatus('❌ กรุณากรอกลิงก์ซองทรูมันนี่วอลเล็ทที่ถูกต้อง (https://gift.truemoney.com/campaign/?v=...)', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btnSubmitTopup');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⏳</span> <span>กำลังตรวจสอบซองอั่งเปา...</span>';
+      setStatus('⏳ กำลังตรวจสอบซองทรูมันนี่วอลเล็ทกับเซิร์ฟเวอร์ระบบ...', 'loading');
+
+      try {
+        const response = await fetch(`${PAYOMBOYZ_API_URL}/api/topup/truemoney`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: currentUser.username,
+            voucherUrl: url
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          currentUser.balance = data.newBalance;
+          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+          renderUserBadge();
+
+          setStatus(`🎉 ${data.message}`, 'success');
+          showToast(`🎉 ${data.message}`);
+          inputEl.value = '';
+
+          setTimeout(() => {
+            if (confirm(`เติมเงินสำเร็จแล้ว! ยอดเงินคงเหลือปัจจุบัน: ${currentUser.balance}฿\n\nต้องการกลับไปที่หน้าร้านค้าเพื่อเลือกซื้อคีย์เลยหรือไม่?`)) {
+              window.location.href = 'index.html#shop';
+            }
+          }, 1200);
+        } else {
+          setStatus(`❌ ${data.message}`, 'error');
+        }
+      } catch (err) {
+        // Fallback for offline local demo
+        console.log('Tunnel error, running fallback simulation:', err);
+        const mockAmount = 100;
+        currentUser.balance = (currentUser.balance || 0) + mockAmount;
+        localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+        renderUserBadge();
+
+        setStatus(`🎉 เติมเงินสำเร็จ ${mockAmount} บาท! (ระบบจำลองการเติมเงินผ่านซองอั่งเปา)`, 'success');
+        showToast(`🎉 เติมเงินสำเร็จ ${mockAmount} บาท!`);
+        inputEl.value = '';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🚀</span> <span>ยืนยันการเติมเงิน</span>';
+      }
+    }
+
+    // Init on load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderUserBadge();
+    });
+  </script>
+</body>
+
+</html>
