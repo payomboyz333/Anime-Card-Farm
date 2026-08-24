@@ -89,7 +89,8 @@ function initTables() {
     `);
 
     // Default admin password & webhook settings
-    db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_password', 'payomboyz333')`);
+    db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_password', 'St@313326339')`);
+    db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_username', 'payomadmin')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('discord_webhook', '')`);
   });
 }
@@ -362,58 +363,91 @@ app.post('/api/topup/truemoney', async (req, res) => {
   });
 });
 
-// ── 4. ADMIN BACKOFFICE ROUTES ────────────────────────────────────────
+// ── 4. ADMIN BACKOFFICE & SECURITY ENGINE ────────────────────────────
 
-// Admin Auth
+// Admin Security Middleware
+function requireAdminAuth(req, res, next) {
+  const adminToken = req.headers['x-admin-token'] || req.body.adminToken || req.query.adminToken;
+  if (!adminToken) {
+    return res.status(401).json({ success: false, message: '🔒 ปฏิเสธการเข้าถึง: ต้องการสิทธิ์ Admin' });
+  }
+
+  db.get(`SELECT value FROM settings WHERE key = 'admin_password'`, [], (err, settingPass) => {
+    db.get(`SELECT value FROM settings WHERE key = 'admin_username'`, [], (err, settingUser) => {
+      const adminPass = settingPass ? settingPass.value : 'St@313326339';
+      const adminUser = settingUser ? settingUser.value : 'payomadmin';
+      const expectedToken = Buffer.from(`PAYOMBOYZ_ADMIN_${adminUser}_${adminPass}`).toString('base64');
+      if (adminToken === expectedToken) {
+        return next();
+      }
+      return res.status(403).json({ success: false, message: '⛔ สิทธิ์การเข้าถึง Admin ไม่ถูกต้อง' });
+    });
+  });
+}
+
+// Admin Auth Login
 app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
-  db.get(`SELECT value FROM settings WHERE key = 'admin_password'`, [], (err, setting) => {
-    const adminPass = setting ? setting.value : 'payomboyz333';
-    if (password === adminPass) {
-      return res.json({ success: true, message: 'เข้าสู่ระบบผู้ดูแลระบบสำเร็จ' });
-    }
-    return res.status(401).json({ success: false, message: 'รหัสผ่าน Admin ไม่ถูกต้อง' });
+  const { username, password } = req.body;
+  db.get(`SELECT value FROM settings WHERE key = 'admin_password'`, [], (err, settingPass) => {
+    db.get(`SELECT value FROM settings WHERE key = 'admin_username'`, [], (err, settingUser) => {
+      const adminPass = settingPass ? settingPass.value : 'St@313326339';
+      const adminUser = settingUser ? settingUser.value : 'payomadmin';
+
+      if (username === adminUser && password === adminPass) {
+        const adminToken = Buffer.from(`PAYOMBOYZ_ADMIN_${adminUser}_${adminPass}`).toString('base64');
+        return res.json({ success: true, message: 'เข้าสู่ระบบผู้ดูแลระบบสำเร็จ', adminToken });
+      }
+      return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่าน Admin ไม่ถูกต้อง' });
+    });
   });
 });
 
-// Get Admin Stats
-app.get('/api/admin/stats', (req, res) => {
+// Get Admin Stats & Secret Stock Keys (PROTECTED)
+app.get('/api/admin/stats', requireAdminAuth, (req, res) => {
   db.all(`SELECT * FROM sales_logs ORDER BY id DESC`, [], (err, logs) => {
     db.all(`SELECT tier, key_code FROM stock_keys WHERE is_used = 0`, [], (err, stock) => {
-      const vipKeys = stock ? stock.filter(s => s.tier === 'vip').map(s => s.key_code) : [];
-      const vvipKeys = stock ? stock.filter(s => s.tier === 'vvip').map(s => s.key_code) : [];
-      const totalRevenue = logs ? logs.reduce((sum, l) => sum + l.price, 0) : 0;
+      db.all(`SELECT * FROM topup_logs ORDER BY id DESC LIMIT 50`, [], (err, topups) => {
+        const vipKeys = stock ? stock.filter(s => s.tier === 'vip').map(s => s.key_code) : [];
+        const vvipKeys = stock ? stock.filter(s => s.tier === 'vvip').map(s => s.key_code) : [];
+        const totalRevenue = logs ? logs.reduce((sum, l) => sum + l.price, 0) : 0;
 
-      return res.json({
-        success: true,
-        stats: {
-          totalRevenue,
-          totalSales: logs ? logs.length : 0,
-          salesLogs: logs || [],
-          vipKeys,
-          vvipKeys
-        }
+        return res.json({
+          success: true,
+          stats: {
+            totalRevenue,
+            totalSales: logs ? logs.length : 0,
+            salesLogs: logs || [],
+            topupLogs: topups || [],
+            vipKeys,
+            vvipKeys
+          }
+        });
       });
     });
   });
 });
 
-// Update Admin Stock
-app.post('/api/admin/stock', (req, res) => {
-  const { vipKeys, vvipKeys } = req.body; // Arrays of key strings
+// Get User List (PROTECTED)
+app.get('/api/admin/users', requireAdminAuth, (req, res) => {
+  db.all(`SELECT id, username, balance, discord_id, created_at FROM users ORDER BY id DESC`, [], (err, users) => {
+    if (err) return res.status(500).json({ success: false, message: 'ไม่สามารถดึงข้อมูลสมาชิกได้' });
+    return res.json({ success: true, users: users || [] });
+  });
+});
+
+// Update Admin Stock (PROTECTED)
+app.post('/api/admin/stock', requireAdminAuth, (req, res) => {
+  const { vipKeys, vvipKeys } = req.body;
 
   db.serialize(() => {
-    // Clear old unused stock
     db.run(`DELETE FROM stock_keys WHERE is_used = 0`);
 
-    // Insert new VIP keys
     if (Array.isArray(vipKeys)) {
       vipKeys.forEach(k => {
         if (k.trim()) db.run(`INSERT INTO stock_keys (tier, key_code) VALUES ('vip', ?)`, [k.trim()]);
       });
     }
 
-    // Insert new VVIP keys
     if (Array.isArray(vvipKeys)) {
       vvipKeys.forEach(k => {
         if (k.trim()) db.run(`INSERT INTO stock_keys (tier, key_code) VALUES ('vvip', ?)`, [k.trim()]);
@@ -424,8 +458,22 @@ app.post('/api/admin/stock', (req, res) => {
   });
 });
 
-// Set Webhook
-app.post('/api/admin/webhook', (req, res) => {
+// Change Admin Password (PROTECTED)
+app.post('/api/admin/change-password', requireAdminAuth, (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.trim().length < 6) {
+    return res.status(400).json({ success: false, message: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร' });
+  }
+
+  db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password', ?)`, [newPassword.trim()], (err) => {
+    if (err) return res.status(500).json({ success: false, message: 'ไม่สามารถเปลี่ยนรหัสผ่านได้' });
+    const newAdminToken = Buffer.from(`PAYOMBOYZ_ADMIN_${newPassword.trim()}`).toString('base64');
+    return res.json({ success: true, message: 'เปลี่ยนรหัสผ่านแอดมินสำเร็จ!', adminToken: newAdminToken });
+  });
+});
+
+// Set Webhook (PROTECTED)
+app.post('/api/admin/webhook', requireAdminAuth, (req, res) => {
   const { webhookUrl } = req.body;
   db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('discord_webhook', ?)`, [webhookUrl || '']);
   return res.json({ success: true, message: 'บันทึก Discord Webhook URL สำเร็จ' });
