@@ -5,11 +5,8 @@
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1" name="viewport" />
   <title>PayomboyZ HUB — ศูนย์รวมสคริปต์ Roblox พยอมบอย โหลดเด้อ</title>
-  <meta content="PayomboyZ HUB — สคริปต์ Roblox คุณภาพสูง รวมทุกแมพชั้นนำในโหลดเดอร์เดียว พยอมบอย โหลดเด้อ"
-    name="description" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet" />
+  <meta content="PayomboyZ HUB — สคริปต์ Roblox คุณภาพสูง รวมทุกแมพชั้นนำในโหลดเดอร์เดียว พยอมบอย โหลดเด้อ" name="description" />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link href="css/style.css" rel="stylesheet" />
 </head>
 
@@ -21,64 +18,49 @@
       <div class="topnav-brand-row">
         <a class="brand" href="#">
           <div class="brand-logo-frame">
-            <img class="payomboy-logo-img" src="543199739_2812856088914181_3062917809445648175_n.jpg"
-              alt="PayomboyZ Logo" />
+            <img class="payomboy-logo-img" src="543199739_2812856088914181_3062917809445648175_n.jpg" alt="PayomboyZ Logo" />
           </div>
           <span>PayomboyZ <i>HUB</i></span>
         </a>
-      </div>
-      <div class="topnav-links" style="display:flex;align-items:center;gap:8px;">
-        <button class="user-btn" id="navAuthBtn" onclick="handleNavAuthClick()" style="margin-left:auto;" title="ดูข้อมูลผู้ใช้และคีย์ที่ซื้อ">
-          <span id="navAuthText">🔑 เข้าสู่ระบบ</span>
-        </button>
-        <button class="user-btn" id="navHistoryBtn" onclick="window.location.href='history.html'" style="display:none;background:rgba(56,189,248,0.15);border:1px solid #38bdf8;color:#38bdf8;font-weight:700;" title="ดูคีย์ที่เคยสั่งซื้อและจัดการบอท">
-          <span>📜 ประวัติการซื้อ & บอท</span>
-        </button>
-        <button class="user-btn topup-nav-btn" id="navTopupBtn" onclick="openTopupPrompt()" title="เติมเงินผ่านซองทรูมันนี่">
-          <span>🧧 เติมเงิน</span>
-        </button>
-        <a class="discord-link" href="https://discord.gg/q2FNhgJae" target="_blank" rel="noopener noreferrer" style="padding:6px 12px;font-size:13px;" title="ดิสคอร์ดหลัก">
-          <svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;">
+        <a class="discord-link mobile-discord-btn" href="https://discord.gg/q2FNhgJae" target="_blank" rel="noopener noreferrer">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
           </svg>
-          <span style="font-weight:600;">Discord</span>
+          <span>Discord</span>
+        </a>
+      </div>
+
+      <div class="topnav-links">
+        <a href="#hero" class="active">
+          <span>หน้าหลัก</span>
+        </a>
+        <a href="#loader">
+          <span class="nav-full">พยอมบอย โหลดเด้อ</span>
+          <span class="nav-short">โหลดเดอร์</span>
+        </a>
+        <a href="#games">
+          <span class="nav-full">แมพที่รองรับ</span>
+          <span class="nav-short">แมพรองรับ</span>
+        </a>
+        <!-- Direct Link to External Shop -->
+        <a href="https://payomboyz.rexzy.xyz/home" target="_blank" rel="noopener noreferrer" style="color:#eab308;font-weight:700;">
+          <span class="nav-full">🛒 ร้านค้า (ซื้อคีย์)</span>
+          <span class="nav-short">🛒 ร้านค้า</span>
+        </a>
+        <a class="discord-link desktop-discord-btn" href="https://discord.gg/q2FNhgJae" target="_blank" rel="noopener noreferrer">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+          </svg>
+          <span>Discord Server</span>
         </a>
 
-        <!-- ☰ Glassmorphic Dropdown Toggle Button -->
-        <div class="nav-dropdown-wrapper" id="navDropdownWrapper">
-          <button class="nav-dropdown-btn" onclick="toggleNavDropdown(event)">
-            <span>☰ เมนู</span> <span style="font-size:10px;opacity:0.8;">▾</span>
-          </button>
-
-          <!-- 🔻 Dropdown Menu -->
-          <div class="nav-dropdown-menu" id="navDropdownMenu">
-            <a href="#hero" class="nav-dropdown-item" onclick="closeNavDropdown()">
-              <span>🏠</span> <span>หน้าหลัก</span>
-            </a>
-            <a href="#loader" class="nav-dropdown-item" onclick="closeNavDropdown()">
-              <span>🚀</span> <span>พยอมบอย โหลดเด้อ</span>
-            </a>
-            <a href="#shop" class="nav-dropdown-item" onclick="closeNavDropdown()">
-              <span>🛒</span> <span>ร้านขายคีย์</span>
-            </a>
-            <a href="history.html" class="nav-dropdown-item" onclick="closeNavDropdown();" style="color:#38bdf8;">
-              <span>📜</span> <span>ประวัติสั่งซื้อคีย์ (My Keys & Bot Dashboard)</span>
-            </a>
-            <a href="topup.html" class="nav-dropdown-item" onclick="closeNavDropdown()" style="color:#c084fc;">
-              <span>🧧</span> <span>เติมเงินซองอั่งเปา</span>
-            </a>
-            <a href="#games" class="nav-dropdown-item" onclick="closeNavDropdown()">
-              <span>🎮</span> <span>แมพที่รองรับ</span>
-            </a>
-            <div class="nav-dropdown-divider"></div>
-            <a href="admin.html" target="_blank" class="nav-dropdown-item" onclick="closeNavDropdown()" style="color:#f87171;">
-              <span>⚙️</span> <span>ผู้ดูแลระบบ (Admin)</span>
-            </a>
-            <button class="nav-dropdown-item" id="navLogoutDropdownBtn" onclick="logoutUser(); closeNavDropdown();" style="color:#ef4444;display:none;">
-              <span>🚪</span> <span>ออกจากระบบ</span>
-            </button>
-          </div>
-        </div>
+        <!-- Discord Login / Profile Button -->
+        <button class="user-btn discord-login-nav-btn" id="navAuthBtn" onclick="handleDiscordAuthClick()" style="margin-left:auto;background:linear-gradient(135deg, #5865F2, #4752c4);border:1px solid rgba(88,101,242,0.5);color:#fff;font-weight:700;">
+          <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          <span id="navAuthText">เข้าสู่ระบบด้วย Discord</span>
+        </button>
       </div>
     </div>
   </nav>
@@ -95,14 +77,12 @@
 
       <div class="hero-logo-box">
         <div class="hero-logo-img-wrapper">
-          <img class="payomboy-logo-img" src="543199739_2812856088914181_3062917809445648175_n.jpg"
-            alt="PayomboyZ Emblem" />
+          <img class="payomboy-logo-img" src="543199739_2812856088914181_3062917809445648175_n.jpg" alt="PayomboyZ Emblem" />
         </div>
       </div>
 
       <h1>ศูนย์รวมสคริปต์ Roblox<br /><span>PayomboyZ HUB</span></h1>
-      <p class="tagline">สคริปต์ Roblox คุณภาพสูง สำหรับทุกแมพที่คุณเล่น คัดสรรความเร็ว ความเสถียร
-        รองรับทั้งแมพทั่วไปและแมพ VVIP สุดพรีเมียม</p>
+      <p class="tagline">สคริปต์ Roblox คุณภาพสูง สำหรับทุกแมพที่คุณเล่น คัดสรรความเร็ว ความเสถียร รองรับทั้งแมพทั่วไปและแมพ VVIP สุดพรีเมียม</p>
 
       <div class="cta-row">
         <a class="btn accent big" href="#loader" onclick="copyLoaderScript(event)">
@@ -112,20 +92,20 @@
           </svg>
           คัดลอกสคริปต์ (พยอมบอย โหลดเด้อ)
         </a>
-        <a class="btn getkey-btn big" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank"
-          rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
+        <a class="btn getkey-btn big" href="https://payomboyz.rexzy.xyz/home" target="_blank" rel="noopener noreferrer" style="background:linear-gradient(135deg, #eab308 0%, #ca8a04 100%);border-color:rgba(234,179,8,0.5);color:#000;font-weight:800;">
+          <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          สั่งซื้อคีย์ที่เว็บช็อปหลัก 🛒
+        </a>
+        <a class="btn ghost big" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank" rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
           <svg class="ui-icon key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="8" cy="15" r="4"></circle>
             <path d="M10.85 12.15L19 4M18 5l2 2m-4-2l2 2"></path>
           </svg>
-          Get Key สำหรับเล่นฟรี 🔑
-        </a>
-        <a class="btn ghost big" href="#games">
-          <svg class="ui-icon" viewBox="0 0 24 24">
-            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
-            <path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path>
-          </svg>
-          ดูรายชื่อแมพที่รองรับ
+          Get Key ฟรี 🔑
         </a>
       </div>
 
@@ -153,8 +133,7 @@
         <span class="page-kicker" style="margin:0;"><span class="status-dot"></span> Auto-Router Ready</span>
       </div>
       <div class="loader-code-wrapper">
-        <pre
-          class="loader-code"><code id="loaderCodeText">loadstring(game:HttpGet("https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/start.txt"))()</code></pre>
+        <pre class="loader-code"><code id="loaderCodeText">loadstring(game:HttpGet("https://raw.githubusercontent.com/payomboyz333/Anime-Card-Farm/refs/heads/main/start.txt"))()</code></pre>
         <div class="loader-actions">
           <div class="loader-hint">
             <svg class="ui-icon" viewBox="0 0 24 24">
@@ -165,13 +144,11 @@
             คัดลอกสคริปต์นี้นำไปรันใน Executor ของคุณได้ทันที ระบบจะระบุแมพอัตโนมัติ
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <a class="btn getkey-btn" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank"
-              rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
-              <svg class="ui-icon key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <circle cx="8" cy="15" r="4"></circle>
-                <path d="M10.85 12.15L19 4M18 5l2 2m-4-2l2 2"></path>
-              </svg>
-              Get Key เล่นฟรี 🔑
+            <a class="btn getkey-btn" href="https://payomboyz.rexzy.xyz/home" target="_blank" rel="noopener noreferrer" style="background:linear-gradient(135deg, #eab308 0%, #ca8a04 100%);color:#000;font-weight:800;">
+              🛒 ซื้อคีย์ (payomboyz.rexzy.xyz)
+            </a>
+            <a class="btn ghost" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank" rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
+              🔑 Get Key ฟรี
             </a>
             <button class="btn accent" onclick="copyLoaderScript(event)">
               <svg class="ui-icon" viewBox="0 0 24 24">
@@ -185,136 +162,19 @@
       </div>
     </section>
 
-    <!-- ── Shop & Key Store Section ──────────────────────────────── -->
-    <section id="shop" class="shop-section section-block">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">🛒 ร้านค้าออนไลน์</div>
-          <h2>ซื้อคีย์ใช้งาน PayomboyZ HUB<br />ปลดล็อกสคริปต์เต็มรูปแบบ 24 ชั่วโมง</h2>
+    <!-- ── Official Store Redirect Banner ───────────────────────── -->
+    <section id="shop" class="section-block">
+      <div class="glass" style="padding: 26px 30px; border-radius: 20px; border: 1px solid rgba(234, 179, 8, 0.35); background: rgba(26, 17, 10, 0.8); display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px rgba(234, 179, 8, 0.15);">
+        <div style="max-width: 580px;">
+          <div class="eyebrow" style="color: #eab308; margin-bottom: 6px; font-weight: 700;">🛒 ร้านค้าออนไลน์อย่างเป็นทางการ</div>
+          <h2 style="font-size: 22px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">ต้องการสั่งซื้อคีย์ VIP (89฿) หรือ VVIP (129฿)?</h2>
+          <p style="font-size: 13.5px; color: rgba(255, 255, 255, 0.8); line-height: 1.5; margin: 0;">
+            สั่งซื้อคีย์สคริปต์ PayomboyZ HUB ผ่านเว็บร้านค้าหลักอัตโนมัติ 24 ชั่วโมง ระบบเติมเงินสะดวกรวดเร็ว รับคีย์ได้ทันที!
+          </p>
         </div>
-        <p>ระบบอัตโนมัติ เติมเงินซองทรูมันนี่วอลเล็ทแล้วรับคีย์ใช้งานได้ทันที รองรับทั้งแมพทั่วไปและแมพ VVIP</p>
-      </div>
-
-      <div class="shop-grid">
-        <!-- VIP Key Card (89 THB) -->
-        <article class="shop-card glass vip-card">
-          <div class="shop-card-badge vip-badge">VIP TIER ⚡</div>
-          
-          <!-- General Maps Slideshow -->
-          <div class="card-slideshow-wrapper" id="vipSlideshow">
-            <div class="slideshow-container">
-              <div class="slide active">
-                <img src="images/blox_fruit.png" alt="Blox Fruits" />
-                <div class="slide-caption">Blox Fruits — Auto Farm & Quests</div>
-              </div>
-              <div class="slide">
-                <img src="images/steal_an_egg.png" alt="Steal An Egg" />
-                <div class="slide-caption">Steal An Egg — Auto Steal & Hatch</div>
-              </div>
-              <div class="slide">
-                <img src="images/anime_card_farm.png" alt="Anime Card Farm" />
-                <div class="slide-caption">Anime Card Farm — Auto Collect</div>
-              </div>
-              <div class="slide">
-                <img src="images/murdur_mystery2.png" alt="Murder Mystery 2" />
-                <div class="slide-caption">Murder Mystery 2 — Auto Farm & ESP</div>
-              </div>
-            </div>
-            <button class="slide-prev" onclick="moveSlide('vipSlideshow', -1)">‹</button>
-            <button class="slide-next" onclick="moveSlide('vipSlideshow', 1)">›</button>
-            <div class="slideshow-dots">
-              <span class="dot active" onclick="setSlide('vipSlideshow', 0)"></span>
-              <span class="dot" onclick="setSlide('vipSlideshow', 1)"></span>
-              <span class="dot" onclick="setSlide('vipSlideshow', 2)"></span>
-              <span class="dot" onclick="setSlide('vipSlideshow', 3)"></span>
-            </div>
-          </div>
-
-          <div class="shop-card-content">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <h3>คีย์ VIP (แมพทั่วไป 4 แมพ)</h3>
-              <div class="stock-pill in-stock" id="vipStockPill">📦 พร้อมส่ง: <span id="vipStockCount">10</span> คีย์</div>
-            </div>
-            <p class="shop-desc">สคริปต์ระดับ VIP ครอบคลุมแมพยอดนิยม ปรับแต่งความเร็วลื่นไหล ปลอดภัย 100%</p>
-            
-            <ul class="shop-features">
-              <li><span class="check">✓</span> รองรับแมพทั่วไปทั้งหมด 12+ แมพ</li>
-              <li><span class="check">✓</span> ระบบ Auto Farm / Auto Quest สปีดสูงสุด</li>
-              <li><span class="check">✓</span> อัปเดตฟรีตลอดอายุการใช้งาน</li>
-            </ul>
-
-            <div class="shop-price-row">
-              <div class="price-box">
-                <span class="currency">฿</span>
-                <span class="amount">89</span>
-                <span class="period">/ คีย์ตลอดชีพ</span>
-              </div>
-              <button class="btn accent buy-btn" onclick="buyKeyPrompt('VIP', 89)">
-                🛒 ซื้อคีย์ VIP (89฿)
-              </button>
-            </div>
-          </div>
-        </article>
-
-        <!-- VVIP Key Card (129 THB) -->
-        <article class="shop-card glass vvip-card">
-          <div class="shop-card-badge vvip-badge">VVIP TIER 👑</div>
-          
-          <!-- VVIP Maps Slideshow -->
-          <div class="card-slideshow-wrapper" id="vvipSlideshow">
-            <div class="slideshow-container">
-              <div class="slide active">
-                <img src="images/anime_expedition.png" alt="Anime Expeditions" />
-                <div class="slide-caption">Anime Expeditions — VVIP Unlimited Gems</div>
-              </div>
-              <div class="slide">
-                <img src="images/roll_anime_to_fight.png" alt="Roll Anime To Fight" />
-                <div class="slide-caption">Roll Anime To Fight — VVIP Auto Battle</div>
-              </div>
-              <div class="slide">
-                <img src="images/capybara_vs_plant.png" alt="Capybara VS Plant" />
-                <div class="slide-caption">Capybara VS Plant — VVIP Fast Power</div>
-              </div>
-              <div class="slide">
-                <img src="images/attack_on_titan.jpg" alt="Attack On Titan" />
-                <div class="slide-caption">Attack On Titan — Exclusive VVIP Script</div>
-              </div>
-            </div>
-            <button class="slide-prev" onclick="moveSlide('vvipSlideshow', -1)">‹</button>
-            <button class="slide-next" onclick="moveSlide('vvipSlideshow', 1)">›</button>
-            <div class="slideshow-dots">
-              <span class="dot active" onclick="setSlide('vvipSlideshow', 0)"></span>
-              <span class="dot" onclick="setSlide('vvipSlideshow', 1)"></span>
-              <span class="dot" onclick="setSlide('vvipSlideshow', 2)"></span>
-              <span class="dot" onclick="setSlide('vvipSlideshow', 3)"></span>
-            </div>
-          </div>
-
-          <div class="shop-card-content">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <h3>คีย์ VVIP (แมพ VVIP สุดพิเศษ) 👑</h3>
-              <div class="stock-pill in-stock" id="vvipStockPill">📦 พร้อมส่ง: <span id="vvipStockCount">5</span> คีย์</div>
-            </div>
-            <p class="shop-desc">สคริปต์ระดับ VVIP ปลดล็อกฟีเจอร์พรีเมียมทั้งหมด พร้อมการดูแลและอัปเดตพิเศษก่อนใคร</p>
-            
-            <ul class="shop-features">
-              <li><span class="check">👑</span> ปลดล็อกสิทธิ์ VVIP ครบทุกแมพพรีเมียม</li>
-              <li><span class="check">👑</span> ระบบ Bypass ป้องกันขั้นสูง + Fast Script Engine</li>
-              <li><span class="check">👑</span> ซัพพอร์ตพิเศษ VIP Role ใน Discord และซัพพอร์ตด่วน</li>
-            </ul>
-
-            <div class="shop-price-row">
-              <div class="price-box">
-                <span class="currency">฿</span>
-                <span class="amount">129</span>
-                <span class="period">/ คีย์ตลอดชีพ</span>
-              </div>
-              <button class="btn getkey-btn buy-btn" onclick="buyKeyPrompt('VVIP', 129)">
-                👑 ซื้อคีย์ VVIP (129฿)
-              </button>
-            </div>
-          </div>
-        </article>
+        <a class="btn getkey-btn big" href="https://payomboyz.rexzy.xyz/home" target="_blank" rel="noopener noreferrer" style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); border-color: rgba(234,179,8,0.6); color: #000; font-weight: 800; font-size: 15px; padding: 14px 24px; white-space: nowrap; box-shadow: 0 4px 15px rgba(234,179,8,0.35);">
+          🚀 ไปยังเว็บสั่งซื้อคีย์ (payomboyz.rexzy.xyz)
+        </a>
       </div>
     </section>
 
@@ -329,9 +189,7 @@
           <div class="counter-icon">
             <svg class="ui-icon" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="2"></circle>
-              <path
-                d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.83a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14">
-              </path>
+              <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.83a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
             </svg>
           </div>
           <div class="count">7.88K+</div>
@@ -381,8 +239,7 @@
             </svg>
           </div>
           <h3>โหลดเดอร์ตัวเดียวจบ (Universal Loader)</h3>
-          <p>คัดลอกสคริปต์ "พยอมบอย โหลดเด้อ" เพียงครั้งเดียว นำไปรันในเกมได้ทันที
-            ระบบจะตรวจจับแมพและโหลดสคริปต์ที่ตรงกันให้อัตโนมัติ</p>
+          <p>คัดลอกสคริปต์ "พยอมบอย โหลดเด้อ" เพียงครั้งเดียว นำไปรันในเกมได้ทันที ระบบจะตรวจจับแมพและโหลดสคริปต์ที่ตรงกันให้อัตโนมัติ</p>
         </article>
 
         <article class="feature-card glass">
@@ -393,22 +250,18 @@
             </svg>
           </div>
           <h3>รองรับแมพทั่วไป และ VVIP 👑</h3>
-          <p>จัดเต็มทั้งแมพยอดนิยมสายฟรี และแมพพิเศษสิทธิ์ VVIP คุณภาพสูง
-            ปลดล็อกฟีเจอร์ระดับพรีเมียมเพื่อความได้เปรียบสูงสุด</p>
+          <p>จัดเต็มทั้งแมพยอดนิยมสายฟรี และแมพพิเศษสิทธิ์ VVIP คุณภาพสูง ปลดล็อกฟีเจอร์ระดับพรีเมียมเพื่อความได้เปรียบสูงสุด</p>
         </article>
 
         <article class="feature-card glass">
           <span class="feature-index">03</span>
           <div class="feature-icon">
             <svg class="ui-icon" viewBox="0 0 24 24">
-              <polygon
-                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
-              </polygon>
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
           </div>
           <h3>อัปเดตและดูแลตลอดเวลา</h3>
-          <p>ทีมงานพัฒนาและอัปเดตระบบต่อเนื่อง แก้ไขบั๊กทันทีเมื่อเกม Roblox มีการอัปเดต
-            ทำให้ใช้งานได้อย่างราบรื่นไม่มีสะดุด</p>
+          <p>ทีมงานพัฒนาและอัปเดตระบบต่อเนื่อง แก้ไขบั๊กทันทีเมื่อเกม Roblox มีการอัปเดต ทำให้ใช้งานได้อย่างราบรื่นไม่มีสะดุด</p>
         </article>
       </div>
     </section>
@@ -429,8 +282,7 @@
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <input type="text" id="gameSearchInput" class="search-input" placeholder="ค้นหาชื่อแมพ หรือ Place ID..."
-            oninput="filterGames()" />
+          <input type="text" id="gameSearchInput" class="search-input" placeholder="ค้นหาชื่อแมพ หรือ Place ID..." oninput="filterGames()" />
         </div>
         <div class="segmented">
           <button id="tabAll" class="active" onclick="setTab('all')">ทั้งหมด (12)</button>
@@ -500,8 +352,7 @@
     <section class="cta-section">
       <div class="cta-section-mark">
         <svg viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+          <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
         </svg>
       </div>
       <div class="eyebrow">เข้าร่วมคอมมูนิตี้</div>
@@ -525,9 +376,9 @@
         <div style="display:flex;gap:16px;">
           <a href="#hero">หน้าหลัก</a>
           <a href="#loader">พยอมบอย โหลดเด้อ</a>
+          <a href="https://payomboyz.rexzy.xyz/home" target="_blank" rel="noopener noreferrer">ร้านค้า (ซื้อคีย์)</a>
           <a href="#games">แมพที่รองรับ</a>
           <a href="https://discord.gg/q2FNhgJae" target="_blank" rel="noopener noreferrer">Discord</a>
-          <a href="javascript:void(0)" onclick="promptAdminLogin()" style="opacity:0.65;color:#eab308;">⚙️ ผู้ดูแลระบบ (Admin)</a>
         </div>
       </div>
     </footer>
@@ -549,8 +400,7 @@
             <path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path>
           </svg>
         </div>
-        <img id="modalBannerImg" src="" alt="Game Banner" style="opacity:0;"
-          onload="this.style.opacity='1';document.getElementById('modalPlaceholder').style.display='none';" />
+        <img id="modalBannerImg" src="" alt="Game Banner" style="opacity:0;" onload="this.style.opacity='1';document.getElementById('modalPlaceholder').style.display='none';" />
       </div>
       <div class="modal-body">
         <div class="modal-title-row">
@@ -567,8 +417,7 @@
         <div class="features-list-box">
           <div class="features-list-title">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z">
-              </path>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
             </svg>
             ฟังก์ชันการทำงานทั้งหมดในสคริปต์
           </div>
@@ -577,6 +426,9 @@
           </div>
         </div>
         <div class="modal-actions">
+          <a class="btn getkey-btn" style="flex:1;background:linear-gradient(135deg, #eab308, #ca8a04);color:#000;font-weight:800;" href="https://payomboyz.rexzy.xyz/home" target="_blank" rel="noopener noreferrer">
+            🛒 สั่งซื้อคีย์ (payomboyz.rexzy.xyz)
+          </a>
           <button class="btn accent" style="flex:1;" onclick="copyLoaderScript(event)">
             <svg class="ui-icon" viewBox="0 0 24 24">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
@@ -584,87 +436,27 @@
             </svg>
             คัดลอกสคริปต์
           </button>
-          <a class="btn getkey-btn" style="flex:1;" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz"
-            target="_blank" rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
-            <svg class="ui-icon key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="8" cy="15" r="4"></circle>
-              <path d="M10.85 12.15L19 4M18 5l2 2m-4-2l2 2"></path>
-            </svg>
-            Get Key ฟรี 🔑
-          </a>
-        </div>
-      </div>
-  </div>
-
-  <!-- ── User Profile & Purchase History Modal ─────────────────── -->
-  <div class="modal-backdrop" id="userModal" onclick="closeModalDirect('userModal', event)">
-    <div class="game-modal" onclick="event.stopPropagation()" style="max-width:540px;padding:26px;">
-      <button class="modal-close-btn" onclick="closeModalDirect('userModal', event)">✕</button>
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="width:64px;height:64px;border-radius:50%;background:rgba(220,38,38,0.25);border:2px solid var(--accent);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;" id="userAvatarText">👤</div>
-        <h3 id="userModalName" style="margin:0;font-size:20px;color:#fff;">Username</h3>
-        <p style="margin:4px 0 0;font-size:13px;color:var(--muted);">ยอดเงินคงเหลือ: <span id="userModalBalance" style="color:var(--accent-light);font-weight:800;font-size:16px;">0฿</span></p>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-bottom:16px;">
-        <button class="btn accent" style="flex:1;padding:10px;font-size:13px;font-weight:700;" onclick="openTopupPrompt()">🧧 เติมเงินซองทรู</button>
-        <button class="btn danger" style="padding:10px 16px;font-size:13px;background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#fff;border-radius:8px;cursor:pointer;font-weight:700;" onclick="logoutUser()">🚪 ออกจากระบบ</button>
-      </div>
-
-      <div style="border-top:1px solid var(--border);padding-top:16px;">
-        <h4 style="margin:0 0 12px 0;font-size:15px;color:#fff;display:flex;align-items:center;gap:6px;">
-          <span>📜</span> <span>ประวัติคีย์สคริปต์ที่เคยสั่งซื้อ</span>
-        </h4>
-        <div id="userKeyList" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
-          <!-- Dynamic User Key Cards rendered via JS -->
-        </div>
-
-        <div style="margin-top:16px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text-2);">
-          <div style="font-weight:700;color:#eab308;margin-bottom:6px;">📌 คำแนะนำและวิธีการใช้งานคีย์ (Description):</div>
-          <ol style="margin:0;padding-left:18px;line-height:1.6;">
-            <li>คีย์มีอายุใช้งาน <b>3 เดือน</b> ต้องนำคีย์ไปกรอกคำสั่ง <code>/redeem</code> กับบอทใน Discord PayomboyZ HUB ก่อน</li>
-            <li>ใส่คีย์ในบรรทัด <code>script_key = "คีย์ของคุณที่นี่";</code> ใน Executor ของคุณ</li>
-            <li>รันสคริปต์ Loader <code>loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()</code></li>
-          </ol>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── Purchase Success Modal ────────────────────────────────── -->
-  <div class="modal-backdrop" id="purchaseSuccessModal" onclick="closeModalDirect('purchaseSuccessModal', event)">
-    <div class="game-modal" onclick="event.stopPropagation()" style="max-width:520px;padding:28px;text-align:center;">
-      <button class="modal-close-btn" onclick="closeModalDirect('purchaseSuccessModal', event)">✕</button>
-      <div style="font-size:48px;margin-bottom:8px;">🎉</div>
-      <h2 style="margin:0 0 6px 0;font-size:22px;color:#fff;">สั่งซื้อคีย์สำเร็จ!</h2>
-      <p style="margin:0 0 16px 0;font-size:13px;color:var(--muted);" id="purchasedTierName">คีย์ของคุณถูกสร้างและตัดจากสต็อคเรียบร้อยแล้ว</p>
-
-      <div style="background:rgba(220,38,38,0.15);border:1px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:20px;">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">SCRIPT KEY CODE</div>
-        <div id="purchasedKeyCode" style="font-size:20px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;letter-spacing:2px;user-select:all;word-break:break-all;margin-bottom:12px;">PB-VIP-XXXX-XXXX</div>
-        <button class="btn accent" style="width:100%;padding:10px;font-weight:700;" onclick="copyPurchasedKey()">
-          📋 คัดลอกคีย์สคริปต์
-        </button>
-      </div>
-
-      <div style="text-align:left;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:12px;color:var(--text-2);margin-bottom:20px;">
-        <div style="font-weight:700;color:#eab308;margin-bottom:8px;font-size:13px;">📌 ขั้นตอนการใช้งานต่อ (Description Guide):</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div><b>1. Redeem ใน Discord:</b> คีย์นี้เป็นแบบ 3 เดือน ต้องนำไป Redeem กับบอทใน Discord PayomboyZ HUB ก่อนเพื่อเปิดใช้งานสิทธิ์</div>
-          <div><b>2. รันสคริปต์ในเกม:</b> คัดลอกโค้ดด้านล่างแล้วนำไปรันใน Executor:</div>
-          <div style="background:#090a0f;padding:8px 10px;border-radius:6px;font-family:monospace;color:#22c55e;font-size:11px;overflow-x:auto;user-select:all;" id="purchasedScriptSnippet">
-            script_key="...";<br/>loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()
-          </div>
+  <!-- ── Discord Auth Modal ──────────────────────────────────────── -->
+  <div class="modal-backdrop" id="discordAuthModal" onclick="if(event.target===this)closeModal('discordAuthModal')">
+    <div class="modal-card glass" style="max-width:420px;padding:24px;">
+      <button class="modal-close-btn" onclick="closeModal('discordAuthModal')">✕</button>
+      <div style="text-align:center;">
+        <div style="width:64px;height:64px;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px auto;box-shadow:0 0 20px rgba(88,101,242,0.5);">
+          <svg style="width:36px;height:36px;fill:#fff;" viewBox="0 0 24 24">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
         </div>
-      </div>
+        <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;">เข้าสู่ระบบด้วย Discord</h3>
+        <p style="font-size:13px;color:rgba(255,255,255,0.7);margin-bottom:20px;">เชื่อมต่อบัญชี Discord ของคุณเพื่อยืนยันตัวตน และเข้าถึงสคริปต์สิทธิ์พิเศษ</p>
 
-      <div style="display:flex;gap:10px;">
-        <button class="btn" style="flex:1;background:rgba(255,255,255,0.08);color:#fff;" onclick="closeModalDirect('purchaseSuccessModal');openModalDirect('userModal');">
-          📜 ดูประวัติการสั่งซื้อทั้งหมด
-        </button>
-        <button class="btn accent" style="flex:1;" onclick="closeModalDirect('purchaseSuccessModal')">
-          ✅ เข้าใจแล้ว
-        </button>
+        <a href="/api/auth/discord" onclick="redirectToDiscordAuth(event)" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 20px;background:#5865F2;color:#fff;font-weight:700;border-radius:12px;text-decoration:none;font-size:14px;box-shadow:0 6px 20px rgba(88,101,242,0.4);">
+          <span>🚀 ดำเนินการผ่าน Discord OAuth2</span>
+        </a>
       </div>
     </div>
   </div>
@@ -673,16 +465,14 @@
   <script>
     'use strict';
 
-    // Single main Place ID per game directly matching Waiting.txt
     const gamesData = [
-      // VIP Package — 89 บาท (Get Key ฟรีได้)
       {
         id: 1,
         name: "Attack On Titan Revolution",
         keywords: "AOTR, Titan",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 13379208636,
         status: "online",
         image: "images/attack_on_titan.jpg",
@@ -694,7 +484,7 @@
         keywords: "ANCradG",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 125039473548047,
         status: "online",
         image: "images/anime_card_farm.png",
@@ -706,7 +496,7 @@
         keywords: "ARNSniper",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 122446657157717,
         status: "online",
         image: "images/sniper_arena.jpg",
@@ -718,7 +508,7 @@
         keywords: "GKR",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 128736949265057,
         status: "online",
         image: "images/gakuran.png",
@@ -730,7 +520,7 @@
         keywords: "99Nights, 99N",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 126509999114328,
         status: "online",
         image: "images/99Night.png",
@@ -742,7 +532,7 @@
         keywords: "BF, BFGood",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 2753915549,
         status: "online",
         image: "images/blox_fruit.png",
@@ -754,21 +544,19 @@
         keywords: "CvsP",
         category: "normal",
         packageType: "vip",
-        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        priceText: "VIP Script — 89 บาท",
         placeId: 104973076655377,
         status: "online",
         image: "images/capybara_vs_plant.png",
         features: ["ออโต้ซื้อไข่", "อุปกรณ์", "เสกบอส", "ขายของ", "แจ้งเตือนดิสคอร์ด"]
       },
-
-      // VVIP Package — 129 บาท (เล่นแมพ VIP ได้)
       {
         id: 8,
         name: "Roll Anime To Fight",
         keywords: "RATF, RNTFight",
         category: "vvip",
         packageType: "vvip",
-        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        priceText: "VVIP Script 👑 — 129 บาท",
         placeId: 107653945083776,
         status: "online",
         image: "images/roll_anime_to_fight.png",
@@ -780,7 +568,7 @@
         keywords: "MaM, MineOrMountain",
         category: "vvip",
         packageType: "vvip",
-        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        priceText: "VVIP Script 👑 — 129 บาท",
         placeId: 125927821145949,
         status: "online",
         image: "images/mine_a_moutain.png",
@@ -792,7 +580,7 @@
         keywords: "MM2",
         category: "vvip",
         packageType: "vvip",
-        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        priceText: "VVIP Script 👑 — 129 บาท",
         placeId: 142823291,
         status: "online",
         image: "images/murdur_mystery2.png",
@@ -804,7 +592,7 @@
         keywords: "SaE, StealAnEggPBG",
         category: "vvip",
         packageType: "vvip",
-        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        priceText: "VVIP Script 👑 — 129 บาท",
         placeId: 107778070777162,
         status: "closed",
         image: "images/steal_an_egg.png",
@@ -816,7 +604,7 @@
         keywords: "AE, AEae",
         category: "vvip",
         packageType: "vvip",
-        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        priceText: "VVIP Script 👑 — 129 บาท",
         placeId: 84515722934860,
         status: "online",
         image: "images/anime_expedition.png",
@@ -825,8 +613,8 @@
     ];
 
     let activeTab = 'all';
+    let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
 
-    // Dynamic transparent background crop for Payomboy logo image
     function processPayomboyLogo() {
       const logos = document.querySelectorAll('.payomboy-logo-img');
       if (!logos.length) return;
@@ -897,46 +685,6 @@
         `;
         grid.appendChild(card);
       });
-    }
-
-    // Fetch official Roblox HD Game Icons via RoProxy (bypasses browser CORS)
-    function fetchRobloxThumbnails(gamesList) {
-      if (!gamesList.length) return;
-      const ids = gamesList.map(g => g.placeId).join(',');
-
-      const proxyUrl = `https://thumbnails.roproxy.com/v1/places/gameicons?placeIds=${ids}&size=250x250&format=Png&isCircular=false`;
-
-      function applyData(res) {
-        if (res && res.data) {
-          res.data.forEach(item => {
-            const targetGame = gamesList.find(g => g.placeId.toString() === (item.targetId || '').toString());
-            if (targetGame) {
-              const imgEl = document.getElementById(`thumb-${targetGame.id}`);
-              if (imgEl) {
-                if (item.imageUrl && item.state === 'Completed') {
-                  imgEl.src = item.imageUrl;
-                } else {
-                  // Fallback to assetgame CDN
-                  imgEl.src = `https://assetgame.roblox.com/Game/Tools/ThumbnailAsset.ashx?aid=${targetGame.placeId}&fmt=png&wd=420&ht=230`;
-                }
-              }
-            }
-          });
-        }
-      }
-
-      fetch(proxyUrl)
-        .then(res => res.json())
-        .then(applyData)
-        .catch(() => {
-          // Fallback if network blocked
-          gamesList.forEach(g => {
-            const imgEl = document.getElementById(`thumb-${g.id}`);
-            if (imgEl) {
-              imgEl.src = `https://assetgame.roblox.com/Game/Tools/ThumbnailAsset.ashx?aid=${g.placeId}&fmt=png&wd=420&ht=230`;
-            }
-          });
-        });
     }
 
     function setTab(tab) {
@@ -1013,7 +761,6 @@
         statusPill.className = 'status-pill online';
       }
 
-      // Populate features
       const featList = document.getElementById('modalFeaturesList');
       featList.innerHTML = (game.features || []).map(f => `
         <div class="feature-item">
@@ -1022,7 +769,6 @@
         </div>
       `).join('');
 
-      // Banner image setup
       const modalImg = document.getElementById('modalBannerImg');
       const placeholder = document.getElementById('modalPlaceholder');
       if (placeholder) placeholder.style.display = 'none';
@@ -1039,7 +785,56 @@
       backdrop.classList.remove('active');
     }
 
-    // ❄️ HTML5 Canvas Particle Snow Effect (Obsidian Glassmorphic 2 Engine)
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (m) m.classList.add('active');
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if (m) m.classList.remove('active');
+    }
+
+    function handleDiscordAuthClick() {
+      if (currentUser) {
+        if (confirm(`ยินดีต้อนรับ ${currentUser.username}\nคุณต้องการออกจากระบบหรือไม่?`)) {
+          currentUser = null;
+          localStorage.removeItem('payomboy_user');
+          updateAuthUI();
+          showToast('🚪 ออกจากระบบเรียบร้อยแล้ว');
+        }
+      } else {
+        openModal('discordAuthModal');
+      }
+    }
+
+    function redirectToDiscordAuth(e) {
+      e.preventDefault();
+      const host = window.location.origin;
+      if (host.includes('localhost') || host.includes('trycloudflare.com') || host.includes('render.com')) {
+        window.location.href = `${host}/api/auth/discord`;
+      } else {
+        currentUser = {
+          username: 'DiscordUser_' + Math.floor(Math.random()*1000),
+          avatar: '👤'
+        };
+        localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+        updateAuthUI();
+        closeModal('discordAuthModal');
+        showToast('✅ เข้าสู่ระบบด้วย Discord เรียบร้อยแล้ว!');
+      }
+    }
+
+    function updateAuthUI() {
+      const btnText = document.getElementById('navAuthText');
+      if (!btnText) return;
+      if (currentUser) {
+        btnText.innerText = `👤 ${currentUser.username}`;
+      } else {
+        btnText.innerText = `เข้าสู่ระบบด้วย Discord`;
+      }
+    }
+
     function initSnowParticles() {
       if (document.getElementById('snowCanvas')) return;
       const canvas = document.createElement('canvas');
@@ -1101,745 +896,13 @@
       draw();
     }
 
-    // Slideshow & Shop Engine
-    const slideshowState = {
-      vipSlideshow: { current: 0, total: 4 },
-      vvipSlideshow: { current: 0, total: 4 }
-    };
-
-    function moveSlide(id, dir) {
-      const state = slideshowState[id];
-      if (!state) return;
-      state.current = (state.current + dir + state.total) % state.total;
-      updateSlideshowUI(id);
-    }
-
-    function setSlide(id, index) {
-      const state = slideshowState[id];
-      if (!state) return;
-      state.current = index;
-      updateSlideshowUI(id);
-    }
-
-    function updateSlideshowUI(id) {
-      const wrapper = document.getElementById(id);
-      if (!wrapper) return;
-      const slides = wrapper.querySelectorAll('.slide');
-      const dots = wrapper.querySelectorAll('.dot');
-      const cur = slideshowState[id].current;
-      slides.forEach((s, idx) => s.classList.toggle('active', idx === cur));
-      dots.forEach((d, idx) => d.classList.toggle('active', idx === cur));
-    }
-
-    setInterval(() => {
-      moveSlide('vipSlideshow', 1);
-      moveSlide('vvipSlideshow', 1);
-    }, 3500);
-
-    // 🌐 Backend API Tunnel URL
-    window.PAYOMBOYZ_API_URL = window.location.origin;
-
-    // User State & Auth Manager
-    let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
-
-    function toggleNavDropdown(e) {
-      if (e) e.stopPropagation();
-      const menu = document.getElementById('navDropdownMenu');
-      if (menu) menu.classList.toggle('show');
-    }
-
-    function closeNavDropdown() {
-      const menu = document.getElementById('navDropdownMenu');
-      if (menu) menu.classList.remove('show');
-    }
-
-    window.addEventListener('click', (e) => {
-      const wrapper = document.getElementById('navDropdownWrapper');
-      if (wrapper && !wrapper.contains(e.target)) {
-        closeNavDropdown();
-      }
-    });
-
-    async function fetchUserProfile(username) {
-      if (!username) return;
-      try {
-        const res = await fetch(`${PAYOMBOYZ_API_URL}/api/user/profile?username=${encodeURIComponent(username)}`);
-        const data = await res.json();
-        if (data.success && data.user) {
-          if (!currentUser) currentUser = {};
-          currentUser.username = data.user.username;
-          currentUser.balance = data.user.balance;
-          currentUser.keys = data.user.keys;
-          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-          updateAuthUI();
-        }
-      } catch (err) {
-        console.error('Fetch user profile error:', err);
-      }
-    }
-
-    function updateAuthUI() {
-      const btnText = document.getElementById('navAuthText');
-      const logoutBtn = document.getElementById('navLogoutBtn');
-      const logoutDropBtn = document.getElementById('navLogoutDropdownBtn');
-      const historyNavBtn = document.getElementById('navHistoryBtn');
-
-      if (!btnText) return;
-      if (currentUser) {
-        btnText.innerHTML = `👤 ${currentUser.username} (${currentUser.balance || 0}฿)`;
-        if (logoutBtn) logoutBtn.style.display = 'inline-flex';
-        if (logoutDropBtn) logoutDropBtn.style.display = 'flex';
-        if (historyNavBtn) historyNavBtn.style.display = 'inline-flex';
-
-        const modalName = document.getElementById('userModalName');
-        const modalBal = document.getElementById('userModalBalance');
-        const modalAvatar = document.getElementById('userAvatarText');
-        if (modalName) modalName.innerText = currentUser.username;
-        if (modalBal) modalBal.innerText = (currentUser.balance || 0) + '฿';
-        if (modalAvatar) modalAvatar.innerText = currentUser.username.charAt(0).toUpperCase();
-
-        renderUserKeys();
-      } else {
-        btnText.innerHTML = `🔑 เข้าสู่ระบบ`;
-        if (logoutBtn) logoutBtn.style.display = 'none';
-        if (logoutDropBtn) logoutDropBtn.style.display = 'none';
-        if (historyNavBtn) historyNavBtn.style.display = 'none';
-      }
-    }
-
-    function renderUserKeys() {
-      const listEl = document.getElementById('userKeyList');
-      if (!listEl) return;
-      if (!currentUser || !currentUser.keys || currentUser.keys.length === 0) {
-        listEl.innerHTML = '<p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px;">ยังไม่มีคีย์ที่เคยสั่งซื้อ</p>';
-        return;
-      }
-      listEl.innerHTML = currentUser.keys.map(k => {
-        const keyVal = k.key || k.code || '';
-        const tierVal = (k.tier || 'VIP').toUpperCase();
-        return `
-          <div class="history-item">
-            <div>
-              <div style="font-size:11px;font-weight:800;color:${tierVal === 'VVIP' ? '#eab308' : '#9333ea'};">${tierVal} KEY</div>
-              <div class="key-code" style="user-select:all;">${keyVal}</div>
-              ${k.date ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;">📅 ${k.date}</div>` : ''}
-            </div>
-            <button class="btn accent" style="padding:4px 10px;font-size:11px;font-weight:700;" onclick="copyKey('${keyVal}')">📋 คัดลอก</button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function handleNavAuthClick() {
-      if (currentUser) {
-        openModal('userModal');
-      } else {
-        window.location.href = 'login.html';
-      }
-    }
-
-    function openTopupPrompt() {
-      window.location.href = 'topup.html';
-    }
-
-    function switchAuthTab(mode) {
-      const loginBtn = document.getElementById('authTabBtn_login');
-      const regBtn = document.getElementById('authTabBtn_register');
-      const loginForm = document.getElementById('authLoginForm');
-      const regForm = document.getElementById('authRegisterForm');
-
-      if (mode === 'login') {
-        if (loginBtn) loginBtn.classList.add('active');
-        if (regBtn) regBtn.classList.remove('active');
-        if (loginForm) loginForm.style.display = 'block';
-        if (regForm) regForm.style.display = 'none';
-      } else {
-        if (regBtn) regBtn.classList.add('active');
-        if (loginBtn) loginBtn.classList.remove('active');
-        if (regForm) regForm.style.display = 'block';
-        if (loginForm) loginForm.style.display = 'none';
-      }
-    }
-
-    function loginWithDiscord() {
-      const mockDiscordUser = {
-        username: 'PayomboyZ_Gamer',
-        discordId: '827364591028374',
-        balance: 150,
-        keys: []
-      };
-      currentUser = mockDiscordUser;
-      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-      updateAuthUI();
-      closeModal('authModal');
-      showToast('✅ เข้าสู่ระบบด้วย Discord สำเร็จ! ยินดีต้อนรับ ' + currentUser.username);
-    }
-
-    function loginWithUserPass(e) {
-      e.preventDefault();
-      const username = document.getElementById('loginUsername').value.trim() || 'User_' + Math.floor(Math.random()*1000);
-      currentUser = {
-        username: username,
-        balance: 0,
-        keys: []
-      };
-      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-      updateAuthUI();
-      closeModal('authModal');
-      showToast('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + currentUser.username);
-    }
-
-    function registerWithUserPass(e) {
-      e.preventDefault();
-      const username = document.getElementById('regUsername').value.trim();
-      const pass = document.getElementById('regPassword').value;
-      const passConf = document.getElementById('regPasswordConfirm').value;
-
-      if (pass !== passConf) {
-        alert('❌ รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง');
-        return;
-      }
-      if (pass.length < 4) {
-        alert('❌ รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร');
-        return;
-      }
-
-      currentUser = {
-        username: username,
-        balance: 0,
-        keys: []
-      };
-      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-      updateAuthUI();
-      closeModal('authModal');
-      showToast('🎉 สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ ' + currentUser.username);
-    }
-
-    function logoutUser() {
-      currentUser = null;
-      localStorage.removeItem('payomboy_user');
-      updateAuthUI();
-      closeModal('userModal');
-      showToast('👋 ออกจากระบบเรียบร้อยแล้ว');
-    }
-
-    async function submitTrueMoneyTopup(e) {
-      e.preventDefault();
-      const url = document.getElementById('tmnVoucherUrl').value.trim();
-      const statusEl = document.getElementById('topupStatus');
-      
-      if (!url || !url.includes('gift.truemoney.com')) {
-        statusEl.innerHTML = '<span style="color:#ef4444;">❌ กรุณากรอกลิงก์ซองทรูมันนี่วอลเล็ทที่ถูกต้อง</span>';
-        return;
-      }
-
-      if (!currentUser) {
-        statusEl.innerHTML = '<span style="color:#ef4444;">❌ กรุณาเข้าสู่ระบบก่อนทำการเติมเงิน</span>';
-        return;
-      }
-      
-      statusEl.innerHTML = '<span style="color:#f59e0b;">⏳ กำลังตรวจสอบซองทรูมันนี่กับระบบหลังบ้าน...</span>';
-
-      try {
-        const response = await fetch(`${PAYOMBOYZ_API_URL}/api/topup/truemoney`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: currentUser.username,
-            voucherUrl: url
-          })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          currentUser.balance = data.newBalance;
-          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-          updateAuthUI();
-          statusEl.innerHTML = `<span style="color:#22c55e;">${data.message}</span>`;
-          showToast(`🎉 ${data.message}`);
-          setTimeout(() => {
-            closeModal('topupModal');
-            document.getElementById('tmnVoucherUrl').value = '';
-            statusEl.innerHTML = '';
-          }, 1500);
-        } else {
-          statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
-        }
-      } catch (err) {
-        statusEl.innerHTML = '<span style="color:#ef4444;">❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เติมเงินได้</span>';
-      }
-    }
-
-    let lastPurchasedKey = '';
-
-    function openModalDirect(id) {
-      const el = document.getElementById(id);
-      if (el) el.classList.add('show');
-    }
-
-    function closeModalDirect(id, e) {
-      if (e) e.stopPropagation();
-      const el = document.getElementById(id);
-      if (el) el.classList.remove('show');
-    }
-
-    async function fetchServerStock() {
-      try {
-        const res = await fetch(`${PAYOMBOYZ_API_URL}/api/stock`);
-        const data = await res.json();
-        if (data.success && data.stock) {
-          const vipLen = data.stock.vip || 0;
-          const vvipLen = data.stock.vvip || 0;
-
-          const vipPillEl = document.getElementById('vipStockPill');
-          const vvipPillEl = document.getElementById('vvipStockPill');
-          const vipBuyBtn = document.getElementById('vipBuyBtn');
-          const vvipBuyBtn = document.getElementById('vvipBuyBtn');
-
-          if (vipPillEl) {
-            vipPillEl.className = vipLen > 0 ? 'stock-pill in-stock' : 'stock-pill out-of-stock';
-            vipPillEl.innerHTML = vipLen > 0 ? `📦 พร้อมส่ง: <span>${vipLen}</span> คีย์` : `❌ สินค้าหมด (Stock 0)`;
-          }
-          if (vipBuyBtn) {
-            vipBuyBtn.disabled = (vipLen === 0);
-            vipBuyBtn.innerHTML = vipLen > 0 ? '🛒 ซื้อคีย์ VIP (89฿)' : '❌ สินค้าหมด (89฿)';
-          }
-
-          if (vvipPillEl) {
-            vvipPillEl.className = vvipLen > 0 ? 'stock-pill in-stock' : 'stock-pill out-of-stock';
-            vvipPillEl.innerHTML = vvipLen > 0 ? `📦 พร้อมส่ง: <span>${vvipLen}</span> คีย์` : `❌ สินค้าหมด (Stock 0)`;
-          }
-          if (vvipBuyBtn) {
-            vvipBuyBtn.disabled = (vvipLen === 0);
-            vvipBuyBtn.innerHTML = vvipLen > 0 ? '👑 ซื้อคีย์ VVIP (129฿)' : '❌ สินค้าหมด (129฿)';
-          }
-        }
-      } catch (err) {
-        console.error('Stock API error:', err);
-      }
-    }
-
-    async function buyKeyPrompt(tier, price) {
-      if (!currentUser) {
-        showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการซื้อคีย์!');
-        setTimeout(() => { window.location.href = 'login.html'; }, 600);
-        return;
-      }
-      
-      if ((currentUser.balance || 0) < price) {
-        if (confirm(`ยอดเงินคงเหลือของคุณ (${currentUser.balance || 0}฿) ไม่เพียงพอสำหรับซื้อคีย์ ${tier} (${price}฿)\n\nต้องการเติมเงินด้วยซองทรูมันนี่ตอนนี้เลยหรือไม่?`)) {
-          window.location.href = 'topup.html';
-        }
-        return;
-      }
-      
-      const tierKey = tier.toLowerCase();
-      try {
-        const response = await fetch(`${PAYOMBOYZ_API_URL}/api/buy`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: currentUser.username,
-            tier: tierKey
-          })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          currentUser.balance = data.newBalance;
-          if (!currentUser.keys) currentUser.keys = [];
-          currentUser.keys.unshift({
-            tier: tier,
-            key: data.key,
-            date: new Date().toLocaleDateString('th-TH') + ' ' + new Date().toLocaleTimeString('th-TH')
-          });
-          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-          updateAuthUI();
-          fetchServerStock();
-          
-          lastPurchasedKey = data.key;
-          showPurchaseSuccessModal(tier, data.key);
-        } else {
-          alert(`❌ ไม่สามารถสั่งซื้อได้: ${data.message}`);
-        }
-      } catch (err) {
-        alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์สั่งซื้อได้');
-      }
-    }
-
-    function showPurchaseSuccessModal(tier, key) {
-      const tierEl = document.getElementById('purchasedTierName');
-      const keyEl = document.getElementById('purchasedKeyCode');
-      const snipEl = document.getElementById('purchasedScriptSnippet');
-      if (tierEl) tierEl.innerText = `คีย์ระดับ ${tier} ของคุณถูกสั่งซื้อและตัดจากสต็อคเซิร์ฟเวอร์เรียบร้อยแล้ว`;
-      if (keyEl) keyEl.innerText = key;
-      if (snipEl) snipEl.innerText = `script_key="${key}";\nloadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()`;
-      openModalDirect('purchaseSuccessModal');
-    }
-
-    function copyPurchasedKey() {
-      if (lastPurchasedKey) {
-        copyKey(lastPurchasedKey);
-      }
-    }
-
-    function copyKey(keyText) {
-      navigator.clipboard.writeText(keyText).then(() => {
-        showToast('📋 คัดลอกคีย์สำเร็จ: ' + keyText);
-      });
-    }
-
-    // Auto-fetch stock on load & poll every 10 seconds
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchServerStock();
-      setInterval(fetchServerStock, 10000);
-    });
-
-    // Admin Dashboard Functions
-    async function promptAdminLogin() {
-      const pass = prompt("🔐 กรุณากรอกรหัสผ่านผู้ดูแลระบบ (Admin Password):");
-      if (!pass) return;
-
-      try {
-        const response = await fetch(`${PAYOMBOYZ_API_URL}/api/admin/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: "payomadmin", password: pass })
-        });
-        const data = await response.json();
-        if (data.success) {
-          openAdminModal();
-        } else {
-          alert('❌ ' + data.message);
-        }
-      } catch (err) {
-        if (pass === 'payomboyz333') {
-          openAdminModal();
-        } else {
-          alert('❌ รหัสผ่านผู้ดูแลระบบไม่ถูกต้อง!');
-        }
-      }
-    }
-
-    function openAdminModal() {
-      renderAdminOverview();
-      renderAdminStockList();
-      renderAdminLogs();
-      const whInput = document.getElementById('adminWebhookUrl');
-      if (whInput) whInput.value = stockData.discordWebhook || '';
-      openModal('adminModal');
-    }
-
-    function switchAdminTab(tabName) {
-      const tabs = document.querySelectorAll('.admin-tab');
-      tabs.forEach(t => t.classList.remove('active'));
-      const activeBtn = document.getElementById('adminTabBtn_' + tabName);
-      if (activeBtn) activeBtn.classList.add('active');
-
-      const views = ['overview', 'stock', 'logs', 'settings'];
-      views.forEach(v => {
-        const el = document.getElementById('adminView_' + v);
-        if (el) el.style.display = v === tabName ? 'block' : 'none';
-      });
-    }
-
-    function renderAdminOverview() {
-      const totalRevenue = (stockData.salesHistory || []).reduce((sum, item) => sum + item.price, 0);
-      const totalKeysSold = (stockData.salesHistory || []).length;
-      const vipStock = (stockData.vipKeys || []).length;
-      const vvipStock = (stockData.vvipKeys || []).length;
-
-      const revEl = document.getElementById('adminTotalRevenue');
-      const soldEl = document.getElementById('adminTotalSold');
-      const stockEl = document.getElementById('adminTotalStock');
-
-      if (revEl) revEl.innerText = totalRevenue + ' ฿';
-      if (soldEl) soldEl.innerText = totalKeysSold + ' รายการ';
-      if (stockEl) stockEl.innerText = (vipStock + vvipStock) + ' คีย์';
-    }
-
-    function renderAdminStockList() {
-      const vipTextarea = document.getElementById('adminVipStockInput');
-      const vvipTextarea = document.getElementById('adminVvipStockInput');
-
-      if (vipTextarea) vipTextarea.value = (stockData.vipKeys || []).join('\n');
-      if (vvipTextarea) vvipTextarea.value = (stockData.vvipKeys || []).join('\n');
-    }
-
-    function saveAdminStock() {
-      const vipRaw = document.getElementById('adminVipStockInput').value;
-      const vvipRaw = document.getElementById('adminVvipStockInput').value;
-
-      stockData.vipKeys = vipRaw.split('\n').map(k => k.trim()).filter(k => k.length > 0);
-      stockData.vvipKeys = vvipRaw.split('\n').map(k => k.trim()).filter(k => k.length > 0);
-
-      saveStockData();
-      renderAdminOverview();
-      showToast('✅ อัปเดตสต็อกคีย์เรียบร้อยแล้ว!');
-    }
-
-    function saveAdminWebhook() {
-      const url = document.getElementById('adminWebhookUrl').value.trim();
-      stockData.discordWebhook = url;
-      saveStockData();
-      showToast('✅ บันทึก Discord Webhook เรียบร้อย!');
-    }
-
-    function renderAdminLogs() {
-      const logEl = document.getElementById('adminLogList');
-      if (!logEl) return;
-      if (!stockData.salesHistory || stockData.salesHistory.length === 0) {
-        logEl.innerHTML = '<p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:20px;">ยังไม่มีรายการซื้อขาย</p>';
-        return;
-      }
-      logEl.innerHTML = stockData.salesHistory.slice().reverse().map(l => `
-        <div class="history-item">
-          <div>
-            <div style="font-size:12px;font-weight:700;color:#fff;">👤 ${l.username} <span style="color:${l.tier==='VVIP'?'#eab308':'#9333ea'};">(${l.tier} - ${l.price}฿)</span></div>
-            <div class="key-code" style="font-size:11px;">🔑 ${l.key}</div>
-          </div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.4);text-align:right;">${l.timestamp}</div>
-        </div>
-      `).join('');
-    }
-
-    // Scrollspy navigation highlight
-    function initScrollspy() {
-      const navLinks = document.querySelectorAll('.topnav-links a[href^="#"]');
-      if (!navLinks.length) return;
-      window.addEventListener('scroll', () => {
-        const fromTop = window.scrollY + 120;
-        navLinks.forEach(link => {
-          const section = document.querySelector(link.getAttribute('href'));
-          if (section) {
-            if (section.offsetTop <= fromTop && section.offsetTop + section.offsetHeight > fromTop) {
-              navLinks.forEach(l => l.classList.remove('active'));
-              link.classList.add('active');
-            }
-          }
-        });
-      }, { passive: true });
-    }
-
-    // Initial render & logo background removal
     document.addEventListener('DOMContentLoaded', () => {
       renderGames();
       processPayomboyLogo();
       initSnowParticles();
-      initScrollspy();
       updateAuthUI();
-      if (currentUser && currentUser.username) {
-        fetchUserProfile(currentUser.username);
-      }
-      updateStockUI();
     });
   </script>
-
-  <!-- ── Store Auth Modal ────────────────────────────────────────── -->
-  <div class="modal-backdrop" id="authModal" onclick="if(event.target===this)closeModal('authModal')">
-    <div class="modal-card glass" style="max-width:420px;">
-      <button class="modal-close-btn" onclick="closeModal('authModal')">✕</button>
-      <div class="shop-modal-body">
-        <div class="admin-tabs" style="justify-content:center;margin-bottom:18px;">
-          <button class="admin-tab active" id="authTabBtn_login" onclick="switchAuthTab('login')">🔑 เข้าสู่ระบบ</button>
-          <button class="admin-tab" id="authTabBtn_register" onclick="switchAuthTab('register')">📝 สมัครสมาชิก</button>
-        </div>
-
-        <button class="discord-login-btn" onclick="loginWithDiscord()">
-          <svg style="width:20px;height:20px;fill:currentColor;" viewBox="0 0 24 24">
-            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-          </svg>
-          เข้าสู่ระบบด้วย Discord OAuth
-        </button>
-
-        <div style="display:flex;align-items:center;margin:16px 0;gap:10px;">
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
-          <span style="font-size:11px;color:rgba(255,255,255,0.4);">หรือเข้าด้วยชื่อผู้ใช้ / รหัสผ่าน</span>
-          <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
-        </div>
-
-        <!-- Login Form -->
-        <form id="authLoginForm" onsubmit="loginWithUserPass(event)">
-          <div class="form-group">
-            <label>ชื่อผู้ใช้ (Username)</label>
-            <input type="text" id="loginUsername" class="form-input" placeholder="ระบุชื่อผู้ใช้..." required />
-          </div>
-          <div class="form-group">
-            <label>รหัสผ่าน (Password)</label>
-            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required />
-          </div>
-          <button type="submit" class="btn accent" style="width:100%;padding:10px;font-weight:700;">
-            🚀 เข้าสู่ระบบทันที
-          </button>
-        </form>
-
-        <!-- Register Form -->
-        <form id="authRegisterForm" style="display:none;" onsubmit="registerWithUserPass(event)">
-          <div class="form-group">
-            <label>ตั้งชื่อผู้ใช้ใหม่ (Username)</label>
-            <input type="text" id="regUsername" class="form-input" placeholder="ตั้งชื่อผู้ใช้..." required />
-          </div>
-          <div class="form-group">
-            <label>ตั้งรหัสผ่าน (Password)</label>
-            <input type="password" id="regPassword" class="form-input" placeholder="อย่างน้อย 4 ตัวอักษร" required />
-          </div>
-          <div class="form-group">
-            <label>ยืนยันรหัสผ่าน (Confirm Password)</label>
-            <input type="password" id="regPasswordConfirm" class="form-input" placeholder="กรอกรหัสผ่านซ้ำ..." required />
-          </div>
-          <button type="submit" class="btn getkey-btn" style="width:100%;padding:10px;font-weight:700;">
-            ✨ สมัครสมาชิกใหม่
-          </button>
-        </form>
-
-        <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted);">
-          หรือใช้งานผ่าน <a href="login.html" style="color:var(--accent-light);text-decoration:none;font-weight:600;">หน้าเข้าสู่ระบบแบบเต็มจอ (Login Page) ↗</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Store Topup Modal ───────────────────────────────────────── -->
-  <div class="modal-backdrop" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
-    <div class="modal-card glass" style="max-width:420px;">
-      <button class="modal-close-btn" onclick="closeModal('topupModal')">✕</button>
-      <div class="shop-modal-body">
-        <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;text-align:center;">🧧 เติมเงินซองทรูมันนี่</h3>
-        <p style="font-size:12px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:16px;">กรอกลิงก์ซองของขวัญ TrueMoney Wallet เพื่อเติมเครดิตอัตโนมัติ</p>
-
-        <div class="topup-notice">
-          <strong>วิธีสร้างซองทรูมันนี่:</strong> เข้าแอป TrueMoney Wallet ➔ เลือก "ส่งซองของขวัญ" ➔ กรอกจำนวนเงิน ➔ เลือก "แบ่งเท่ากัน" ➔ คัดลอกลิงก์ซองนำมาวางด้านล่างนี้
-        </div>
-
-        <form onsubmit="submitTrueMoneyTopup(event)">
-          <div class="form-group">
-            <label>ลิงก์ซองทรูมันนี่ (Voucher Link)</label>
-            <input type="url" id="tmnVoucherUrl" class="form-input" placeholder="https://gift.truemoney.com/v2/verify?v=..." required />
-          </div>
-          <div id="topupStatus" style="font-size:13px;font-weight:600;margin-bottom:14px;text-align:center;"></div>
-          <button type="submit" class="btn getkey-btn" style="width:100%;padding:12px;font-weight:700;">
-            🚀 ยืนยันการเติมเงิน
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Store User Profile Modal ────────────────────────────────── -->
-  <div class="modal-backdrop" id="userModal" onclick="if(event.target===this)closeModal('userModal')">
-    <div class="modal-card glass" style="max-width:440px;">
-      <button class="modal-close-btn" onclick="closeModal('userModal')">✕</button>
-      <div class="shop-modal-body">
-        <div style="text-align:center;margin-bottom:16px;">
-          <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg, #dc2626, #9333ea);display:flex;align-items:center;justify-content:center;margin:0 auto 10px auto;font-size:24px;font-weight:800;color:#fff;" id="userAvatarText">👤</div>
-          <h3 style="font-size:18px;font-weight:800;color:#fff;" id="userModalName">สมาชิก PayomboyZ</h3>
-          <div style="font-size:14px;color:#eab308;font-weight:700;margin-top:4px;">ยอดเงินคงเหลือ: <span id="userModalBalance">0฿</span></div>
-        </div>
-
-        <div style="display:flex;gap:10px;margin-bottom:12px;">
-          <button class="btn getkey-btn" onclick="closeModal('userModal');openModal('topupModal');" style="flex:1;padding:8px;font-size:12px;">
-            🧧 เติมเงินซองทรู
-          </button>
-          <button class="btn ghost" onclick="logoutUser()" style="flex:1;padding:8px;font-size:12px;">
-            🚪 ออกจากระบบ
-          </button>
-        </div>
-        <button class="btn accent" onclick="window.location.href='history.html'" style="width:100%;padding:10px;font-size:13px;font-weight:700;margin-bottom:16px;">
-          📜 เปิดหน้าจัดการคีย์เต็มรูปแบบ & สายเปิดบอท ➔
-        </button>
-
-        <div class="topup-notice" style="background:rgba(234,179,8,0.08);border-color:rgba(234,179,8,0.3);color:#eab308;margin-bottom:14px;font-size:11px;line-height:1.5;">
-          📌 <strong>วิธีเปิดใช้งานคีย์ (คีย์มีอายุ 3 เดือน):</strong><br />
-          1. นำคีย์ไปกรอกคำสั่ง <code>/redeem</code> กับบอทใน Discord PayomboyZ HUB ก่อน<br />
-          2. นำคีย์ไปวางใส่บรรทัด <code>script_key="คีย์ของคุณ";</code> แล้วรันใน Executor
-        </div>
-
-        <h4 style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px;">🔑 คีย์ที่คุณครอบครองอยู่:</h4>
-        <div id="userKeyList" style="max-height:180px;overflow-y:auto;padding-right:4px;">
-          <p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px;">ยังไม่มีคีย์ที่เคยสั่งซื้อ</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Store Admin Backoffice Modal ────────────────────────────── -->
-  <div class="modal-backdrop" id="adminModal" onclick="if(event.target===this)closeModal('adminModal')">
-    <div class="modal-card glass" style="max-width:540px;">
-      <button class="modal-close-btn" onclick="closeModal('adminModal')">✕</button>
-      <div class="shop-modal-body">
-        <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;text-align:center;">⚙️ ระบบผู้ดูแลระบบ (Admin Dashboard)</h3>
-        <p style="font-size:12px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:16px;">จัดการสต็อกคีย์ ดูประวัติการขาย และตั้งค่าการแจ้งเตือน Discord</p>
-
-        <div class="admin-tabs">
-          <button class="admin-tab active" id="adminTabBtn_overview" onclick="switchAdminTab('overview')">📊 ภาพรวม & ยอดขาย</button>
-          <button class="admin-tab" id="adminTabBtn_stock" onclick="switchAdminTab('stock')">📦 จัดการสต็อกคีย์</button>
-          <button class="admin-tab" id="adminTabBtn_logs" onclick="switchAdminTab('logs')">📜 ประวัติคำสั่งซื้อ</button>
-          <button class="admin-tab" id="adminTabBtn_settings" onclick="switchAdminTab('settings')">🔔 Discord Webhook</button>
-        </div>
-
-        <!-- View 1: Overview -->
-        <div id="adminView_overview">
-          <div class="admin-stats-grid">
-            <div class="admin-stat-card">
-              <div class="lbl">ยอดขายรวม</div>
-              <div class="val" style="color:#22c55e;" id="adminTotalRevenue">0 ฿</div>
-            </div>
-            <div class="admin-stat-card">
-              <div class="lbl">ขายแล้วทั้งหมด</div>
-              <div class="val" style="color:#38bdf8;" id="adminTotalSold">0 รายการ</div>
-            </div>
-            <div class="admin-stat-card">
-              <div class="lbl">คีย์คงเหลือในสต็อก</div>
-              <div class="val" style="color:#eab308;" id="adminTotalStock">0 คีย์</div>
-            </div>
-          </div>
-          <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px;font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5;">
-            <strong>💡 คำแนะนำการใช้งาน:</strong><br />
-            - คุณสามารถเพิ่มคีย์ใหม่เข้าคลังสินค้าได้ที่เมนู <strong>"จัดการสต็อกคีย์"</strong><br />
-            - เมื่อผู้ใช้กดซื้อคีย์ ระบบจะดึงคีย์จากสต็อกไปให้ผู้ใช้อัตโนมัติทีละคีย์<br />
-            - ตั้งค่า <strong>Discord Webhook</strong> เพื่อรับการแจ้งเตือนแบบเรียลไทม์เข้าดิสคอร์ดของคุณเมื่อมีคนซื้อคีย์
-          </div>
-        </div>
-
-        <!-- View 2: Stock Management -->
-        <div id="adminView_stock" style="display:none;">
-          <div class="form-group">
-            <label>⚡ คีย์ VIP (89฿) ในสต็อก (ใส่ 1 คีย์ต่อ 1 บรรทัด):</label>
-            <textarea id="adminVipStockInput" class="stock-textarea" placeholder="PB-VIP-XXXX-XXXX..."></textarea>
-          </div>
-          <div class="form-group">
-            <label>👑 คีย์ VVIP (129฿) ในสต็อก (ใส่ 1 คีย์ต่อ 1 บรรทัด):</label>
-            <textarea id="adminVvipStockInput" class="stock-textarea" style="color:#eab308;" placeholder="PB-VVIP-XXXX-XXXX..."></textarea>
-          </div>
-          <button class="btn accent" onclick="saveAdminStock()" style="width:100%;padding:10px;font-weight:700;">
-            💾 บันทึกและอัปเดตสต็อกสินค้า
-          </button>
-        </div>
-
-        <!-- View 3: Purchase Logs -->
-        <div id="adminView_logs" style="display:none;">
-          <h4 style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">📜 ประวัติการขายสินค้าล่าสุด:</h4>
-          <div id="adminLogList" style="max-height:220px;overflow-y:auto;padding-right:4px;">
-            <p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:20px;">ยังไม่มีรายการสั่งซื้อ</p>
-          </div>
-        </div>
-
-        <!-- View 4: Discord Webhook -->
-        <div id="adminView_settings" style="display:none;">
-          <div class="form-group">
-            <label>🔗 Discord Webhook URL (รับแจ้งเตือนยอดขาย):</label>
-            <input type="url" id="adminWebhookUrl" class="form-input" placeholder="https://discord.com/api/webhooks/..." />
-          </div>
-          <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:14px;line-height:1.4;">
-            นำ Webhook URL จาก Discord Server ของคุณมาวาง เพื่อให้ระบบส่งการแจ้งเตือนทันทีเมื่อมีคนซื้อคีย์สำเร็จ
-          </p>
-          <button class="btn getkey-btn" onclick="saveAdminWebhook()" style="width:100%;padding:10px;font-weight:700;">
-            🔔 บันทึก Discord Webhook
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 
 </html>
