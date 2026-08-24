@@ -283,6 +283,53 @@
 
   </main>
 
+  <!-- Modal Dialog overlay -->
+  <div class="modal-backdrop" id="gameModalBackdrop" onclick="closeGameModal(event)">
+    <div class="game-modal" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closeGameModal(event)">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div class="modal-header-banner">
+        <div class="game-card-placeholder" id="modalPlaceholder">
+          <svg class="ui-icon" viewBox="0 0 24 24" style="width:48px;height:48px;opacity:0.6;stroke:var(--accent);"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
+        </div>
+        <img id="modalBannerImg" src="" alt="Game Banner" style="opacity:0;" onload="this.style.opacity='1';document.getElementById('modalPlaceholder').style.display='none';"/>
+      </div>
+      <div class="modal-body">
+        <div class="modal-title-row">
+          <div class="modal-game-title" id="modalGameTitle">Game Name</div>
+          <div class="modal-pkg-badge" id="modalPkgBadge">VIP Package</div>
+        </div>
+        <div class="modal-meta-row">
+          <span class="status-pill online" id="modalStatusPill">🟢 พร้อมใช้งาน</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="place-id-label">Place ID:</span>
+            <span class="place-id-chip" id="modalPlaceId">123456789</span>
+          </div>
+        </div>
+        <div class="features-list-box">
+          <div class="features-list-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+            ฟังก์ชันการทำงานทั้งหมดในสคริปต์
+          </div>
+          <div class="features-grid-list" id="modalFeaturesList">
+            <!-- Dynamic features list -->
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn accent" style="flex:1;" onclick="copyLoaderScript(event)">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+            คัดลอกสคริปต์
+          </button>
+          <a class="btn getkey-btn" style="flex:1;" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank" rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
+            <svg class="ui-icon key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"></circle><path d="M10.85 12.15L19 4M18 5l2 2m-4-2l2 2"></path></svg>
+            Get Key ฟรี 🔑
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Interactive JavaScript Logic ──────────────────────────── -->
   <script>
     'use strict';
@@ -606,56 +653,7 @@
       document.body.appendChild(toast);
       setTimeout(() => { if (toast) toast.remove(); }, 2500);
     }
-  </script>
 
-  <!-- Modal Dialog overlay -->
-  <div class="modal-backdrop" id="gameModalBackdrop" onclick="closeGameModal(event)">
-    <div class="game-modal" onclick="event.stopPropagation()">
-      <button class="modal-close-btn" onclick="closeGameModal(event)">
-        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-      <div class="modal-header-banner">
-        <div class="game-card-placeholder" id="modalPlaceholder">
-          <svg class="ui-icon" viewBox="0 0 24 24" style="width:48px;height:48px;opacity:0.6;stroke:var(--accent);"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
-        </div>
-        <img id="modalBannerImg" src="" alt="Game Banner" style="opacity:0;" onload="this.style.opacity='1';document.getElementById('modalPlaceholder').style.display='none';"/>
-      </div>
-      <div class="modal-body">
-        <div class="modal-title-row">
-          <div class="modal-game-title" id="modalGameTitle">Game Name</div>
-          <div class="modal-pkg-badge" id="modalPkgBadge">VIP Package</div>
-        </div>
-        <div class="modal-meta-row">
-          <span class="status-pill online" id="modalStatusPill">🟢 พร้อมใช้งาน</span>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="place-id-label">Place ID:</span>
-            <span class="place-id-chip" id="modalPlaceId">123456789</span>
-          </div>
-        </div>
-        <div class="features-list-box">
-          <div class="features-list-title">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-            ฟังก์ชันการทำงานทั้งหมดในสคริปต์
-          </div>
-          <div class="features-grid-list" id="modalFeaturesList">
-            <!-- Dynamic features list -->
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn accent" style="flex:1;" onclick="copyLoaderScript(event)">
-            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-            คัดลอกสคริปต์
-          </button>
-          <a class="btn getkey-btn" style="flex:1;" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank" rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
-            <svg class="ui-icon key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"></circle><path d="M10.85 12.15L19 4M18 5l2 2m-4-2l2 2"></path></svg>
-            Get Key ฟรี 🔑
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
     function openGameModal(gameId) {
       const game = gamesData.find(g => g.id === gameId);
       if (!game) return;
