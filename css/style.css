@@ -303,9 +303,9 @@ header,
 }
 
 .wrap {
-  max-width: 980px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 28px 24px 80px;
+  padding: 28px 32px 80px;
 }
 
 /* ── Glass card ────────────────────────────────────────────────── */
@@ -329,13 +329,13 @@ header,
 }
 
 .topnav-inner {
-  max-width: 980px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 10px 24px;
+  padding: 12px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 20px;
 }
 
 .topnav-brand-row {
@@ -417,6 +417,7 @@ header,
   border-radius: var(--radius-xs);
   transition: all var(--transition);
   position: relative;
+  white-space: nowrap !important;
 }
 
 .topnav-links a:hover {
@@ -1552,10 +1553,11 @@ header,
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 420px));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   justify-content: center;
-  gap: 24px;
+  gap: 28px;
   margin-top: 24px;
+  width: 100%;
 }
 
 .shop-card {
