@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>ประวัติสั่งซื้อคีย์ & จัดการบอทฟาร์ม — PayomboyZ HUB</title>
+  <meta content="ศูนย์รวมประวัติการสั่งซื้อคีย์สคริปต์ Roblox สำหรับผู้ใช้และสายเปิดบอทหลายจอ PayomboyZ HUB" name="description" />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="../css/style.css" rel="stylesheet" />
+  <style>
+    .history-container {
+      max-width: 1100px;
+      margin: 100px auto 60px;
+      padding: 0 20px;
+    }
+    .farmer-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: rgba(18, 20, 29, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent);
+    }
+    .stat-card.active-card::before { background: #22c55e; }
+    .stat-card.expired-card::before { background: #ef4444; }
+    .stat-card.bal-card::before { background: #eab308; }
+
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      margin: 8px 0 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-lbl {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toolbar-box {
+      background: rgba(18, 20, 29, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .search-input-box {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+    }
+    .search-input-box input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px 10px 38px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .search-input-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(220, 38, 38, 0.3);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      width: 16px;
+      height: 16px;
+    }
+
+    .key-table-wrapper {
+      background: rgba(18, 20, 29, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+      backdrop-filter: blur(16px);
+    }
+    .key-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    .key-table th {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 14px 18px;
+      font-weight: 700;
+      color: #cbd5e1;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+    .key-table td {
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
+      color: #f1f5f9;
+    }
+    .key-table tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .key-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: all;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-badge.active {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .status-badge.expired {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .timestamp-box {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .timestamp-box .created { color: #94a3b8; }
+    .timestamp-box .expires { color: #cbd5e1; font-weight: 600; }
+
+    .bot-instruction-card {
+      margin-top: 24px;
+      background: rgba(234, 179, 8, 0.08);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      border-radius: 14px;
+      padding: 18px 22px;
+      color: #e2e8f0;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── Navigation Bar ────────────────────────────────────────── -->
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <div class="topnav-brand-row">
+        <a class="brand" href="index.html">
+          <div class="brand-logo-frame">
+            <img class="payomboy-logo-img" src="../543199739_2812856088914181_3062917809445648175_n.jpg" alt="PayomboyZ Logo" />
+          </div>
+          <span>PayomboyZ <i>HUB</i></span>
+        </a>
+      </div>
+
+      <div class="topnav-links" style="display:flex;align-items:center;gap:8px;">
+        <span id="userPillText" style="font-size:13px;font-weight:700;color:var(--accent-light);background:rgba(220,38,38,0.15);padding:6px 14px;border-radius:20px;border:1px solid var(--border);">👤 โหลดข้อมูล...</span>
+        
+        <a class="user-btn" href="index.html" style="text-decoration:none;">
+          <span>🏠 ร้านค้า</span>
+        </a>
+        <a class="user-btn topup-nav-btn" href="topup.html" style="text-decoration:none;">
+          <span>🧧 เติมเงิน</span>
+        </a>
+        <button class="user-btn" onclick="logoutUser()" style="background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#fff;">
+          <span>🚪 ออกจากระบบ</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="history-container">
+    <!-- Header Title -->
+    <div style="margin-bottom: 24px;">
+      <div class="eyebrow">📜 USER KEY DASHBOARD</div>
+      <h1 style="font-size: 26px; margin: 4px 0;">ประวัติการสั่งซื้อ & จัดการคีย์สคริปต์ (3 เดือน)</h1>
+      <p style="color: var(--muted); font-size: 14px; margin: 0;">
+        ศูนย์จัดการคีย์สำหรับสายเปิดบอทหลายจอ และตรวจสอบวันเวลาสั่งซื้อ / วันหมดอายุของคีย์
+      </p>
+    </div>
+
+    <!-- Stat Overview Cards -->
+    <div class="farmer-stats-grid">
+      <div class="stat-card">
+        <div class="stat-lbl">🔑 จำนวนคีย์ทั้งหมด</div>
+        <div class="stat-val" id="statTotalKeys">0</div>
+        <div style="font-size:11px;color:var(--muted);">ประวัติการสั่งซื้อทั้งหมด</div>
+      </div>
+      <div class="stat-card active-card">
+        <div class="stat-lbl">🟢 คีย์ที่ใช้งานได้ (Active 90d)</div>
+        <div class="stat-val" id="statActiveKeys" style="color:#4ade80;">0</div>
+        <div style="font-size:11px;color:var(--muted);">ยังไม่หมดอายุ 3 เดือน</div>
+      </div>
+      <div class="stat-card expired-card">
+        <div class="stat-lbl">🔴 คีย์ที่หมดอายุ (Expired)</div>
+        <div class="stat-val" id="statExpiredKeys" style="color:#f87171;">0</div>
+        <div style="font-size:11px;color:var(--muted);">ต้องสั่งซื้อใหม่หรือต่ออายุ</div>
+      </div>
+      <div class="stat-card bal-card">
+        <div class="stat-lbl">💰 ยอดเงินคงเหลือ</div>
+        <div class="stat-val" id="statBalance" style="color:#eab308;">0฿</div>
+        <div style="font-size:11px;color:var(--muted);">สำหรับซื้อคีย์เพิ่ม</div>
+      </div>
+    </div>
+
+    <!-- Toolbar & Bot Control Bar -->
+    <div class="toolbar-box">
+      <div class="search-input-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="keySearchInput" placeholder="ค้นหารหัสคีย์ หรือ Tier (VIP/VVIP)..." oninput="renderFilteredKeys()" />
+      </div>
+
+      <div class="segmented" style="margin:0;">
+        <button id="filterAll" class="active" onclick="setKeyFilter('all')">ทั้งหมด</button>
+        <button id="filterActive" onclick="setKeyFilter('active')">🟢 ใช้งานอยู่</button>
+        <button id="filterExpired" onclick="setKeyFilter('expired')">🔴 หมดอายุ</button>
+      </div>
+
+      <div style="display:flex;gap:8px;">
+        <button class="btn accent" onclick="copyAllActiveKeys()" style="font-size:12px;padding:8px 14px;font-weight:700;">
+          📋 คัดลอก Active Keys ทั้งหมด (สำหรับสายเปิดบอท)
+        </button>
+        <button class="btn ghost" onclick="refreshUserData()" style="font-size:12px;padding:8px 12px;">
+          🔄 รีเฟรชข้อมูล
+        </button>
+      </div>
+    </div>
+
+    <!-- Key Table -->
+    <div class="key-table-wrapper">
+      <table class="key-table">
+        <thead>
+          <tr>
+            <th>ระดับ (Tier)</th>
+            <th>รหัสคีย์สคริปต์ (Script Key Code)</th>
+            <th>วันเวลาสั่งซื้อ (Created Timestamp)</th>
+            <th>วันเวลาหมดอายุ (3 เดือน Expiration)</th>
+            <th>สถานะ (Status & Countdown)</th>
+            <th style="text-align:right;">เครื่องมือ (Actions)</th>
+          </tr>
+        </thead>
+        <tbody id="keyTableBody">
+          <tr>
+            <td colspan="6" style="text-align:center;padding:35px;color:var(--muted);">
+              ⏳ กำลังโหลดรายการคีย์ของคุณ...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bot Instruction Notice -->
+    <div class="bot-instruction-card">
+      <div style="font-weight:800;color:#eab308;font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span>📌</span> <span>คู่มือคำแนะนำสำหรับสายเปิดบอทหลายจอ (Multi-Instance Botting):</span>
+      </div>
+      <ol style="margin:0;padding-left:20px;line-height:1.7;">
+        <li><b>ระยะเวลาใช้งาน:</b> คีย์ทุกใบมีอายุใช้งาน <b>3 เดือน (90 วัน)</b> นับจากวันที่สั่งซื้อในระบบ</li>
+        <li><b>การใช้งานสคริปต์:</b> คัดลอกรหัสคีย์ไปกรอกคำสั่ง <code>/redeem</code> ใน Discord PayomboyZ HUB ก่อนใช้งาน</li>
+        <li><b>สำหรับบอทหลายจอ:</b> กดปุ่ม <b>"📋 คัดลอก Active Keys ทั้งหมด"</b> เพื่อนำรหัสคีย์ที่ใช้งานได้ทั้งหมดไปใส่ในโปรแกรม Auto-Farmer / Executor config file ได้ทันที</li>
+      </ol>
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    const PAYOMBOYZ_API_URL = window.location.origin;
+    let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
+    let activeFilter = 'all';
+
+    // Verify Auth
+    if (!currentUser || !currentUser.username) {
+      alert('🔑 กรุณาเข้าสู่ระบบก่อนเข้าใช้งานหน้าประวัติการสั่งซื้อ');
+      window.location.href = 'login.html';
+    }
+
+    async function refreshUserData() {
+      if (!currentUser || !currentUser.username) return;
+      
+      const pillEl = document.getElementById('userPillText');
+      if (pillEl) pillEl.innerText = `👤 ${currentUser.username} (กำลังอัปเดต...)`;
+
+      try {
+        const res = await fetch(`${PAYOMBOYZ_API_URL}/api/user/profile?username=${encodeURIComponent(currentUser.username)}`);
+        const data = await res.json();
+        if (data.success && data.user) {
+          currentUser.balance = data.user.balance;
+          currentUser.keys = data.user.keys || [];
+          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+        }
+      } catch (err) {
+        console.error('Error syncing user profile:', err);
+      }
+      
+      updateUI();
+    }
+
+    function updateUI() {
+      const pillEl = document.getElementById('userPillText');
+      if (pillEl) pillEl.innerText = `👤 ${currentUser.username} (${currentUser.balance || 0}฿)`;
+
+      const keys = currentUser.keys || [];
+      
+      // Calculate Stats
+      const totalCount = keys.length;
+      let activeCount = 0;
+      let expiredCount = 0;
+
+      keys.forEach(k => {
+        if (k.is_expired || k.status === 'EXPIRED') {
+          expiredCount++;
+        } else {
+          activeCount++;
+        }
+      });
+
+      document.getElementById('statTotalKeys').innerText = totalCount;
+      document.getElementById('statActiveKeys').innerText = activeCount;
+      document.getElementById('statExpiredKeys').innerText = expiredCount;
+      document.getElementById('statBalance').innerText = (currentUser.balance || 0) + '฿';
+
+      renderFilteredKeys();
+    }
+
+    function setKeyFilter(filter) {
+      activeFilter = filter;
+      document.getElementById('filterAll').className = filter === 'all' ? 'active' : '';
+      document.getElementById('filterActive').className = filter === 'active' ? 'active' : '';
+      document.getElementById('filterExpired').className = filter === 'expired' ? 'active' : '';
+      renderFilteredKeys();
+    }
+
+    function renderFilteredKeys() {
+      const tbody = document.getElementById('keyTableBody');
+      const search = (document.getElementById('keySearchInput').value || '').toLowerCase().trim();
+      const keys = currentUser.keys || [];
+
+      const filtered = keys.filter(k => {
+        const keyStr = (k.key || k.code || '').toLowerCase();
+        const tierStr = (k.tier || 'VIP').toLowerCase();
+        const isExp = (k.is_expired || k.status === 'EXPIRED');
+
+        const matchSearch = !search || keyStr.includes(search) || tierStr.includes(search);
+        const matchFilter = (activeFilter === 'all') ||
+                            (activeFilter === 'active' && !isExp) ||
+                            (activeFilter === 'expired' && isExp);
+
+        return matchSearch && matchFilter;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align:center;padding:35px;color:var(--muted);">
+              ไม่พบประวัติคีย์ที่ตรงกับเงื่อนไขการค้นหา
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(k => {
+        const keyCode = k.key || k.code || '';
+        const tierName = (k.tier || 'VIP').toUpperCase();
+        const isExp = (k.is_expired || k.status === 'EXPIRED');
+        const daysLeft = k.days_left !== undefined ? k.days_left : 90;
+
+        // Date formatting helper
+        const createdFormatted = formatTimestamp(k.created_at || k.date);
+        const expiresFormatted = formatTimestamp(k.expires_at || calculateFallbackExpire(k.created_at || k.date));
+
+        const tierBadgeStyle = tierName === 'VVIP' 
+          ? 'background:rgba(234,179,8,0.2);color:#facc15;border:1px solid #eab308;' 
+          : 'background:rgba(147,51,234,0.2);color:#c084fc;border:1px solid #9333ea;';
+
+        return `
+          <tr>
+            <td>
+              <span style="font-size:11px;font-weight:800;padding:4px 8px;border-radius:6px;${tierBadgeStyle}">
+                ${tierName} KEY
+              </span>
+            </td>
+            <td>
+              <div class="key-display">
+                <span>🔑</span>
+                <span>${keyCode}</span>
+              </div>
+            </td>
+            <td>
+              <div class="timestamp-box">
+                <div class="created">📅 ${createdFormatted}</div>
+              </div>
+            </td>
+            <td>
+              <div class="timestamp-box">
+                <div class="expires" style="color:${isExp ? '#ef4444' : '#38bdf8'};">⏳ ${expiresFormatted}</div>
+              </div>
+            </td>
+            <td>
+              ${isExp ? `
+                <span class="status-badge expired">🔴 หมดอายุแล้ว</span>
+              ` : `
+                <span class="status-badge active">🟢 ใช้งานอยู่ (เหลือ ${daysLeft} วัน)</span>
+              `}
+            </td>
+            <td style="text-align:right;">
+              <div style="display:flex;gap:6px;justify-content:flex-end;">
+                <button class="btn accent" style="padding:6px 12px;font-size:11px;font-weight:700;" onclick="copyKeyText('${keyCode}')">
+                  📋 คัดลอกคีย์
+                </button>
+                <button class="btn ghost" style="padding:6px 10px;font-size:11px;" onclick="copyScriptCode('${keyCode}')" title="คัดลอกโค้ดสคริปต์พร้อมรันในเกม">
+                  🚀 โค้ดสคริปต์
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function formatTimestamp(tsStr) {
+      if (!tsStr) return 'ไม่ระบุวันเวลา';
+      try {
+        const d = new Date(tsStr);
+        if (isNaN(d.getTime())) return tsStr;
+        return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' +
+               d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return tsStr;
+      }
+    }
+
+    function calculateFallbackExpire(createdStr) {
+      if (!createdStr) return '';
+      try {
+        const d = new Date(createdStr);
+        d.setDate(d.getDate() + 90);
+        return d.toISOString();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function copyKeyText(keyText) {
+      navigator.clipboard.writeText(keyText).then(() => {
+        showToast('📋 คัดลอกคีย์สำเร็จ: ' + keyText);
+      });
+    }
+
+    function copyScriptCode(keyText) {
+      const code = `script_key = "${keyText}";\nloadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()`;
+      navigator.clipboard.writeText(code).then(() => {
+        showToast('🚀 คัดลอกสคริปต์พร้อมรัน (Key + Loader) เรียบร้อย!');
+      });
+    }
+
+    function copyAllActiveKeys() {
+      const keys = currentUser.keys || [];
+      const activeKeys = keys.filter(k => !(k.is_expired || k.status === 'EXPIRED')).map(k => k.key || k.code);
+      if (activeKeys.length === 0) {
+        alert('⚠️ ไม่พบ Active Keys ที่ยังใช้งานได้');
+        return;
+      }
+      const textToCopy = activeKeys.join('\n');
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        alert(`🎉 คัดลอก Active Keys สำเร็จทั้งหมด ${activeKeys.length} คีย์!\n\nนำไปใช้งานในบอทของคุณได้ทันที`);
+      });
+    }
+
+    function logoutUser() {
+      localStorage.removeItem('payomboy_user');
+      window.location.href = 'login.html';
+    }
+
+    function showToast(msg) {
+      const oldToast = document.querySelector('.toast');
+      if (oldToast) oldToast.remove();
+
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <svg style="width:18px;height:18px;stroke:currentColor;" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>${msg}</span>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => { if (toast) toast.remove(); }, 2500);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      refreshUserData();
+    });
+  </script>
+</body>
+
+</html>
