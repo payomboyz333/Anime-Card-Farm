@@ -31,6 +31,9 @@
         <button class="user-btn" id="navAuthBtn" onclick="handleNavAuthClick()" style="margin-left:auto;" title="ดูข้อมูลผู้ใช้และคีย์ที่ซื้อ">
           <span id="navAuthText">🔑 เข้าสู่ระบบ</span>
         </button>
+        <button class="user-btn" id="navHistoryBtn" onclick="window.location.href='history.html'" style="display:none;background:rgba(56,189,248,0.15);border:1px solid #38bdf8;color:#38bdf8;font-weight:700;" title="ดูคีย์ที่เคยสั่งซื้อและจัดการบอท">
+          <span>📜 ประวัติการซื้อ & บอท</span>
+        </button>
         <button class="user-btn topup-nav-btn" id="navTopupBtn" onclick="openTopupPrompt()" title="เติมเงินผ่านซองทรูมันนี่">
           <span>🧧 เติมเงิน</span>
         </button>
@@ -57,6 +60,9 @@
             </a>
             <a href="#shop" class="nav-dropdown-item" onclick="closeNavDropdown()">
               <span>🛒</span> <span>ร้านขายคีย์</span>
+            </a>
+            <a href="history.html" class="nav-dropdown-item" onclick="closeNavDropdown();" style="color:#38bdf8;">
+              <span>📜</span> <span>ประวัติสั่งซื้อคีย์ (My Keys & Bot Dashboard)</span>
             </a>
             <a href="topup.html" class="nav-dropdown-item" onclick="closeNavDropdown()" style="color:#c084fc;">
               <span>🧧</span> <span>เติมเงินซองอั่งเปา</span>
@@ -1154,15 +1160,37 @@
       }
     });
 
+    async function fetchUserProfile(username) {
+      if (!username) return;
+      try {
+        const res = await fetch(`${PAYOMBOYZ_API_URL}/api/user/profile?username=${encodeURIComponent(username)}`);
+        const data = await res.json();
+        if (data.success && data.user) {
+          if (!currentUser) currentUser = {};
+          currentUser.username = data.user.username;
+          currentUser.balance = data.user.balance;
+          currentUser.keys = data.user.keys;
+          localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+          updateAuthUI();
+        }
+      } catch (err) {
+        console.error('Fetch user profile error:', err);
+      }
+    }
+
     function updateAuthUI() {
       const btnText = document.getElementById('navAuthText');
       const logoutBtn = document.getElementById('navLogoutBtn');
       const logoutDropBtn = document.getElementById('navLogoutDropdownBtn');
+      const historyNavBtn = document.getElementById('navHistoryBtn');
+
       if (!btnText) return;
       if (currentUser) {
         btnText.innerHTML = `👤 ${currentUser.username} (${currentUser.balance || 0}฿)`;
         if (logoutBtn) logoutBtn.style.display = 'inline-flex';
         if (logoutDropBtn) logoutDropBtn.style.display = 'flex';
+        if (historyNavBtn) historyNavBtn.style.display = 'inline-flex';
+
         const modalName = document.getElementById('userModalName');
         const modalBal = document.getElementById('userModalBalance');
         const modalAvatar = document.getElementById('userAvatarText');
@@ -1175,6 +1203,7 @@
         btnText.innerHTML = `🔑 เข้าสู่ระบบ`;
         if (logoutBtn) logoutBtn.style.display = 'none';
         if (logoutDropBtn) logoutDropBtn.style.display = 'none';
+        if (historyNavBtn) historyNavBtn.style.display = 'none';
       }
     }
 
@@ -1185,15 +1214,20 @@
         listEl.innerHTML = '<p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px;">ยังไม่มีคีย์ที่เคยสั่งซื้อ</p>';
         return;
       }
-      listEl.innerHTML = currentUser.keys.map(k => `
-        <div class="history-item">
-          <div>
-            <div style="font-size:11px;font-weight:800;color:${k.tier === 'VVIP' ? '#eab308' : '#9333ea'};">${k.tier} KEY</div>
-            <div class="key-code">${k.key}</div>
+      listEl.innerHTML = currentUser.keys.map(k => {
+        const keyVal = k.key || k.code || '';
+        const tierVal = (k.tier || 'VIP').toUpperCase();
+        return `
+          <div class="history-item">
+            <div>
+              <div style="font-size:11px;font-weight:800;color:${tierVal === 'VVIP' ? '#eab308' : '#9333ea'};">${tierVal} KEY</div>
+              <div class="key-code" style="user-select:all;">${keyVal}</div>
+              ${k.date ? `<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;">📅 ${k.date}</div>` : ''}
+            </div>
+            <button class="btn accent" style="padding:4px 10px;font-size:11px;font-weight:700;" onclick="copyKey('${keyVal}')">📋 คัดลอก</button>
           </div>
-          <button class="btn accent" style="padding:4px 8px;font-size:11px;" onclick="copyKey('${k.key}')">คัดลอก</button>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function handleNavAuthClick() {
@@ -1460,14 +1494,6 @@
       fetchServerStock();
       setInterval(fetchServerStock, 10000);
     });
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: messageContent,
-          username: "PayomboyZ Store Bot"
-        })
-      }).catch(err => console.log('Webhook error:', err));
-    }
 
     // Admin Dashboard Functions
     async function promptAdminLogin() {
@@ -1602,6 +1628,9 @@
       initSnowParticles();
       initScrollspy();
       updateAuthUI();
+      if (currentUser && currentUser.username) {
+        fetchUserProfile(currentUser.username);
+      }
       updateStockUI();
     });
   </script>
@@ -1707,7 +1736,7 @@
           <div style="font-size:14px;color:#eab308;font-weight:700;margin-top:4px;">ยอดเงินคงเหลือ: <span id="userModalBalance">0฿</span></div>
         </div>
 
-        <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
           <button class="btn getkey-btn" onclick="closeModal('userModal');openModal('topupModal');" style="flex:1;padding:8px;font-size:12px;">
             🧧 เติมเงินซองทรู
           </button>
@@ -1715,6 +1744,9 @@
             🚪 ออกจากระบบ
           </button>
         </div>
+        <button class="btn accent" onclick="window.location.href='history.html'" style="width:100%;padding:10px;font-size:13px;font-weight:700;margin-bottom:16px;">
+          📜 เปิดหน้าจัดการคีย์เต็มรูปแบบ & สายเปิดบอท ➔
+        </button>
 
         <div class="topup-notice" style="background:rgba(234,179,8,0.08);border-color:rgba(234,179,8,0.3);color:#eab308;margin-bottom:14px;font-size:11px;line-height:1.5;">
           📌 <strong>วิธีเปิดใช้งานคีย์ (คีย์มีอายุ 3 เดือน):</strong><br />
