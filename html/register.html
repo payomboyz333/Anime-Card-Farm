@@ -155,19 +155,13 @@
   </div>
 
   <script>
+    const API_BASE = 'https://offered-hours-fairly-final.trycloudflare.com';
+
     function loginWithDiscord() {
-      const mockDiscordUser = {
-        username: 'PayomboyZ_Gamer',
-        discordId: '827364591028374',
-        balance: 150,
-        keys: []
-      };
-      localStorage.setItem('payomboy_user', JSON.stringify(mockDiscordUser));
-      alert('✅ สมัครสมาชิกด้วย Discord สำเร็จ!');
-      window.location.href = 'index.html';
+      window.location.href = `${API_BASE}/api/auth/discord`;
     }
 
-    function handleRegisterSubmit(e) {
+    async function handleRegisterSubmit(e) {
       e.preventDefault();
       const username = document.getElementById('regUsername').value.trim();
       const pass = document.getElementById('regPassword').value;
@@ -183,14 +177,26 @@
         return;
       }
 
-      const user = {
-        username: username,
-        balance: 0,
-        keys: []
-      };
-      localStorage.setItem('payomboy_user', JSON.stringify(user));
-      alert('🎉 สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ ' + username);
-      window.location.href = 'index.html';
+      try {
+        const res = await fetch(`${API_BASE}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password: pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.setItem('payomboy_user', JSON.stringify(data.user));
+          alert('🎉 ' + data.message);
+          window.location.href = 'index.html';
+        } else {
+          alert('❌ ' + data.message);
+        }
+      } catch (err) {
+        const user = { username: username, balance: 0, keys: [] };
+        localStorage.setItem('payomboy_user', JSON.stringify(user));
+        alert('🎉 สมัครสมาชิกสำเร็จ (Offline Mode)');
+        window.location.href = 'index.html';
+      }
     }
   </script>
 </body>
