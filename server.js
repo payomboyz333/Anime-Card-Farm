@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'database.db');
 
 // Middleware
+app.set('trust proxy', true);
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
@@ -170,8 +171,14 @@ const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1541441062248128624'
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'ltpM3j34Fx6ue2l5VHiCuawVAzqeez3w';
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY || '0adaf0f96d39c56d27cd7824dd6fc64e0b5d6b94dd3fabd333bb48b59e2c0cd1';
 
+function getDiscordRedirectUri(req) {
+  const host = req.get('host');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  return `${proto}://${host}/api/auth/discord/callback`;
+}
+
 app.get('/api/auth/discord', (req, res) => {
-  const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/auth/discord/callback`);
+  const redirectUri = encodeURIComponent(getDiscordRedirectUri(req));
   const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=identify`;
   res.redirect(discordAuthUrl);
 });
@@ -181,7 +188,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
   if (!code) return res.status(400).send('Authorization code missing');
 
   try {
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/auth/discord/callback`;
+    const redirectUri = getDiscordRedirectUri(req);
     const tokenRes = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
       client_id: DISCORD_CLIENT_ID,
       client_secret: DISCORD_CLIENT_SECRET,
@@ -201,23 +208,33 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     const username = `${discordUser.username}_Discord`;
 
     db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, existing) => {
+      let balance = 0;
       if (!existing) {
         db.run(`INSERT INTO users (username, password_hash, discord_id) VALUES (?, ?, ?)`, [username, 'DISCORD_OAUTH', discordUser.id]);
+      } else {
+        balance = existing.balance || 0;
       }
-      res.send(`
-        <script>
-          localStorage.setItem('payomboy_user', JSON.stringify({
-            username: '${username}',
-            discordId: '${discordUser.id}',
-            balance: 0,
-            keys: []
-          }));
-          window.location.href = '/index.html';
-        </script>
-      `);
+      db.all(`SELECT key_code, tier, created_at FROM sales_logs WHERE username = ? ORDER BY id DESC`, [username], (err, logs) => {
+        const keys = logs ? logs.map(l => ({ code: l.key_code, tier: l.tier, date: l.created_at })) : [];
+        res.send(`
+          <script>
+            localStorage.setItem('payomboy_user', JSON.stringify({
+              username: '${username}',
+              discordId: '${discordUser.id}',
+              balance: ${balance},
+              keys: ${JSON.stringify(keys)}
+            }));
+            window.location.href = '/index.html';
+          </script>
+        `);
+      });
     });
   } catch (err) {
-    res.status(500).send('Discord OAuth Login Error: ' + err.message);
+    console.error('Discord OAuth Error Details:', err.response ? err.response.data : err.message);
+    const errMsg = err.response && err.response.data && err.response.data.error_description 
+      ? err.response.data.error_description 
+      : (err.response && err.response.data && err.response.data.error ? err.response.data.error : err.message);
+    res.status(500).send('Discord OAuth Login Error: ' + errMsg);
   }
 });
 
