@@ -588,6 +588,78 @@
           </a>
         </div>
       </div>
+  </div>
+
+  <!-- ── User Profile & Purchase History Modal ─────────────────── -->
+  <div class="modal-backdrop" id="userModal" onclick="closeModalDirect('userModal', event)">
+    <div class="game-modal" onclick="event.stopPropagation()" style="max-width:540px;padding:26px;">
+      <button class="modal-close-btn" onclick="closeModalDirect('userModal', event)">✕</button>
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(220,38,38,0.25);border:2px solid var(--accent);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;" id="userAvatarText">👤</div>
+        <h3 id="userModalName" style="margin:0;font-size:20px;color:#fff;">Username</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--muted);">ยอดเงินคงเหลือ: <span id="userModalBalance" style="color:var(--accent-light);font-weight:800;font-size:16px;">0฿</span></p>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button class="btn accent" style="flex:1;padding:10px;font-size:13px;font-weight:700;" onclick="openTopupPrompt()">🧧 เติมเงินซองทรู</button>
+        <button class="btn danger" style="padding:10px 16px;font-size:13px;background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#fff;border-radius:8px;cursor:pointer;font-weight:700;" onclick="logoutUser()">🚪 ออกจากระบบ</button>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <h4 style="margin:0 0 12px 0;font-size:15px;color:#fff;display:flex;align-items:center;gap:6px;">
+          <span>📜</span> <span>ประวัติคีย์สคริปต์ที่เคยสั่งซื้อ</span>
+        </h4>
+        <div id="userKeyList" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+          <!-- Dynamic User Key Cards rendered via JS -->
+        </div>
+
+        <div style="margin-top:16px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text-2);">
+          <div style="font-weight:700;color:#eab308;margin-bottom:6px;">📌 คำแนะนำและวิธีการใช้งานคีย์ (Description):</div>
+          <ol style="margin:0;padding-left:18px;line-height:1.6;">
+            <li>คีย์มีอายุใช้งาน <b>3 เดือน</b> ต้องนำคีย์ไปกรอกคำสั่ง <code>/redeem</code> กับบอทใน Discord PayomboyZ HUB ก่อน</li>
+            <li>ใส่คีย์ในบรรทัด <code>script_key = "คีย์ของคุณที่นี่";</code> ใน Executor ของคุณ</li>
+            <li>รันสคริปต์ Loader <code>loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()</code></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Purchase Success Modal ────────────────────────────────── -->
+  <div class="modal-backdrop" id="purchaseSuccessModal" onclick="closeModalDirect('purchaseSuccessModal', event)">
+    <div class="game-modal" onclick="event.stopPropagation()" style="max-width:520px;padding:28px;text-align:center;">
+      <button class="modal-close-btn" onclick="closeModalDirect('purchaseSuccessModal', event)">✕</button>
+      <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+      <h2 style="margin:0 0 6px 0;font-size:22px;color:#fff;">สั่งซื้อคีย์สำเร็จ!</h2>
+      <p style="margin:0 0 16px 0;font-size:13px;color:var(--muted);" id="purchasedTierName">คีย์ของคุณถูกสร้างและตัดจากสต็อคเรียบร้อยแล้ว</p>
+
+      <div style="background:rgba(220,38,38,0.15);border:1px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">SCRIPT KEY CODE</div>
+        <div id="purchasedKeyCode" style="font-size:20px;font-weight:900;font-family:'Orbitron',sans-serif;color:#fff;letter-spacing:2px;user-select:all;word-break:break-all;margin-bottom:12px;">PB-VIP-XXXX-XXXX</div>
+        <button class="btn accent" style="width:100%;padding:10px;font-weight:700;" onclick="copyPurchasedKey()">
+          📋 คัดลอกคีย์สคริปต์
+        </button>
+      </div>
+
+      <div style="text-align:left;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:12px;color:var(--text-2);margin-bottom:20px;">
+        <div style="font-weight:700;color:#eab308;margin-bottom:8px;font-size:13px;">📌 ขั้นตอนการใช้งานต่อ (Description Guide):</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div><b>1. Redeem ใน Discord:</b> คีย์นี้เป็นแบบ 3 เดือน ต้องนำไป Redeem กับบอทใน Discord PayomboyZ HUB ก่อนเพื่อเปิดใช้งานสิทธิ์</div>
+          <div><b>2. รันสคริปต์ในเกม:</b> คัดลอกโค้ดด้านล่างแล้วนำไปรันใน Executor:</div>
+          <div style="background:#090a0f;padding:8px 10px;border-radius:6px;font-family:monospace;color:#22c55e;font-size:11px;overflow-x:auto;user-select:all;" id="purchasedScriptSnippet">
+            script_key="...";<br/>loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn" style="flex:1;background:rgba(255,255,255,0.08);color:#fff;" onclick="closeModalDirect('purchaseSuccessModal');openModalDirect('userModal');">
+          📜 ดูประวัติการสั่งซื้อทั้งหมด
+        </button>
+        <button class="btn accent" style="flex:1;" onclick="closeModalDirect('purchaseSuccessModal')">
+          ✅ เข้าใจแล้ว
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1059,7 +1131,7 @@
     }, 3500);
 
     // 🌐 Backend API Tunnel URL
-    window.PAYOMBOYZ_API_URL = 'https://offered-hours-fairly-final.trycloudflare.com';
+    window.PAYOMBOYZ_API_URL = window.location.origin;
 
     // User State & Auth Manager
     let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
@@ -1264,6 +1336,55 @@
       }
     }
 
+    let lastPurchasedKey = '';
+
+    function openModalDirect(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('show');
+    }
+
+    function closeModalDirect(id, e) {
+      if (e) e.stopPropagation();
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('show');
+    }
+
+    async function fetchServerStock() {
+      try {
+        const res = await fetch(`${PAYOMBOYZ_API_URL}/api/stock`);
+        const data = await res.json();
+        if (data.success && data.stock) {
+          const vipLen = data.stock.vip || 0;
+          const vvipLen = data.stock.vvip || 0;
+
+          const vipPillEl = document.getElementById('vipStockPill');
+          const vvipPillEl = document.getElementById('vvipStockPill');
+          const vipBuyBtn = document.getElementById('vipBuyBtn');
+          const vvipBuyBtn = document.getElementById('vvipBuyBtn');
+
+          if (vipPillEl) {
+            vipPillEl.className = vipLen > 0 ? 'stock-pill in-stock' : 'stock-pill out-of-stock';
+            vipPillEl.innerHTML = vipLen > 0 ? `📦 พร้อมส่ง: <span>${vipLen}</span> คีย์` : `❌ สินค้าหมด (Stock 0)`;
+          }
+          if (vipBuyBtn) {
+            vipBuyBtn.disabled = (vipLen === 0);
+            vipBuyBtn.innerHTML = vipLen > 0 ? '🛒 ซื้อคีย์ VIP (89฿)' : '❌ สินค้าหมด (89฿)';
+          }
+
+          if (vvipPillEl) {
+            vvipPillEl.className = vvipLen > 0 ? 'stock-pill in-stock' : 'stock-pill out-of-stock';
+            vvipPillEl.innerHTML = vvipLen > 0 ? `📦 พร้อมส่ง: <span>${vvipLen}</span> คีย์` : `❌ สินค้าหมด (Stock 0)`;
+          }
+          if (vvipBuyBtn) {
+            vvipBuyBtn.disabled = (vvipLen === 0);
+            vvipBuyBtn.innerHTML = vvipLen > 0 ? '👑 ซื้อคีย์ VVIP (129฿)' : '❌ สินค้าหมด (129฿)';
+          }
+        }
+      } catch (err) {
+        console.error('Stock API error:', err);
+      }
+    }
+
     async function buyKeyPrompt(tier, price) {
       if (!currentUser) {
         showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการซื้อคีย์!');
@@ -1273,7 +1394,7 @@
       
       if ((currentUser.balance || 0) < price) {
         if (confirm(`ยอดเงินคงเหลือของคุณ (${currentUser.balance || 0}฿) ไม่เพียงพอสำหรับซื้อคีย์ ${tier} (${price}฿)\n\nต้องการเติมเงินด้วยซองทรูมันนี่ตอนนี้เลยหรือไม่?`)) {
-          openModal('topupModal');
+          window.location.href = 'topup.html';
         }
         return;
       }
@@ -1293,21 +1414,38 @@
         if (data.success) {
           currentUser.balance = data.newBalance;
           if (!currentUser.keys) currentUser.keys = [];
-          currentUser.keys.push({
+          currentUser.keys.unshift({
             tier: tier,
             key: data.key,
-            date: new Date().toLocaleDateString('th-TH')
+            date: new Date().toLocaleDateString('th-TH') + ' ' + new Date().toLocaleTimeString('th-TH')
           });
           localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
           updateAuthUI();
+          fetchServerStock();
           
-          alert(`🎉 ซื้อคีย์ ${tier} สำเร็จ!\n\nคีย์ของคุณคือ: ${data.key}\n\n📌 คำแนะนำสำคัญ (คีย์มีอายุ 3 เดือน):\n1. นำคีย์นี้ไปกรอกคำสั่ง /redeem กับบอทใน Discord PayomboyZ HUB ก่อน\n2. วางคีย์ใส่บรรทัด script_key="${data.key}"; แล้วรันใน Executor ได้เลย!`);
-          openModal('userModal');
+          lastPurchasedKey = data.key;
+          showPurchaseSuccessModal(tier, data.key);
         } else {
           alert(`❌ ไม่สามารถสั่งซื้อได้: ${data.message}`);
         }
       } catch (err) {
         alert('❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์สั่งซื้อได้');
+      }
+    }
+
+    function showPurchaseSuccessModal(tier, key) {
+      const tierEl = document.getElementById('purchasedTierName');
+      const keyEl = document.getElementById('purchasedKeyCode');
+      const snipEl = document.getElementById('purchasedScriptSnippet');
+      if (tierEl) tierEl.innerText = `คีย์ระดับ ${tier} ของคุณถูกสั่งซื้อและตัดจากสต็อคเซิร์ฟเวอร์เรียบร้อยแล้ว`;
+      if (keyEl) keyEl.innerText = key;
+      if (snipEl) snipEl.innerText = `script_key="${key}";\nloadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/54dc54601645ac0bc7238ec1a6868759.lua"))()`;
+      openModalDirect('purchaseSuccessModal');
+    }
+
+    function copyPurchasedKey() {
+      if (lastPurchasedKey) {
+        copyKey(lastPurchasedKey);
       }
     }
 
@@ -1317,95 +1455,11 @@
       });
     }
 
-    // 📦 Stock Management & Admin Engine
-    let stockData = JSON.parse(localStorage.getItem('payomboy_stock')) || {
-      vipKeys: ['PB-VIP-88A9-99B1', 'PB-VIP-77C2-33X4', 'PB-VIP-11Z9-88M2', 'PB-VIP-99K2-55P0', 'PB-VIP-33D4-22Q1', 'PB-VIP-66W8-44R7', 'PB-VIP-55T1-99L3', 'PB-VIP-22J4-77N5', 'PB-VIP-44U6-11S8', 'PB-VIP-88V3-66H9'],
-      vvipKeys: ['PB-VVIP-9999-GOLD', 'PB-VVIP-8888-KING', 'PB-VVIP-7777-CROWN', 'PB-VVIP-6666-ROYAL', 'PB-VVIP-5555-MASTER'],
-      salesHistory: [],
-      topupHistory: [],
-      discordWebhook: ''
-    };
-
-    function saveStockData() {
-      localStorage.setItem('payomboy_stock', JSON.stringify(stockData));
-      updateStockUI();
-    }
-
-    function updateStockUI() {
-      const vipCountEl = document.getElementById('vipStockCount');
-      const vipPillEl = document.getElementById('vipStockPill');
-      const vvipCountEl = document.getElementById('vvipStockCount');
-      const vvipPillEl = document.getElementById('vvipStockPill');
-
-      const vipLen = stockData.vipKeys ? stockData.vipKeys.length : 0;
-      const vvipLen = stockData.vvipKeys ? stockData.vvipKeys.length : 0;
-
-      if (vipCountEl) vipCountEl.innerText = vipLen;
-      if (vipPillEl) {
-        vipPillEl.className = vipLen > 0 ? 'stock-pill in-stock' : 'stock-pill out-of-stock';
-        vipPillEl.innerHTML = vipLen > 0 ? `📦 พร้อมส่ง: <span id="vipStockCount">${vipLen}</span> คีย์` : `❌ สินค้าหมด (Out of Stock)`;
-      }
-
-      if (vvipCountEl) vvipCountEl.innerText = vvipLen;
-      if (vvipPillEl) {
-        vvipPillEl.className = vvipLen > 0 ? 'stock-pill in-stock' : 'stock-pill out-of-stock';
-        vvipPillEl.innerHTML = vvipLen > 0 ? `📦 พร้อมส่ง: <span id="vvipStockCount">${vvipLen}</span> คีย์` : `❌ สินค้าหมด (Out of Stock)`;
-      }
-    }
-
-    function buyKeyPrompt(tier, price) {
-      if (!currentUser) {
-        showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการซื้อคีย์!');
-        openModal('authModal');
-        return;
-      }
-      
-      if ((currentUser.balance || 0) < price) {
-        if (confirm(`ยอดเงินคงเหลือของคุณ (${currentUser.balance || 0}฿) ไม่เพียงพอสำหรับซื้อคีย์ ${tier} (${price}฿)\n\nต้องการเติมเงินด้วยซองทรูมันนี่ตอนนี้เลยหรือไม่?`)) {
-          openModal('topupModal');
-        }
-        return;
-      }
-
-      // Stock check & deduction
-      const stockPool = tier === 'VVIP' ? stockData.vvipKeys : stockData.vipKeys;
-      if (!stockPool || stockPool.length === 0) {
-        alert(`❌ คีย์ ${tier} ในสต็อกหมดชั่วคราว!\n\nผู้ดูแลระบบยังไม่ได้เติมคีย์ กรุณาแจ้ง Admin ใน Discord ให้เติมสต็อกคีย์นะครับ`);
-        return;
-      }
-
-      const issuedKey = stockPool.shift();
-      currentUser.balance -= price;
-
-      if (!currentUser.keys) currentUser.keys = [];
-      currentUser.keys.push({
-        tier: tier,
-        key: issuedKey,
-        date: new Date().toLocaleDateString('th-TH') + ' ' + new Date().toLocaleTimeString('th-TH')
-      });
-
-      if (!stockData.salesHistory) stockData.salesHistory = [];
-      stockData.salesHistory.push({
-        username: currentUser.username,
-        tier: tier,
-        price: price,
-        key: issuedKey,
-        timestamp: new Date().toLocaleString('th-TH')
-      });
-
-      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
-      saveStockData();
-      updateAuthUI();
-
-      sendDiscordWebhook(`🎉 **คำสั่งซื้อคีย์สำเร็จ!**\n👤 **ผู้ซื้อ:** \`${currentUser.username}\`\n🏷️ **แพ็กเกจ:** ${tier} Key (${price}฿)\n🔑 **คีย์ที่ได้รับ:** \`${issuedKey}\``);
-
-      alert(`🎉 ซื้อคีย์ ${tier} สำเร็จ!\n\nคีย์ของคุณคือ: ${issuedKey}\n(ระบบตัดคีย์ออกจากสต็อกเรียบร้อยแล้ว คีย์นี้ถูกบันทึกเข้าประวัติคีย์ของคุณเรียบร้อย)`);
-      openModal('userModal');
-    }
-
-    function sendDiscordWebhook(messageContent) {
-      if (!stockData.discordWebhook) return;
-      fetch(stockData.discordWebhook, {
+    // Auto-fetch stock on load & poll every 10 seconds
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchServerStock();
+      setInterval(fetchServerStock, 10000);
+    });
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
