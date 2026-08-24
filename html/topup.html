@@ -440,7 +440,7 @@
 
   <script>
     // API Server URL
-    window.PAYOMBOYZ_API_URL = 'https://offered-hours-fairly-final.trycloudflare.com';
+    window.PAYOMBOYZ_API_URL = window.location.origin;
 
     let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
 
@@ -482,8 +482,8 @@
         return;
       }
 
-      if (!url || !url.includes('gift.truemoney.com')) {
-        setStatus('❌ กรุณากรอกลิงก์ซองทรูมันนี่วอลเล็ทที่ถูกต้อง (https://gift.truemoney.com/campaign/?v=...)', 'error');
+      if (!url || (!url.includes('gift.truemoney.com') && !url.includes('v=') && url.length < 8)) {
+        setStatus('❌ กรุณากรอกลิงก์ซองทรูมันนี่วอลเล็ทที่ถูกต้อง (เช่น https://gift.truemoney.com/campaign/?v=...)', 'error');
         return;
       }
 
