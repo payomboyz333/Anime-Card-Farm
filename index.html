@@ -1504,7 +1504,7 @@
         const response = await fetch(`${PAYOMBOYZ_API_URL}/api/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pass })
+          body: JSON.stringify({ username: "payomadmin", password: pass })
         });
         const data = await response.json();
         if (data.success) {
