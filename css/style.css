@@ -307,6 +307,20 @@ body::after {
   justify-content: space-between;
   gap: 18px;
 }
+.topnav-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mobile-discord-btn {
+  display: none !important;
+}
+.nav-short {
+  display: none !important;
+}
+.nav-full {
+  display: inline;
+}
 .brand {
   display: flex;
   align-items: center;
@@ -1060,6 +1074,71 @@ body::after {
   .workflow-section { grid-template-columns: 1fr; padding: 26px; }
   .hero h1 { font-size: 34px; }
   .wrap { padding: 20px 16px 60px; }
-  .topnav-inner { padding: 10px 16px; }
+  .topnav-inner {
+    padding: 8px 12px 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .topnav-brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .brand {
+    font-size: 16.5px;
+    gap: 10px;
+  }
+  .brand-logo-frame {
+    width: 34px;
+    height: 34px;
+  }
+  .mobile-discord-btn {
+    display: inline-flex !important;
+    color: #ffffff;
+    background: linear-gradient(135deg, #5865F2 0%, #4752c4 100%);
+    border: 1px solid rgba(121, 131, 245, 0.4);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 10px rgba(88, 101, 242, 0.35);
+  }
+  .desktop-discord-btn {
+    display: none !important;
+  }
+  .nav-full {
+    display: none !important;
+  }
+  .nav-short {
+    display: inline !important;
+  }
+  .topnav-links {
+    display: flex;
+    width: 100%;
+    gap: 4px;
+    background: rgba(18, 7, 9, 0.85);
+    border: 1px solid rgba(220, 38, 38, 0.25);
+    border-radius: 12px;
+    padding: 4px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .topnav-links a {
+    flex: 1;
+    text-align: center;
+    padding: 7px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .footer-content { flex-direction: column; text-align: center; }
 }
