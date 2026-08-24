@@ -2021,3 +2021,18 @@ header,
 .stock-textarea:focus {
   border-color: #dc2626;
 }
+
+/* Dedicated Topup Nav Button */
+.topup-nav-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  border-color: rgba(34, 197, 94, 0.5) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.topup-nav-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.5) !important;
+}
