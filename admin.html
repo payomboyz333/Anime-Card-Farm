@@ -272,7 +272,7 @@
   </div>
 
   <script>
-    const API_URL = window.PAYOMBOYZ_API_URL || 'https://offered-hours-fairly-final.trycloudflare.com';
+    const API_URL = window.PAYOMBOYZ_API_URL || window.location.origin;
     let adminToken = sessionStorage.getItem('payomboy_admin_token') || null;
 
     document.addEventListener('DOMContentLoaded', () => {
