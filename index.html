@@ -58,6 +58,9 @@
             <a href="#shop" class="nav-dropdown-item" onclick="closeNavDropdown()">
               <span>🛒</span> <span>ร้านขายคีย์</span>
             </a>
+            <a href="topup.html" class="nav-dropdown-item" onclick="closeNavDropdown()" style="color:#c084fc;">
+              <span>🧧</span> <span>เติมเงินซองอั่งเปา</span>
+            </a>
             <a href="#games" class="nav-dropdown-item" onclick="closeNavDropdown()">
               <span>🎮</span> <span>แมพที่รองรับ</span>
             </a>
@@ -1130,12 +1133,7 @@
     }
 
     function openTopupPrompt() {
-      if (!currentUser) {
-        showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการเติมเงิน!');
-        setTimeout(() => { window.location.href = 'login.html'; }, 600);
-        return;
-      }
-      openModal('topupModal');
+      window.location.href = 'topup.html';
     }
 
     function switchAuthTab(mode) {
