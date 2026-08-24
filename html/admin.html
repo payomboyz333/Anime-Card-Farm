@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PayomboyZ HUB - ผู้ดูแลระบบ (Admin Dashboard)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    body {
+      background: #090a0f;
+      color: #f3f4f6;
+      font-family: 'Kanit', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    .admin-container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .admin-card {
+      background: rgba(18, 18, 26, 0.85);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: 16px;
+      backdrop-filter: blur(16px);
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 24px;
+      font-weight: 800;
+      color: #dc2626;
+      margin-top: 6px;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: rgba(220, 38, 38, 0.2);
+      color: #fff;
+      border: 1px solid rgba(220, 38, 38, 0.4);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .data-table th, .data-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .data-table th {
+      background: rgba(255, 255, 255, 0.03);
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 700;
+    }
+    .login-box {
+      max-width: 400px;
+      margin: 80px auto;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-container">
+    <!-- Admin Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div>
+        <h1 style="font-size:26px;font-weight:900;margin:0;color:#fff;display:flex;align-items:center;gap:10px;">
+          ⚙️ PayomboyZ <span style="color:#dc2626;">ADMIN DASHBOARD</span>
+        </h1>
+        <p style="font-size:13px;color:rgba(255,255,255,0.5);margin:4px 0 0 0;">ระบบจัดการหลังบ้านและคลังสต็อกคีย์แบบปลอดภัย</p>
+      </div>
+      <div id="adminHeaderActions" style="display:none;gap:10px;">
+        <a href="index.html" class="btn ghost" style="padding:8px 14px;font-size:13px;">🏠 กลับหน้าหลัก</a>
+        <button onclick="logoutAdmin()" class="btn danger" style="padding:8px 14px;font-size:13px;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🚪 ออกจากแอดมิน</button>
+      </div>
+    </div>
+
+    <!-- 🔒 1. LOGIN FORM SCREEN (Unauthenticated) -->
+    <div id="adminLoginScreen" class="admin-card login-box">
+      <h2 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px;">🔒 ยืนยันสิทธิ์ผู้ดูแลระบบ</h2>
+      <p style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:20px;">กรอกชื่อผู้ใช้และรหัสผ่าน Admin เพื่อเข้าสู่ระบบจัดการหลังบ้าน</p>
+
+      <form onsubmit="handleAdminLogin(event)">
+        <div class="form-group" style="text-align:left;margin-bottom:12px;">
+          <label style="font-size:12px;color:rgba(255,255,255,0.7);display:block;margin-bottom:6px;">Admin Username</label>
+          <input type="text" id="adminUserInput" class="form-input" style="width:100%;padding:12px;box-sizing:border-box;" placeholder="กรอก Username ผู้ดูแลระบบ" required />
+        </div>
+        <div class="form-group" style="text-align:left;margin-bottom:16px;">
+          <label style="font-size:12px;color:rgba(255,255,255,0.7);display:block;margin-bottom:6px;">Admin Password</label>
+          <input type="password" id="adminPassInput" class="form-input" style="width:100%;padding:12px;box-sizing:border-box;" placeholder="กรอกรหัสผ่านหลังบ้าน" required />
+        </div>
+        <div id="loginStatus" style="font-size:13px;font-weight:600;margin-bottom:14px;"></div>
+        <button type="submit" class="btn getkey-btn" style="width:100%;padding:12px;font-weight:700;font-size:14px;">
+          🔓 เข้าสู่ระบบผู้ดูแลระบบ
+        </button>
+      </form>
+    </div>
+
+    <!-- ⚙️ 2. ADMIN DASHBOARD SCREEN (Authenticated) -->
+    <div id="adminDashboardScreen" class="admin-card" style="display:none;">
+      <!-- Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);">💰 รายได้รวมทั้งหมด</div>
+          <div class="stat-val" id="statRevenue">0 ฿</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);">🛒 รายการขายสำเร็จ</div>
+          <div class="stat-val" id="statSales">0</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);">🔑 VIP Keys ในสต็อก</div>
+          <div class="stat-val" style="color:#a855f7;" id="statVipCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);">👑 VVIP Keys ในสต็อก</div>
+          <div class="stat-val" style="color:#eab308;" id="statVvipCount">0</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="admin-tabs">
+        <button class="tab-btn active" id="tabBtn_stock" onclick="switchAdminTab('stock')">📦 เติมสต็อกคีย์</button>
+        <button class="tab-btn" id="tabBtn_users" onclick="switchAdminTab('users')">👥 สมาชิกในระบบ</button>
+        <button class="tab-btn" id="tabBtn_logs" onclick="switchAdminTab('logs')">📜 ประวัติขาย & เติมเงิน</button>
+        <button class="tab-btn" id="tabBtn_settings" onclick="switchAdminTab('settings')">⚙️ ตั้งค่า & รหัสผ่าน</button>
+      </div>
+
+      <!-- TAB 1: STOCK MANAGEMENT -->
+      <div id="tabView_stock">
+        <div style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);color:#eab308;padding:12px;border-radius:10px;font-size:12px;margin-bottom:16px;">
+          💡 <strong>วิธีเติมสต็อกคีย์ทีละเยอะๆ:</strong> ก๊อบปี้คีย์วางลงในช่องด้านล่างนี้ได้ทีละหลายร้อยคีย์ (ใส่ 1 คีย์ ต่อ 1 บรรทัด) แล้วกดบันทึก
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <label style="font-size:13px;font-weight:700;color:#a855f7;display:block;margin-bottom:6px;">📦 คีย์ VIP (89 บาท)</label>
+            <textarea id="vipStockInput" rows="10" class="form-input" style="width:100%;font-family:monospace;font-size:12px;padding:10px;box-sizing:border-box;" placeholder="วางคีย์ VIP ที่นี่ (1 คีย์ ต่อ 1 บรรทัด)"></textarea>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:700;color:#eab308;display:block;margin-bottom:6px;">👑 คีย์ VVIP (129 บาท)</label>
+            <textarea id="vvipStockInput" rows="10" class="form-input" style="width:100%;font-family:monospace;font-size:12px;padding:10px;box-sizing:border-box;" placeholder="วางคีย์ VVIP ที่นี่ (1 คีย์ ต่อ 1 บรรทัด)"></textarea>
+          </div>
+        </div>
+
+        <button onclick="saveStockData()" class="btn getkey-btn" style="width:100%;padding:12px;margin-top:16px;font-weight:700;">
+          💾 บันทึกและอัปเดตสต็อกคีย์
+        </button>
+      </div>
+
+      <!-- TAB 2: USERS DATABASE -->
+      <div id="tabView_users" style="display:none;">
+        <h4 style="font-size:15px;color:#fff;margin:0 0 10px 0;">👥 รายชื่อสมาชิกที่ลงทะเบียนไว้</h4>
+        <div style="max-height:350px;overflow-y:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>ยอดเงินคงเหลือ</th>
+                <th>Discord ID</th>
+                <th>วันที่สมัคร</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="5" style="text-align:center;">กำลังโหลดข้อมูลสมาชิก...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: LOGS HISTORY -->
+      <div id="tabView_logs" style="display:none;">
+        <h4 style="font-size:15px;color:#fff;margin:0 0 10px 0;">🛒 ประวัติการสั่งซื้อคีย์</h4>
+        <div style="max-height:200px;overflow-y:auto;margin-bottom:20px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>เวลา</th>
+                <th>ผู้ซื้อ</th>
+                <th>สินค้า</th>
+                <th>คีย์ที่ดึงไป</th>
+                <th>ราคา</th>
+              </tr>
+            </thead>
+            <tbody id="salesTableBody">
+              <tr><td colspan="5" style="text-align:center;">ไม่มีประวัติการสั่งซื้อ</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 style="font-size:15px;color:#fff;margin:0 0 10px 0;">🧧 ประวัติการเติมเงินซองทรู</h4>
+        <div style="max-height:200px;overflow-y:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>เวลา</th>
+                <th>ผู้เติมเงิน</th>
+                <th>Voucher Code</th>
+                <th>จำนวนเงิน</th>
+              </tr>
+            </thead>
+            <tbody id="topupTableBody">
+              <tr><td colspan="4" style="text-align:center;">ไม่มีประวัติการเติมเงิน</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: SETTINGS & SECURITY -->
+      <div id="tabView_settings" style="display:none;">
+        <div style="max-width:500px;">
+          <h4 style="font-size:15px;color:#fff;margin:0 0 10px 0;">🔔 ตั้งค่า Discord Webhook แจ้งเตือนยอดขาย</h4>
+          <div class="form-group" style="margin-bottom:16px;">
+            <input type="url" id="webhookInput" class="form-input" style="width:100%;padding:10px;box-sizing:border-box;" placeholder="https://discord.com/api/webhooks/..." />
+          </div>
+          <button onclick="saveWebhook()" class="btn accent" style="padding:8px 16px;font-weight:700;margin-bottom:24px;">
+            💾 บันทึก Discord Webhook
+          </button>
+
+          <hr style="border-color:rgba(255,255,255,0.1);margin:20px 0;" />
+
+          <h4 style="font-size:15px;color:#ef4444;margin:0 0 10px 0;">🔐 เปลี่ยนรหัสผ่านผู้ดูแลระบบ (Change Admin Password)</h4>
+          <div class="form-group" style="margin-bottom:12px;">
+            <input type="password" id="newAdminPassInput" class="form-input" style="width:100%;padding:10px;box-sizing:border-box;" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" />
+          </div>
+          <button onclick="changeAdminPassword()" class="btn danger" style="background:#ef4444;color:#fff;padding:8px 16px;font-weight:700;border:none;border-radius:8px;cursor:pointer;">
+            🔑 ยืนยันเปลี่ยนรหัสผ่าน Admin
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.PAYOMBOYZ_API_URL || 'https://offered-hours-fairly-final.trycloudflare.com';
+    let adminToken = sessionStorage.getItem('payomboy_admin_token') || null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (adminToken) {
+        showDashboard();
+      }
+    });
+
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('adminUserInput').value;
+      const pass = document.getElementById('adminPassInput').value;
+      const statusEl = document.getElementById('loginStatus');
+
+      statusEl.innerHTML = '<span style="color:#f59e0b;">⏳ กำลังตรวจสอบรหัสผ่าน...</span>';
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          adminToken = data.adminToken;
+          sessionStorage.setItem('payomboy_admin_token', adminToken);
+          statusEl.innerHTML = '<span style="color:#22c55e;">✅ ยืนยันตัวตนสำเร็จ!</span>';
+          setTimeout(showDashboard, 500);
+        } else {
+          statusEl.innerHTML = `<span style="color:#ef4444;">❌ ${data.message}</span>`;
+        }
+      } catch (err) {
+        statusEl.innerHTML = '<span style="color:#ef4444;">❌ ไม่สามารถเชื่อมต่อหลังบ้านได้</span>';
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('adminLoginScreen').style.display = 'none';
+      document.getElementById('adminDashboardScreen').style.display = 'block';
+      document.getElementById('adminHeaderActions').style.display = 'flex';
+      loadAdminData();
+    }
+
+    function logoutAdmin() {
+      adminToken = null;
+      sessionStorage.removeItem('payomboy_admin_token');
+      window.location.reload();
+    }
+
+    async function loadAdminData() {
+      if (!adminToken) return;
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stats`, {
+          headers: { 'x-admin-token': adminToken }
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('statRevenue').innerText = `${data.stats.totalRevenue} ฿`;
+          document.getElementById('statSales').innerText = data.stats.totalSales;
+          document.getElementById('statVipCount').innerText = data.stats.vipKeys.length;
+          document.getElementById('statVvipCount').innerText = data.stats.vvipKeys.length;
+
+          document.getElementById('vipStockInput').value = data.stats.vipKeys.join('\n');
+          document.getElementById('vvipStockInput').value = data.stats.vvipKeys.join('\n');
+
+          // Render Sales Logs
+          const salesBody = document.getElementById('salesTableBody');
+          if (data.stats.salesLogs.length > 0) {
+            salesBody.innerHTML = data.stats.salesLogs.map(l => `
+              <tr>
+                <td>${new Date(l.created_at).toLocaleString('th-TH')}</td>
+                <td><strong>${l.username}</strong></td>
+                <td><span style="color:${l.tier==='vvip'?'#eab308':'#a855f7'};font-weight:700;">${l.tier.toUpperCase()}</span></td>
+                <td><code>${l.key_code}</code></td>
+                <td>${l.price} ฿</td>
+              </tr>
+            `).join('');
+          }
+
+          // Render Topup Logs
+          const topupBody = document.getElementById('topupTableBody');
+          if (data.stats.topupLogs.length > 0) {
+            topupBody.innerHTML = data.stats.topupLogs.map(t => `
+              <tr>
+                <td>${new Date(t.created_at).toLocaleString('th-TH')}</td>
+                <td><strong>${t.username}</strong></td>
+                <td><code>${t.voucher_code}</code></td>
+                <td><span style="color:#22c55e;font-weight:700;">+${t.amount} ฿</span></td>
+              </tr>
+            `).join('');
+          }
+        } else {
+          logoutAdmin();
+        }
+      } catch (err) {
+        console.error('Error loading admin data:', err);
+      }
+    }
+
+    async function loadUsers() {
+      if (!adminToken) return;
+      try {
+        const res = await fetch(`${API_URL}/api/admin/users`, {
+          headers: { 'x-admin-token': adminToken }
+        });
+        const data = await res.json();
+        if (data.success) {
+          const tbody = document.getElementById('usersTableBody');
+          if (data.users.length > 0) {
+            tbody.innerHTML = data.users.map(u => `
+              <tr>
+                <td>#${u.id}</td>
+                <td><strong>${u.username}</strong></td>
+                <td><span style="color:#eab308;font-weight:700;">${u.balance || 0} ฿</span></td>
+                <td>${u.discord_id || '-'}</td>
+                <td>${new Date(u.created_at).toLocaleDateString('th-TH')}</td>
+              </tr>
+            `).join('');
+          } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">ยังไม่มีสมาชิกสมัครเข้าในระบบ</td></tr>';
+          }
+        }
+      } catch (err) {
+        console.error('Error loading users:', err);
+      }
+    }
+
+    async function saveStockData() {
+      const vipKeys = document.getElementById('vipStockInput').value.split('\n').map(k => k.trim()).filter(Boolean);
+      const vvipKeys = document.getElementById('vvipStockInput').value.split('\n').map(k => k.trim()).filter(Boolean);
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/stock`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken
+          },
+          body: JSON.stringify({ vipKeys, vvipKeys })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadAdminData();
+      } catch (err) {
+        alert('❌ ไม่สามารถอัปเดตสต็อกได้');
+      }
+    }
+
+    async function changeAdminPassword() {
+      const newPass = document.getElementById('newAdminPassInput').value;
+      if (!newPass || newPass.trim().length < 6) {
+        alert('❌ รหัสผ่านใหม่ต้องอย่างน้อย 6 ตัวอักษร');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/api/admin/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken
+          },
+          body: JSON.stringify({ newPassword: newPass })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          adminToken = data.adminToken;
+          sessionStorage.setItem('payomboy_admin_token', adminToken);
+          document.getElementById('newAdminPassInput').value = '';
+        } else {
+          alert('❌ ' + data.message);
+        }
+      } catch (err) {
+        alert('❌ ไม่สามารถเปลี่ยนรหัสผ่านได้');
+      }
+    }
+
+    async function saveWebhook() {
+      const webhookUrl = document.getElementById('webhookInput').value.trim();
+      try {
+        const res = await fetch(`${API_URL}/api/admin/webhook`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': adminToken
+          },
+          body: JSON.stringify({ webhookUrl })
+        });
+        const data = await res.json();
+        alert(data.message);
+      } catch (err) {
+        alert('❌ ไม่สามารถบันทึก Webhook ได้');
+      }
+    }
+
+    function switchAdminTab(tabName) {
+      const tabs = ['stock', 'users', 'logs', 'settings'];
+      tabs.forEach(t => {
+        document.getElementById(`tabBtn_${t}`).classList.remove('active');
+        document.getElementById(`tabView_${t}`).style.display = t === tabName ? 'block' : 'none';
+      });
+      document.getElementById(`tabBtn_${tabName}`).classList.add('active');
+
+      if (tabName === 'users') loadUsers();
+    }
+  </script>
+</body>
+</html>
