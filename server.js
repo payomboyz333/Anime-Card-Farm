@@ -21,6 +21,7 @@ const DB_PATH = path.join(__dirname, 'database.db');
 app.set('trust proxy', true);
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(express.static(__dirname));
 
 // Initialize SQLite Database
 const db = new sqlite3.Database(DB_PATH, (err) => {
