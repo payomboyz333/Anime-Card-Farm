@@ -166,8 +166,9 @@ app.post('/api/login', (req, res) => {
 });
 
 // Discord OAuth2 Redirect & Callback Engine
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1541013499449450526';
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'dZt3-8OSilx_UFUwwGIeK5-z-WG0zTTC';
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1541441062248128624';
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'ltpM3j34Fx6ue2l5VHiCuawVAzqeez3w';
+const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY || '0adaf0f96d39c56d27cd7824dd6fc64e0b5d6b94dd3fabd333bb48b59e2c0cd1';
 
 app.get('/api/auth/discord', (req, res) => {
   const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/auth/discord/callback`);
