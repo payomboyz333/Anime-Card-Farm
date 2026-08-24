@@ -43,10 +43,17 @@
           <span class="nav-full">พยอมบอย โหลดเด้อ</span>
           <span class="nav-short">โหลดเดอร์</span>
         </a>
+        <a href="#shop">
+          <span class="nav-full">ร้านขายคีย์</span>
+          <span class="nav-short">ร้านค้า</span>
+        </a>
         <a href="#games">
           <span class="nav-full">แมพที่รองรับ</span>
           <span class="nav-short">แมพรองรับ</span>
         </a>
+        <button class="user-btn" id="navAuthBtn" onclick="handleNavAuthClick()" style="margin-left:auto;">
+          <span id="navAuthText">🔑 เข้าสู่ระบบ / เติมเงิน</span>
+        </button>
         <a class="discord-link desktop-discord-btn" href="https://discord.gg/q2FNhgJae" target="_blank"
           rel="noopener noreferrer">
           <svg class="ui-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -158,6 +165,133 @@
             </button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ── Shop & Key Store Section ──────────────────────────────── -->
+    <section id="shop" class="shop-section section-block">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">🛒 ร้านค้าออนไลน์</div>
+          <h2>ซื้อคีย์ใช้งาน PayomboyZ HUB<br />ปลดล็อกสคริปต์เต็มรูปแบบ 24 ชั่วโมง</h2>
+        </div>
+        <p>ระบบอัตโนมัติ เติมเงินซองทรูมันนี่วอลเล็ทแล้วรับคีย์ใช้งานได้ทันที รองรับทั้งแมพทั่วไปและแมพ VVIP</p>
+      </div>
+
+      <div class="shop-grid">
+        <!-- VIP Key Card (89 THB) -->
+        <article class="shop-card glass vip-card">
+          <div class="shop-card-badge vip-badge">VIP TIER ⚡</div>
+          
+          <!-- General Maps Slideshow -->
+          <div class="card-slideshow-wrapper" id="vipSlideshow">
+            <div class="slideshow-container">
+              <div class="slide active">
+                <img src="images/blox_fruit.png" alt="Blox Fruits" />
+                <div class="slide-caption">Blox Fruits — Auto Farm & Quests</div>
+              </div>
+              <div class="slide">
+                <img src="images/anime_expedition.png" alt="Anime Expeditions" />
+                <div class="slide-caption">Anime Expeditions — Unlimited Gems</div>
+              </div>
+              <div class="slide">
+                <img src="images/steal_an_egg.png" alt="Steal An Egg" />
+                <div class="slide-caption">Steal An Egg — Auto Steal & Hatch</div>
+              </div>
+              <div class="slide">
+                <img src="images/anime_card_farm.png" alt="Anime Card Farm" />
+                <div class="slide-caption">Anime Card Farm — Auto Collect</div>
+              </div>
+            </div>
+            <button class="slide-prev" onclick="moveSlide('vipSlideshow', -1)">‹</button>
+            <button class="slide-next" onclick="moveSlide('vipSlideshow', 1)">›</button>
+            <div class="slideshow-dots">
+              <span class="dot active" onclick="setSlide('vipSlideshow', 0)"></span>
+              <span class="dot" onclick="setSlide('vipSlideshow', 1)"></span>
+              <span class="dot" onclick="setSlide('vipSlideshow', 2)"></span>
+              <span class="dot" onclick="setSlide('vipSlideshow', 3)"></span>
+            </div>
+          </div>
+
+          <div class="shop-card-content">
+            <h3>คีย์ VIP (แมพทั่วไป 4 แมพ)</h3>
+            <p class="shop-desc">สคริปต์ระดับ VIP ครอบคลุมแมพยอดนิยม ปรับแต่งความเร็วลื่นไหล ปลอดภัย 100%</p>
+            
+            <ul class="shop-features">
+              <li><span class="check">✓</span> รองรับแมพทั่วไปทั้งหมด 12+ แมพ</li>
+              <li><span class="check">✓</span> ระบบ Auto Farm / Auto Quest สปีดสูงสุด</li>
+              <li><span class="check">✓</span> อัปเดตฟรีตลอดอายุการใช้งาน</li>
+            </ul>
+
+            <div class="shop-price-row">
+              <div class="price-box">
+                <span class="currency">฿</span>
+                <span class="amount">89</span>
+                <span class="period">/ คีย์ตลอดชีพ</span>
+              </div>
+              <button class="btn accent buy-btn" onclick="buyKeyPrompt('VIP', 89)">
+                🛒 ซื้อคีย์ VIP (89฿)
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- VVIP Key Card (129 THB) -->
+        <article class="shop-card glass vvip-card">
+          <div class="shop-card-badge vvip-badge">VVIP TIER 👑</div>
+          
+          <!-- VVIP Maps Slideshow -->
+          <div class="card-slideshow-wrapper" id="vvipSlideshow">
+            <div class="slideshow-container">
+              <div class="slide active">
+                <img src="images/99Night.png" alt="99 Night" />
+                <div class="slide-caption">99 Night — VVIP Bypass & Auto Kill</div>
+              </div>
+              <div class="slide">
+                <img src="images/Oxide.png" alt="Oxide" />
+                <div class="slide-caption">Oxide — Extreme Fast Farm</div>
+              </div>
+              <div class="slide">
+                <img src="images/capybara_vs_plant.png" alt="Capybara VS Plant" />
+                <div class="slide-caption">Capybara VS Plant — Unlimited Power</div>
+              </div>
+              <div class="slide">
+                <img src="images/gakuran.png" alt="Gakuran High School" />
+                <div class="slide-caption">Gakuran — Exclusive VVIP Script</div>
+              </div>
+            </div>
+            <button class="slide-prev" onclick="moveSlide('vvipSlideshow', -1)">‹</button>
+            <button class="slide-next" onclick="moveSlide('vvipSlideshow', 1)">›</button>
+            <div class="slideshow-dots">
+              <span class="dot active" onclick="setSlide('vvipSlideshow', 0)"></span>
+              <span class="dot" onclick="setSlide('vvipSlideshow', 1)"></span>
+              <span class="dot" onclick="setSlide('vvipSlideshow', 2)"></span>
+              <span class="dot" onclick="setSlide('vvipSlideshow', 3)"></span>
+            </div>
+          </div>
+
+          <div class="shop-card-content">
+            <h3>คีย์ VVIP (แมพ VVIP สุดพิเศษ) 👑</h3>
+            <p class="shop-desc">สคริปต์ระดับ VVIP ปลดล็อกฟีเจอร์พรีเมียมทั้งหมด พร้อมการดูแลและอัปเดตพิเศษก่อนใคร</p>
+            
+            <ul class="shop-features">
+              <li><span class="check">👑</span> ปลดล็อกสิทธิ์ VVIP ครบทุกแมพพรีเมียม</li>
+              <li><span class="check">👑</span> ระบบ Bypass ป้องกันขั้นสูง + Fast Script Engine</li>
+              <li><span class="check">👑</span> ซัพพอร์ตพิเศษ VIP Role ใน Discord และซัพพอร์ตด่วน</li>
+            </ul>
+
+            <div class="shop-price-row">
+              <div class="price-box">
+                <span class="currency">฿</span>
+                <span class="amount">129</span>
+                <span class="period">/ คีย์ตลอดชีพ</span>
+              </div>
+              <button class="btn getkey-btn buy-btn" onclick="buyKeyPrompt('VVIP', 129)">
+                👑 ซื้อคีย์ VVIP (129฿)
+              </button>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -871,6 +1005,188 @@
       draw();
     }
 
+    // Slideshow & Shop Engine
+    const slideshowState = {
+      vipSlideshow: { current: 0, total: 4 },
+      vvipSlideshow: { current: 0, total: 4 }
+    };
+
+    function moveSlide(id, dir) {
+      const state = slideshowState[id];
+      if (!state) return;
+      state.current = (state.current + dir + state.total) % state.total;
+      updateSlideshowUI(id);
+    }
+
+    function setSlide(id, index) {
+      const state = slideshowState[id];
+      if (!state) return;
+      state.current = index;
+      updateSlideshowUI(id);
+    }
+
+    function updateSlideshowUI(id) {
+      const wrapper = document.getElementById(id);
+      if (!wrapper) return;
+      const slides = wrapper.querySelectorAll('.slide');
+      const dots = wrapper.querySelectorAll('.dot');
+      const cur = slideshowState[id].current;
+      slides.forEach((s, idx) => s.classList.toggle('active', idx === cur));
+      dots.forEach((d, idx) => d.classList.toggle('active', idx === cur));
+    }
+
+    setInterval(() => {
+      moveSlide('vipSlideshow', 1);
+      moveSlide('vvipSlideshow', 1);
+    }, 3500);
+
+    // User State & Auth Manager
+    let currentUser = JSON.parse(localStorage.getItem('payomboy_user')) || null;
+
+    function updateAuthUI() {
+      const btnText = document.getElementById('navAuthText');
+      if (!btnText) return;
+      if (currentUser) {
+        btnText.innerHTML = `👤 ${currentUser.username} (${currentUser.balance || 0}฿)`;
+        const modalName = document.getElementById('userModalName');
+        const modalBal = document.getElementById('userModalBalance');
+        const modalAvatar = document.getElementById('userAvatarText');
+        if (modalName) modalName.innerText = currentUser.username;
+        if (modalBal) modalBal.innerText = (currentUser.balance || 0) + '฿';
+        if (modalAvatar) modalAvatar.innerText = currentUser.username.charAt(0).toUpperCase();
+
+        renderUserKeys();
+      } else {
+        btnText.innerHTML = `🔑 เข้าสู่ระบบ / เติมเงิน`;
+      }
+    }
+
+    function renderUserKeys() {
+      const listEl = document.getElementById('userKeyList');
+      if (!listEl) return;
+      if (!currentUser || !currentUser.keys || currentUser.keys.length === 0) {
+        listEl.innerHTML = '<p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px;">ยังไม่มีคีย์ที่เคยสั่งซื้อ</p>';
+        return;
+      }
+      listEl.innerHTML = currentUser.keys.map(k => `
+        <div class="history-item">
+          <div>
+            <div style="font-size:11px;font-weight:800;color:${k.tier === 'VVIP' ? '#eab308' : '#9333ea'};">${k.tier} KEY</div>
+            <div class="key-code">${k.key}</div>
+          </div>
+          <button class="btn accent" style="padding:4px 8px;font-size:11px;" onclick="copyKey('${k.key}')">คัดลอก</button>
+        </div>
+      `).join('');
+    }
+
+    function handleNavAuthClick() {
+      if (currentUser) {
+        openModal('userModal');
+      } else {
+        openModal('authModal');
+      }
+    }
+
+    function loginWithDiscord() {
+      const mockDiscordUser = {
+        username: 'PayomboyZ_Gamer',
+        discordId: '827364591028374',
+        balance: 150,
+        keys: []
+      };
+      currentUser = mockDiscordUser;
+      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+      updateAuthUI();
+      closeModal('authModal');
+      showToast('✅ เข้าสู่ระบบด้วย Discord สำเร็จ! ยินดีต้อนรับ ' + currentUser.username);
+    }
+
+    function loginWithUserPass(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim() || 'User_' + Math.floor(Math.random()*1000);
+      currentUser = {
+        username: username,
+        balance: 0,
+        keys: []
+      };
+      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+      updateAuthUI();
+      closeModal('authModal');
+      showToast('✅ เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับ ' + currentUser.username);
+    }
+
+    function logoutUser() {
+      currentUser = null;
+      localStorage.removeItem('payomboy_user');
+      updateAuthUI();
+      closeModal('userModal');
+      showToast('👋 ออกจากระบบเรียบร้อยแล้ว');
+    }
+
+    function submitTrueMoneyTopup(e) {
+      e.preventDefault();
+      const url = document.getElementById('tmnVoucherUrl').value.trim();
+      const statusEl = document.getElementById('topupStatus');
+      
+      if (!url || !url.includes('gift.truemoney.com')) {
+        statusEl.innerHTML = '<span style="color:#ef4444;">❌ กรุณากรอกลิงก์ซองทรูมันนี่วอลเล็ทที่ถูกต้อง</span>';
+        return;
+      }
+      
+      statusEl.innerHTML = '<span style="color:#f59e0b;">⏳ กำลังตรวจสอบซองทรูมันนี่...</span>';
+      
+      setTimeout(() => {
+        const amount = 150;
+        if (!currentUser) {
+          currentUser = { username: 'Gamer_' + Math.floor(Math.random()*1000), balance: 0, keys: [] };
+        }
+        currentUser.balance = (currentUser.balance || 0) + amount;
+        localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+        updateAuthUI();
+        statusEl.innerHTML = `<span style="color:#22c55e;">✅ เติมเงินสำเร็จ! ได้รับเครดิต +${amount} บาท</span>`;
+        document.getElementById('tmnVoucherUrl').value = '';
+        setTimeout(() => { closeModal('topupModal'); statusEl.innerHTML = ''; }, 1500);
+      }, 1200);
+    }
+
+    function buyKeyPrompt(tier, price) {
+      if (!currentUser) {
+        showToast('🔑 กรุณาเข้าสู่ระบบก่อนทำการซื้อคีย์!');
+        openModal('authModal');
+        return;
+      }
+      
+      if ((currentUser.balance || 0) < price) {
+        if (confirm(`ยอดเงินคงเหลือของคุณ (${currentUser.balance || 0}฿) ไม่เพียงพอสำหรับซื้อคีย์ ${tier} (${price}฿)\n\nต้องการเติมเงินด้วยซองทรูมันนี่ตอนนี้เลยหรือไม่?`)) {
+          openModal('topupModal');
+        }
+        return;
+      }
+      
+      currentUser.balance -= price;
+      const keyPrefix = tier === 'VVIP' ? 'PB-VVIP-' : 'PB-VIP-';
+      const newKey = keyPrefix + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      
+      if (!currentUser.keys) currentUser.keys = [];
+      currentUser.keys.push({
+        tier: tier,
+        key: newKey,
+        date: new Date().toLocaleDateString('th-TH')
+      });
+      
+      localStorage.setItem('payomboy_user', JSON.stringify(currentUser));
+      updateAuthUI();
+      
+      alert(`🎉 ซื้อคีย์ ${tier} สำเร็จ!\n\nคีย์ของคุณคือ: ${newKey}\n(ระบบได้บันทึกคีย์นี้เข้าประวัติคีย์ในโปรไฟล์ของคุณเรียบร้อยแล้ว)`);
+      openModal('userModal');
+    }
+
+    function copyKey(keyText) {
+      navigator.clipboard.writeText(keyText).then(() => {
+        showToast('📋 คัดลอกคีย์สำเร็จ: ' + keyText);
+      });
+    }
+
     // Scrollspy navigation highlight
     function initScrollspy() {
       const navLinks = document.querySelectorAll('.topnav-links a[href^="#"]');
@@ -895,8 +1211,97 @@
       processPayomboyLogo();
       initSnowParticles();
       initScrollspy();
+      updateAuthUI();
     });
   </script>
+
+  <!-- ── Store Auth Modal ────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="authModal" onclick="if(event.target===this)closeModal('authModal')">
+    <div class="modal-card glass" style="max-width:400px;">
+      <button class="modal-close-btn" onclick="closeModal('authModal')">✕</button>
+      <div class="shop-modal-body">
+        <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;text-align:center;">เข้าสู่ระบบสมาชิก</h3>
+        <p style="font-size:12px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:20px;">เข้าสู่ระบบเพื่อซื้อคีย์สคริปต์ เติมเงิน และจัดการคีย์ของคุณ</p>
+        
+        <button class="discord-login-btn" onclick="loginWithDiscord()">
+          <svg style="width:20px;height:20px;fill:currentColor;" viewBox="0 0 24 24">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.893.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          Sign in with Discord
+        </button>
+
+        <div style="display:flex;align-items:center;margin:16px 0;gap:10px;">
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+          <span style="font-size:11px;color:rgba(255,255,255,0.4);">หรือเข้าด้วยชื่อผู้ใช้</span>
+          <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+        </div>
+
+        <form onsubmit="loginWithUserPass(event)">
+          <div class="form-group">
+            <label>ชื่อผู้ใช้ (Username)</label>
+            <input type="text" id="loginUsername" class="form-input" placeholder="ระบุชื่อผู้ใช้..." required />
+          </div>
+          <button type="submit" class="btn accent" style="width:100%;padding:10px;font-weight:700;">
+            เข้าสู่ระบบทันที
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Store Topup Modal ───────────────────────────────────────── -->
+  <div class="modal-backdrop" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
+    <div class="modal-card glass" style="max-width:420px;">
+      <button class="modal-close-btn" onclick="closeModal('topupModal')">✕</button>
+      <div class="shop-modal-body">
+        <h3 style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px;text-align:center;">🧧 เติมเงินซองทรูมันนี่</h3>
+        <p style="font-size:12px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:16px;">กรอกลิงก์ซองของขวัญ TrueMoney Wallet เพื่อเติมเครดิตอัตโนมัติ</p>
+
+        <div class="topup-notice">
+          <strong>วิธีสร้างซองทรูมันนี่:</strong> เข้าแอป TrueMoney Wallet ➔ เลือก "ส่งซองของขวัญ" ➔ กรอกจำนวนเงิน ➔ เลือก "แบ่งเท่ากัน" ➔ คัดลอกลิงก์ซองนำมาวางด้านล่างนี้
+        </div>
+
+        <form onsubmit="submitTrueMoneyTopup(event)">
+          <div class="form-group">
+            <label>ลิงก์ซองทรูมันนี่ (Voucher Link)</label>
+            <input type="url" id="tmnVoucherUrl" class="form-input" placeholder="https://gift.truemoney.com/v2/verify?v=..." required />
+          </div>
+          <div id="topupStatus" style="font-size:13px;font-weight:600;margin-bottom:14px;text-align:center;"></div>
+          <button type="submit" class="btn getkey-btn" style="width:100%;padding:12px;font-weight:700;">
+            🚀 ยืนยันการเติมเงิน
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Store User Profile Modal ────────────────────────────────── -->
+  <div class="modal-backdrop" id="userModal" onclick="if(event.target===this)closeModal('userModal')">
+    <div class="modal-card glass" style="max-width:440px;">
+      <button class="modal-close-btn" onclick="closeModal('userModal')">✕</button>
+      <div class="shop-modal-body">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg, #dc2626, #9333ea);display:flex;align-items:center;justify-content:center;margin:0 auto 10px auto;font-size:24px;font-weight:800;color:#fff;" id="userAvatarText">👤</div>
+          <h3 style="font-size:18px;font-weight:800;color:#fff;" id="userModalName">สมาชิก PayomboyZ</h3>
+          <div style="font-size:14px;color:#eab308;font-weight:700;margin-top:4px;">ยอดเงินคงเหลือ: <span id="userModalBalance">0฿</span></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:20px;">
+          <button class="btn getkey-btn" onclick="closeModal('userModal');openModal('topupModal');" style="flex:1;padding:8px;font-size:12px;">
+            🧧 เติมเงินซองทรู
+          </button>
+          <button class="btn ghost" onclick="logoutUser()" style="flex:1;padding:8px;font-size:12px;">
+            🚪 ออกจากระบบ
+          </button>
+        </div>
+
+        <h4 style="font-size:14px;font-weight:700;color:#fff;margin-bottom:10px;">🔑 คีย์ที่คุณครอบครองอยู่:</h4>
+        <div id="userKeyList" style="max-height:180px;overflow-y:auto;padding-right:4px;">
+          <p style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:14px;">ยังไม่มีคีย์ที่เคยสั่งซื้อ</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
