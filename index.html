@@ -277,11 +277,52 @@
           <a href="#loader">พยอมบอย โหลดเด้อ</a>
           <a href="#games">แมพที่รองรับ</a>
           <a href="https://discord.gg/q2FNhgJae" target="_blank" rel="noopener noreferrer">Discord</a>
+  <!-- Modal Dialog overlay -->
+  <div class="modal-backdrop" id="gameModalBackdrop" onclick="closeGameModal(event)">
+    <div class="game-modal" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closeGameModal(event)">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div class="modal-header-banner">
+        <div class="game-card-placeholder" id="modalPlaceholder">
+          <svg class="ui-icon" viewBox="0 0 24 24" style="width:48px;height:48px;opacity:0.6;stroke:var(--accent);"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
+        </div>
+        <img id="modalBannerImg" src="" alt="Game Banner" style="opacity:0;" onload="this.style.opacity='1';document.getElementById('modalPlaceholder').style.display='none';"/>
+      </div>
+      <div class="modal-body">
+        <div class="modal-title-row">
+          <div class="modal-game-title" id="modalGameTitle">Game Name</div>
+          <div class="modal-pkg-badge" id="modalPkgBadge">VIP Package</div>
+        </div>
+        <div class="modal-meta-row">
+          <span class="status-pill online" id="modalStatusPill">🟢 พร้อมใช้งาน</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="place-id-label">Place ID:</span>
+            <span class="place-id-chip" id="modalPlaceId">123456789</span>
+          </div>
+        </div>
+        <div class="features-list-box">
+          <div class="features-list-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+            ฟังก์ชันการทำงานทั้งหมดในสคริปต์
+          </div>
+          <div class="features-grid-list" id="modalFeaturesList">
+            <!-- Dynamic features list -->
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn accent" style="flex:1;" onclick="copyLoaderScript(event)">
+            <svg class="ui-icon" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+            คัดลอกสคริปต์
+          </button>
+          <a class="btn getkey-btn" style="flex:1;" href="https://ads.luarmor.net/get_key?for=PBG-fVUxHRHebIHz" target="_blank" rel="noopener noreferrer" onclick="handleGetKeyClick(event)">
+            <svg class="ui-icon key-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="15" r="4"></circle><path d="M10.85 12.15L19 4M18 5l2 2m-4-2l2 2"></path></svg>
+            Get Key ฟรี 🔑
+          </a>
         </div>
       </div>
-    </footer>
-
-  </main>
+    </div>
+  </div>
 
   <!-- ── Interactive JavaScript Logic ──────────────────────────── -->
   <script>
@@ -289,21 +330,141 @@
 
     // Single main Place ID per game directly matching Waiting.txt
     const gamesData = [
-      // General Maps
-      { id: 1, name: "Attack On Titan Revolution", keywords: "AOTR, Titan", category: "normal", placeId: 13379208636 },
-      { id: 2, name: "Anime Card Farm", keywords: "ANCradG", category: "normal", placeId: 125039473548047 },
-      { id: 3, name: "Arena Sniper (Sniper Arena)", keywords: "ARNSniper", category: "normal", placeId: 122446657157717 },
-      { id: 4, name: "Roll Anime To Fight", keywords: "RATF, RNTFight", category: "normal", placeId: 107653945083776 },
-      { id: 5, name: "Gakuran", keywords: "GKR", category: "normal", placeId: 128736949265057 },
-      { id: 6, name: "99 Nights in the forest", keywords: "99Nights, 99N", category: "normal", placeId: 126509999114328 },
-      { id: 7, name: "Blox Fruit", keywords: "BF, BFGood", category: "normal", placeId: 2753915549 },
+      // VIP Package — 89 บาท (Get Key ฟรีได้)
+      {
+        id: 1,
+        name: "Attack On Titan Revolution",
+        keywords: "AOTR, Titan",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 13379208636,
+        status: "online",
+        features: ["ออโต้รับรางวัล", "ใส่โค้ด", "อัปสกิล", "วาร์ป", "เทรดของ"]
+      },
+      {
+        id: 2,
+        name: "Anime Card Farm",
+        keywords: "ANCradG",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 125039473548047,
+        status: "online",
+        features: ["ออโต้รับของ", "ซื้อแพ็ค", "รีออป", "จัดแท่นการ์ด", "ลงเรด", "ลดจอขาว"]
+      },
+      {
+        id: 3,
+        name: "Arena Sniper (Sniper Arena)",
+        keywords: "ARNSniper",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 122446657157717,
+        status: "online",
+        features: ["โปรมอง (ESP)", "ล็อกหัว (Aimbot)", "ขยายเป้า", "ลบกระตุก"]
+      },
+      {
+        id: 4,
+        name: "Gakuran",
+        keywords: "GKR",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 128736949265057,
+        status: "online",
+        features: ["ออโต้ต่อสู้", "ออโต้หลบหลีก", "ออโต้เกิดใหม่", "มองเห็นหลอดเลือด"]
+      },
+      {
+        id: 5,
+        name: "99 Nights in the forest",
+        keywords: "99Nights, 99N",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 126509999114328,
+        status: "online",
+        features: ["ออโต้ฟาร์มเพชร", "ช่วยเด็ก", "Hob Server", "ไก่ตัน"]
+      },
+      {
+        id: 6,
+        name: "Blox Fruit",
+        keywords: "BF, BFGood",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 2753915549,
+        status: "online",
+        features: ["ไก่ตัน", "ออโต้สุ่มผล", "ออโต้ฟาร์มไก่ตัน 850", "ระบบอมตะ"]
+      },
+      {
+        id: 7,
+        name: "Capybara Vs Plant",
+        keywords: "CvsP",
+        category: "normal",
+        packageType: "vip",
+        priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
+        placeId: 104973076655377,
+        status: "online",
+        features: ["ออโต้ซื้อไข่", "อุปกรณ์", "เสกบอส", "ขายของ", "แจ้งเตือนดิสคอร์ด"]
+      },
 
-      // VVIP Exclusive Maps
-      { id: 8, name: "Mine a Mountain", keywords: "MaM, MineOrMountain", category: "vvip", placeId: 125927821145949 },
-      { id: 9, name: "Murder Mystery 2", keywords: "MM2", category: "vvip", placeId: 142823291 },
-      { id: 10, name: "Capybara Vs Plant", keywords: "CvsP", category: "vvip", placeId: 104973076655377 },
-      { id: 11, name: "Steal An Egg", keywords: "SaE, StealAnEggPBG", category: "vvip", placeId: 107778070777162 },
-      { id: 12, name: "Anime Expedition", keywords: "AE, AEae", category: "vvip", placeId: 84515722934860 }
+      // VVIP Package — 129 บาท (เล่นแมพ VIP ได้)
+      {
+        id: 8,
+        name: "Roll Anime To Fight",
+        keywords: "RATF, RNTFight",
+        category: "vvip",
+        packageType: "vvip",
+        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        placeId: 107653945083776,
+        status: "online",
+        features: ["ออโต้สุ่มยูนิตเลือกระดับ-มิวเทชั่น", "หมุนวงล้อ", "รับ Pass", "บันทึกตั้งค่า"]
+      },
+      {
+        id: 9,
+        name: "Mine a Mountain",
+        keywords: "MaM, MineOrMountain",
+        category: "vvip",
+        packageType: "vvip",
+        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        placeId: 125927821145949,
+        status: "online",
+        features: ["โปรมองคริสตัลระบุราคา", "ออโต้ฟาร์มหิน-รูน", "วาร์ป", "ปรับวิ่งเร็ว-บิน"]
+      },
+      {
+        id: 10,
+        name: "Murder Mystery 2 (MM2)",
+        keywords: "MM2",
+        category: "vvip",
+        packageType: "vvip",
+        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        placeId: 142823291,
+        status: "online",
+        features: ["ออโต้ฟาร์มเหรียญ-สุ่มกล่อง", "กัน AFK", "ปรับแสง-ลดกระตุก", "Custom UI"]
+      },
+      {
+        id: 11,
+        name: "Steal An Egg (ขโมยไข่)",
+        keywords: "SaE, StealAnEggPBG",
+        category: "vvip",
+        packageType: "vvip",
+        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        placeId: 107778070777162,
+        status: "closed",
+        features: ["ออโต้ขโมย", "ออโต้วางไข่", "ออโต้ฟักไข่", "ออโต้ขายสัตว์"]
+      },
+      {
+        id: 12,
+        name: "Anime Expedition (AE)",
+        keywords: "AE, AEae",
+        category: "vvip",
+        packageType: "vvip",
+        priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
+        placeId: 84515722934860,
+        status: "online",
+        features: ["ออโต้ฟาร์ม", "ออโต้ไก่ตัน", "ออโต้ขาย"]
+      }
     ];
 
     let activeTab = 'all';
@@ -361,6 +522,8 @@
       filtered.forEach(game => {
         const card = document.createElement('div');
         card.className = 'game-card';
+        card.style.cursor = 'pointer';
+        card.onclick = () => openGameModal(game.id);
 
         const badgeClass = game.category === 'vvip' ? 'game-badge vvip' : 'game-badge general';
         const badgeText = game.category === 'vvip' ? '👑 แมพ VVIP' : 'แมพทั่วไป';
@@ -370,7 +533,10 @@
 
         card.innerHTML = `
           <div class="game-card-banner">
-            <img id="thumb-${game.id}" src="${thumbUrl}" alt="${game.name}" onerror="this.onerror=null;this.src='https://tr.rbxcdn.com/30DAY-RobloxDefaultIcon/150/150/GameIcon/Png';"/>
+            <div class="game-card-placeholder" id="placeholder-${game.id}">
+              <svg class="ui-icon" viewBox="0 0 24 24" style="width:36px;height:36px;opacity:0.6;stroke:var(--accent);"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
+            </div>
+            <img id="thumb-${game.id}" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4=" alt="${game.name}" style="opacity:0;" onload="if(this.src && !this.src.startsWith('data:')){this.style.opacity='1';const p=document.getElementById('placeholder-${game.id}');if(p)p.style.display='none';}" onerror="this.style.display='none';const p=document.getElementById('placeholder-${game.id}');if(p)p.style.display='flex';"/>
             <span class="${badgeClass}">${badgeText}</span>
           </div>
           <div class="game-card-body">
@@ -387,28 +553,44 @@
       fetchRobloxThumbnails(filtered);
     }
 
-    // Fetch official Roblox HD Game Icons via public API
+    // Fetch official Roblox HD Game Icons via RoProxy (bypasses browser CORS)
     function fetchRobloxThumbnails(gamesList) {
       if (!gamesList.length) return;
       const ids = gamesList.map(g => g.placeId).join(',');
-      const apiUrl = `https://thumbnails.roblox.com/v1/places/game-icons?placeIds=${ids}&size=250x250&format=Png&isCircular=false`;
+      
+      const proxyUrl = `https://thumbnails.roproxy.com/v1/places/gameicons?placeIds=${ids}&size=250x250&format=Png&isCircular=false`;
 
-      fetch(apiUrl)
-        .then(res => res.json())
-        .then(res => {
-          if (res && res.data) {
-            res.data.forEach(item => {
-              if (item.imageUrl && item.state === 'Completed') {
-                const targetGame = gamesList.find(g => g.placeId === item.targetId);
-                if (targetGame) {
-                  const imgEl = document.getElementById(`thumb-${targetGame.id}`);
-                  if (imgEl) imgEl.src = item.imageUrl;
+      function applyData(res) {
+        if (res && res.data) {
+          res.data.forEach(item => {
+            const targetGame = gamesList.find(g => g.placeId.toString() === (item.targetId || '').toString());
+            if (targetGame) {
+              const imgEl = document.getElementById(`thumb-${targetGame.id}`);
+              if (imgEl) {
+                if (item.imageUrl && item.state === 'Completed') {
+                  imgEl.src = item.imageUrl;
+                } else {
+                  // Fallback to assetgame CDN
+                  imgEl.src = `https://assetgame.roblox.com/Game/Tools/ThumbnailAsset.ashx?aid=${targetGame.placeId}&fmt=png&wd=420&ht=230`;
                 }
               }
-            });
-          }
-        })
-        .catch(() => {});
+            }
+          });
+        }
+      }
+
+      fetch(proxyUrl)
+        .then(res => res.json())
+        .then(applyData)
+        .catch(() => {
+          // Fallback if network blocked
+          gamesList.forEach(g => {
+            const imgEl = document.getElementById(`thumb-${g.id}`);
+            if (imgEl) {
+              imgEl.src = `https://assetgame.roblox.com/Game/Tools/ThumbnailAsset.ashx?aid=${g.placeId}&fmt=png&wd=420&ht=230`;
+            }
+          });
+        });
     }
 
     function setTab(tab) {
@@ -465,10 +647,125 @@
       setTimeout(() => { if (toast) toast.remove(); }, 2500);
     }
 
+    function openGameModal(gameId) {
+      const game = gamesData.find(g => g.id === gameId);
+      if (!game) return;
+
+      document.getElementById('modalGameTitle').textContent = game.name;
+      document.getElementById('modalPlaceId').textContent = game.placeId;
+
+      const pkgBadge = document.getElementById('modalPkgBadge');
+      pkgBadge.textContent = game.priceText;
+      pkgBadge.className = `modal-pkg-badge ${game.packageType}`;
+
+      const statusPill = document.getElementById('modalStatusPill');
+      if (game.status === 'closed') {
+        statusPill.textContent = '🔴 ปิดปรับปรุงชั่วคราว';
+        statusPill.className = 'status-pill closed';
+      } else {
+        statusPill.textContent = '🟢 พร้อมใช้งาน';
+        statusPill.className = 'status-pill online';
+      }
+
+      // Populate features
+      const featList = document.getElementById('modalFeaturesList');
+      featList.innerHTML = (game.features || []).map(f => `
+        <div class="feature-item">
+          <svg class="feature-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span>${f}</span>
+        </div>
+      `).join('');
+
+      // Banner image setup
+      const modalImg = document.getElementById('modalBannerImg');
+      const placeholder = document.getElementById('modalPlaceholder');
+      placeholder.style.display = 'flex';
+      modalImg.style.opacity = '0';
+      
+      const thumbEl = document.getElementById(`thumb-${game.id}`);
+      if (thumbEl && thumbEl.src && !thumbEl.src.startsWith('data:')) {
+        modalImg.src = thumbEl.src;
+      } else {
+        modalImg.src = `https://thumbnails.roproxy.com/v1/places/gameicons?placeIds=${game.placeId}&size=512x512&format=Png`;
+      }
+
+      const backdrop = document.getElementById('gameModalBackdrop');
+      backdrop.classList.add('active');
+    }
+
+    function closeGameModal(e) {
+      if (e) e.preventDefault();
+      const backdrop = document.getElementById('gameModalBackdrop');
+      backdrop.classList.remove('active');
+    }
+
+    // ❄️ HTML5 Canvas Particle Snow Effect (Obsidian Glassmorphic 2 Engine)
+    function initSnowParticles() {
+      if (document.getElementById('snowCanvas')) return;
+      const canvas = document.createElement('canvas');
+      canvas.id = 'snowCanvas';
+      canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;';
+      document.body.appendChild(canvas);
+
+      const ctx = canvas.getContext('2d');
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const flakes = [];
+      const flakeCount = 50;
+
+      for (let i = 0; i < flakeCount; i++) {
+        flakes.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 2.2 + 1.0,
+          speed: Math.random() * 1.2 + 0.4,
+          drift: Math.random() * 0.6 - 0.3,
+          opacity: Math.random() * 0.6 + 0.3
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        for (let i = 0; i < flakeCount; i++) {
+          const f = flakes[i];
+          ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        update();
+        requestAnimationFrame(draw);
+      }
+
+      function update() {
+        for (let i = 0; i < flakeCount; i++) {
+          const f = flakes[i];
+          f.y += f.speed;
+          f.x += f.drift;
+
+          if (f.y > h + 10) {
+            f.y = -10;
+            f.x = Math.random() * w;
+          }
+          if (f.x > w + 10) f.x = -10;
+          if (f.x < -10) f.x = w + 10;
+        }
+      }
+
+      draw();
+    }
+
     // Initial render & logo background removal
     document.addEventListener('DOMContentLoaded', () => {
       renderGames();
       processPayomboyLogo();
+      initSnowParticles();
     });
   </script>
 </body>
