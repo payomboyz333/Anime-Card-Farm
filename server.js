@@ -94,6 +94,7 @@ function initTables() {
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_password', 'St@313326339')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_username', 'payomadmin')`);
     db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('discord_webhook', '')`);
+    db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES ('truemoney_phone', '0623624327')`);
   });
 }
 
@@ -329,56 +330,73 @@ app.post('/api/topup/truemoney', async (req, res) => {
       return res.status(400).json({ success: false, message: 'ซองทรูมันนี่นี้ถูกใช้งานไปแล้ว' });
     }
 
-    try {
-      // Execute request to TrueMoney API
-      const mobilePhone = '0900000000'; // เบอร์รับเงินของผู้ดูแลระบบ
-      const response = await axios.post(`https://gift.truemoney.com/v2/verify?v=${voucherCode}`, {
-        mobile: mobilePhone,
-        voucher_hash: voucherCode
-      }, {
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Get admin truemoney phone setting
+    db.get(`SELECT value FROM settings WHERE key = 'truemoney_phone'`, async (err, settingRow) => {
+      const mobilePhone = (settingRow && settingRow.value) 
+        ? settingRow.value 
+        : (process.env.TRUEMONEY_PHONE || '0623624327');
 
-      const resData = response.data;
-      if (resData && resData.status && resData.status.code === 'SUCCESS') {
-        const amount = parseFloat(resData.data.voucher.amount_baht);
-        
-        // Add balance to user
+      if (mobilePhone === '0900000000') {
+        // Fallback for test mode if admin phone has not been configured in admin panel yet
+        const mockAmount = 100;
         db.get(`SELECT balance FROM users WHERE username = ?`, [username], (err, user) => {
           if (!user) return res.status(400).json({ success: false, message: 'ไม่พบผู้ใช้ในระบบ' });
           
-          const newBal = user.balance + amount;
+          const newBal = (user.balance || 0) + mockAmount;
           db.run(`UPDATE users SET balance = ? WHERE username = ?`, [newBal, username]);
-          db.run(`INSERT INTO topup_logs (username, voucher_code, amount) VALUES (?, ?, ?)`, [username, voucherCode, amount]);
+          db.run(`INSERT INTO topup_logs (username, voucher_code, amount) VALUES (?, ?, ?)`, [username, voucherCode, mockAmount]);
 
           return res.json({
             success: true,
-            message: `🎉 เติมเงินสำเร็จ ${amount} บาท!`,
-            amount: amount,
+            message: `🎉 [Demo Mode] เติมเงินสำเร็จ ${mockAmount} บาท! (กรุณาไปที่หน้า Admin เพื่อตั้งค่าเบอร์ TrueMoney รับเงินจริง)`,
+            amount: mockAmount,
             newBalance: newBal
           });
         });
-      } else {
-        return res.status(400).json({ success: false, message: resData.status.message || 'ซองทรูมันนี่ไม่ถูกต้องหรือถูกใช้ไปแล้ว' });
+        return;
       }
-    } catch (apiErr) {
-      // Mock fallback for testing when TrueMoney API rate-limits test vouchers
-      const mockAmount = 100; // ให้สำหรับการทดสอบระบบหาก TrueMoney API ปฏิเสธซองทดสอบ
-      db.get(`SELECT balance FROM users WHERE username = ?`, [username], (err, user) => {
-        if (!user) return res.status(400).json({ success: false, message: 'ไม่พบผู้ใช้ในระบบ' });
-        
-        const newBal = user.balance + mockAmount;
-        db.run(`UPDATE users SET balance = ? WHERE username = ?`, [newBal, username]);
-        db.run(`INSERT INTO topup_logs (username, voucher_code, amount) VALUES (?, ?, ?)`, [username, voucherCode, mockAmount]);
 
-        return res.json({
-          success: true,
-          message: `🎉 [Demo Mode] เติมเงินสำเร็จ ${mockAmount} บาท!`,
-          amount: mockAmount,
-          newBalance: newBal
+      try {
+        // Execute request to Official TrueMoney Voucher Redeem API
+        const response = await axios.post(`https://gift.truemoney.com/v2/campaign/vouchers/${voucherCode}/redeem`, {
+          mobile: mobilePhone,
+          voucher_hash: voucherCode
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+          }
         });
-      });
-    }
+
+        const resData = response.data;
+        if (resData && resData.status && resData.status.code === 'SUCCESS') {
+          const amount = parseFloat(resData.data.voucher.amount_baht);
+          
+          db.get(`SELECT balance FROM users WHERE username = ?`, [username], (err, user) => {
+            if (!user) return res.status(400).json({ success: false, message: 'ไม่พบผู้ใช้ในระบบ' });
+            
+            const newBal = (user.balance || 0) + amount;
+            db.run(`UPDATE users SET balance = ? WHERE username = ?`, [newBal, username]);
+            db.run(`INSERT INTO topup_logs (username, voucher_code, amount) VALUES (?, ?, ?)`, [username, voucherCode, amount]);
+
+            return res.json({
+              success: true,
+              message: `🎉 เติมเงินสำเร็จ ${amount} บาท!`,
+              amount: amount,
+              newBalance: newBal
+            });
+          });
+        } else {
+          const msg = resData && resData.status ? resData.status.message : 'ซองทรูมันนี่ไม่ถูกต้องหรือหมดอายุแล้ว';
+          return res.status(400).json({ success: false, message: msg });
+        }
+      } catch (apiErr) {
+        const errorMsg = apiErr.response && apiErr.response.data && apiErr.response.data.status 
+          ? apiErr.response.data.status.message 
+          : 'เกิดข้อผิดพลาดในการตรวจสอบซองทรูมันนี่ หรือซองไม่ถูกต้อง';
+        return res.status(400).json({ success: false, message: errorMsg });
+      }
+    });
   });
 });
 
