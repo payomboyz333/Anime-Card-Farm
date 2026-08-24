@@ -340,6 +340,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 13379208636,
         status: "online",
+        image: "images/attack_on_titan.jpg",
         features: ["ออโต้รับรางวัล", "ใส่โค้ด", "อัปสกิล", "วาร์ป", "เทรดของ"]
       },
       {
@@ -351,6 +352,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 125039473548047,
         status: "online",
+        image: "images/anime_card_farm.png",
         features: ["ออโต้รับของ", "ซื้อแพ็ค", "รีออป", "จัดแท่นการ์ด", "ลงเรด", "ลดจอขาว"]
       },
       {
@@ -362,6 +364,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 122446657157717,
         status: "online",
+        image: "images/sniper_arena.jpg",
         features: ["โปรมอง (ESP)", "ล็อกหัว (Aimbot)", "ขยายเป้า", "ลบกระตุก"]
       },
       {
@@ -373,6 +376,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 128736949265057,
         status: "online",
+        image: "images/gakuran.png",
         features: ["ออโต้ต่อสู้", "ออโต้หลบหลีก", "ออโต้เกิดใหม่", "มองเห็นหลอดเลือด"]
       },
       {
@@ -384,6 +388,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 126509999114328,
         status: "online",
+        image: "images/99Night.png",
         features: ["ออโต้ฟาร์มเพชร", "ช่วยเด็ก", "Hob Server", "ไก่ตัน"]
       },
       {
@@ -395,6 +400,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 2753915549,
         status: "online",
+        image: "images/blox_fruit.png",
         features: ["ไก่ตัน", "ออโต้สุ่มผล", "ออโต้ฟาร์มไก่ตัน 850", "ระบบอมตะ"]
       },
       {
@@ -406,6 +412,7 @@
         priceText: "VIP Package — 89 บาท (Get Key ฟรีได้)",
         placeId: 104973076655377,
         status: "online",
+        image: "images/capybara_vs_plant.png",
         features: ["ออโต้ซื้อไข่", "อุปกรณ์", "เสกบอส", "ขายของ", "แจ้งเตือนดิสคอร์ด"]
       },
 
@@ -419,6 +426,7 @@
         priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
         placeId: 107653945083776,
         status: "online",
+        image: "images/roll_anime_to_fight.png",
         features: ["ออโต้สุ่มยูนิตเลือกระดับ-มิวเทชั่น", "หมุนวงล้อ", "รับ Pass", "บันทึกตั้งค่า"]
       },
       {
@@ -430,6 +438,7 @@
         priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
         placeId: 125927821145949,
         status: "online",
+        image: "images/mine_a_moutain.png",
         features: ["โปรมองคริสตัลระบุราคา", "ออโต้ฟาร์มหิน-รูน", "วาร์ป", "ปรับวิ่งเร็ว-บิน"]
       },
       {
@@ -441,6 +450,7 @@
         priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
         placeId: 142823291,
         status: "online",
+        image: "images/murdur_mystery2.png",
         features: ["ออโต้ฟาร์มเหรียญ-สุ่มกล่อง", "กัน AFK", "ปรับแสง-ลดกระตุก", "Custom UI"]
       },
       {
@@ -452,6 +462,7 @@
         priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
         placeId: 107778070777162,
         status: "closed",
+        image: "images/steal_an_egg.png",
         features: ["ออโต้ขโมย", "ออโต้วางไข่", "ออโต้ฟักไข่", "ออโต้ขายสัตว์"]
       },
       {
@@ -463,6 +474,7 @@
         priceText: "VVIP Package — 129 บาท (เล่นแมพ VIP ได้)",
         placeId: 84515722934860,
         status: "online",
+        image: "images/anime_expedition.png",
         features: ["ออโต้ฟาร์ม", "ออโต้ไก่ตัน", "ออโต้ขาย"]
       }
     ];
@@ -486,19 +498,16 @@
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const d = imgData.data;
 
-          // Target outer dark red border (R > 120, G < 55, B < 55)
           for (let i = 0; i < d.length; i += 4) {
             const r = d[i], g = d[i+1], b = d[i+2];
             if (r > 120 && g < 55 && b < 55) {
-              d[i + 3] = 0; // Set transparent alpha
+              d[i + 3] = 0;
             }
           }
           ctx.putImageData(imgData, 0, 0);
           const cleanUrl = canvas.toDataURL('image/png');
           logos.forEach(logo => { logo.src = cleanUrl; });
-        } catch (e) {
-          // Fallback to clean raw image if canvas restricted
-        }
+        } catch (e) {}
       };
       img.src = rawSrc;
     }
@@ -528,15 +537,9 @@
         const badgeClass = game.category === 'vvip' ? 'game-badge vvip' : 'game-badge general';
         const badgeText = game.category === 'vvip' ? '👑 แมพ VVIP' : 'แมพทั่วไป';
 
-        // Roblox Asset game thumbnail URL
-        const thumbUrl = `https://assetgame.roblox.com/Game/Tools/ThumbnailAsset.ashx?aid=${game.placeId}&fmt=png&wd=420&ht=230`;
-
         card.innerHTML = `
           <div class="game-card-banner">
-            <div class="game-card-placeholder" id="placeholder-${game.id}">
-              <svg class="ui-icon" viewBox="0 0 24 24" style="width:36px;height:36px;opacity:0.6;stroke:var(--accent);"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
-            </div>
-            <img id="thumb-${game.id}" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4=" alt="${game.name}" style="opacity:0;" onload="if(this.src && !this.src.startsWith('data:')){this.style.opacity='1';const p=document.getElementById('placeholder-${game.id}');if(p)p.style.display='none';}" onerror="this.style.display='none';const p=document.getElementById('placeholder-${game.id}');if(p)p.style.display='flex';"/>
+            <img id="thumb-${game.id}" src="${game.image}" alt="${game.name}" loading="lazy"/>
             <span class="${badgeClass}">${badgeText}</span>
           </div>
           <div class="game-card-body">
@@ -549,8 +552,6 @@
         `;
         grid.appendChild(card);
       });
-
-      fetchRobloxThumbnails(filtered);
     }
 
     // Fetch official Roblox HD Game Icons via RoProxy (bypasses browser CORS)
@@ -679,15 +680,9 @@
       // Banner image setup
       const modalImg = document.getElementById('modalBannerImg');
       const placeholder = document.getElementById('modalPlaceholder');
-      placeholder.style.display = 'flex';
-      modalImg.style.opacity = '0';
-      
-      const thumbEl = document.getElementById(`thumb-${game.id}`);
-      if (thumbEl && thumbEl.src && !thumbEl.src.startsWith('data:')) {
-        modalImg.src = thumbEl.src;
-      } else {
-        modalImg.src = `https://thumbnails.roproxy.com/v1/places/gameicons?placeIds=${game.placeId}&size=512x512&format=Png`;
-      }
+      if (placeholder) placeholder.style.display = 'none';
+      modalImg.style.opacity = '1';
+      modalImg.src = game.image;
 
       const backdrop = document.getElementById('gameModalBackdrop');
       backdrop.classList.add('active');
