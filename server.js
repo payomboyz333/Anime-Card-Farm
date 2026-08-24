@@ -165,8 +165,8 @@ app.post('/api/login', (req, res) => {
 });
 
 // Discord OAuth2 Redirect & Callback Engine
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '123456789012345678';
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'SECRET_KEY';
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1541013499449450526';
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || 'dZt3-8OSilx_UFUwwGIeK5-z-WG0zTTC';
 
 app.get('/api/auth/discord', (req, res) => {
   const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/auth/discord/callback`);
